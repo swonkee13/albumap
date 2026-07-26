@@ -2,7 +2,7 @@
 
 > **This is the single source of truth for where the project stands.** Update it at the end of every work session. Any new Claude conversation should be able to read this file and get fully up to speed without re-explaining anything. Keep it plain-language and current.
 
-_Last updated: 2026-07-25_
+_Last updated: 2026-07-25 (end of build session — full album workspace live on real data)_
 
 ---
 
@@ -56,43 +56,34 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 ## Current status
 
-**Where we are:** **Real app is live at https://albumap.vercel.app** (deployed from GitHub via Vercel, Supabase connected). Stack provisioned: Vercel + Supabase (own org `Albumap`, project id `ztfscbfdaqodrylvxtum`, region us-east-1). Domain not bought yet. R2 not set up yet.
+**Where we are:** **Working product live at https://albumap.vercel.app** — the full album workspace, running on the user's real data, everything below **confirmed working by the user this session.** Stack fully provisioned: Vercel + Supabase (own org `Albumap`, project id `ztfscbfdaqodrylvxtum`, us-east-1) + Cloudflare R2 (bucket `albumap-audio`). Domain not bought yet.
 
-**ARCHITECTURE DECISION (important):** The logged-in app IS the full mockup, served verbatim. `public/studio.html` is an exact copy of `mockups/00-full-app.html`; the auth-gated `/albums` route renders it full-screen in an iframe. This guarantees zero visual drift from the approved design. All mockup views work (roster, album dashboard, recording grid, songs w/ audio players + lyrics/notes/comments/refs/credits, sequencer w/ drag-reorder + playback, reverse-timeline schedule generator, artwork, merch, share modal, video call bar). Data in the mockup is still its built-in demo data (Novaway etc.), in-memory.
+**ARCHITECTURE DECISION (important — read before changing the UI):** The logged-in app IS the approved mockup, served verbatim. `public/studio.html` started as an exact copy of `mockups/00-full-app.html`; the auth-gated `/albums` route renders it full-screen in an iframe (cache-busted `?v=Date.now()`). This guarantees zero visual drift. **studio.html was edited ONLY at the data layer** — the hardcoded demo `artists` array became `let artists=[]` filled by `reloadData()` from `/api/studio-data`, and each interaction (cell click, upload, comment, etc.) calls an API to persist. All rendering/CSS/JS is still the mockup's. Keep it that way: to change data behavior edit the API + the small data-layer hooks; don't rewrite the views.
 
-**Plan from here:** wire real functionality into the mockup **view by view** — then audio uploads (Cloudflare R2), comments, activity.
+**Everything wired & persisted (Supabase + R2), all user-confirmed working:**
+- Recording grid cells → `/api/cell` (states 0–4 in `song_tracks.status`; 6 fixed parts Drums/Bass/Guitar/Synth/Lead Vox/BGV)
+- Create album / add song → `/api/album`, `/api/song`
+- **Audio** upload + playback via R2 presigned URLs → `/api/upload-url`, `/api/song-file`; table `song_files`
+- Lyrics + notes → `/api/song-meta`; `songs.lyrics/notes`
+- Artwork + merch images (R2) → `/api/asset-url`, `/api/album-asset`; `album_assets`
+- Band photo/logo (R2) → `/api/artist-photo-url`, `/api/artist-photo`; `artist_photos` (keyed owner+slug)
+- Timestamped comments → `/api/comment`; `song_comments` (composer auto-stamps from current playback time)
+- Members/invites → `/api/member`; `album_members` (owner seeded on create + backfilled)
+- Schedule reverse-timeline generator persists → `/api/schedule`; `albums.schedule`/`release_date`
+- References + credits per song → `/api/song-meta`; `songs.refs`/`credits` (jsonb)
+- Activity feed → logged server-side across actions; `activity` table; newest-first, relative times
+- **Public share page** `/share/[shareId]` — read-only "% complete" card, no login, via service-role admin client (`lib/supabase/admin.ts`); `albums.share_id`; the Share-progress modal link is real
 
-**DONE — real data wired (grid verified live):** The studio boots from the user's real Supabase data, not the Novaway demo. `public/studio.html` edited only at the data layer (demo array → `let artists=[]` + `reloadData()` fetch). Iframe cache-busted (`?v=Date.now()`).
+**Known limitation (this is the #1 next build):** members are a **display roster only** — inviting adds an avatar / "waiting on" entry but does NOT give that person a login into the album. Real multi-user membership (invited people sign in and edit) is not built yet. Also: brand-new albums start with an empty schedule until the generator is run; band-photo persistence is per artist-name-slug (no artist entity table yet).
 
-**Wired & persisted (Supabase + R2), verified where noted:**
-- Grid cells (`/api/cell`) ✓ verified · New album / Add song (`/api/album`,`/api/song`) ✓
-- Audio upload + playback via **R2 presigned URLs** ✓ user-confirmed (`/api/upload-url`, `/api/song-file`; `song_files`)
-- Lyrics + notes (`/api/song-meta`; `songs.lyrics/notes`) ✓ user-confirmed
-- Artwork + merch images via R2 (`/api/asset-url`,`/api/album-asset`; `album_assets`) ✓ user-confirmed
-- Band photo/logo → R2 (`/api/artist-photo-url`,`/api/artist-photo`; `artist_photos`, keyed owner+slug)
-- Timestamped comments (`/api/comment`; `song_comments`) — composer auto-stamps from current playback time
-- Members/invites (`/api/member`; `album_members`) — owner seeded on create + backfilled for existing albums; **note: display roster only, not real multi-user login yet**
-- Schedule reverse-timeline generator persists (`/api/schedule`; `albums.schedule`/`release_date`)
-- References + credits per song (`/api/song-meta`; `songs.refs`/`credits` jsonb)
-- Activity feed — logged server-side across actions (`activity` table), newest-first, relative times
-- **Public share page** `/share/[shareId]` — read-only progress card, no login, via service-role admin client (`lib/supabase/admin.ts`); album `share_id` column; share modal link is real
-
-R2 env vars live in Vercel; bucket CORS allows PUT/GET from the app origin. `SUPABASE_SERVICE_ROLE_KEY` used only by the share page.
-
-**Still demo-only (no backend yet):** real multi-user membership/login (members are display roster), and the schedule seed for brand-new albums starts empty (generator fills it).
-
-**What's real underneath (built, ready to reconnect):**
-- **Auth / profiles** — email+password signup & login (Supabase), profile row auto-created via `handle_new_user` trigger. Email confirmation currently OFF (for testing). Login at `/login`; `/albums` is protected by middleware.
-- **DB schema** — `profiles`, `albums`, `songs`, `song_tracks` with full RLS (only `authenticated`, rows scoped to owner). In `supabase/schema.sql`. (The interim minimal album/song/grid UI that used these was removed in favor of the mockup; the tables + schema remain and will be reconnected.)
-- **Security** — every table has RLS ON, only `authenticated` role granted, rows scoped to the album owner.
-
-**Stack notes for any new session:**
-- Next.js 15 (App Router) + TypeScript + Tailwind v4, `@supabase/ssr`. Supabase clients in `lib/supabase/`. Middleware refreshes sessions + protects `/albums`.
-- Env vars in Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
-- To change the DB: edit `supabase/schema.sql` and run it in Supabase → SQL Editor (idempotent).
-- Left in the DB from a live test: a throwaway user "Grid Tester" (gridtest.claude+ap1@gmail.com) + album "Test Record". Safe to delete anytime.
-
-**Still to build for a complete v1 core:** audio ideas (needs Cloudflare R2) → timestamped comments → activity feed. Then visual polish toward the mockup (left sidebar/roster, album cover art, tabbed album views).
+**Stack / facts for any new session:**
+- **Auth** — email+password signup & login (Supabase), profile auto-created via `handle_new_user` trigger. Email confirmation is OFF (for testing — turn on before real launch). Login at `/login`; `/albums` protected by middleware.
+- **Framework** — Next.js 15 (App Router) + TypeScript + Tailwind v4, `@supabase/ssr`. Supabase clients in `lib/supabase/` (`client`, `server`, `admin`=service-role). Middleware refreshes sessions + protects `/albums`, and excludes `.html` so `studio.html` serves directly.
+- **DB tables** (all RLS ON, only `authenticated`, rows scoped to album owner): `profiles`, `albums`, `songs`, `song_tracks`, `song_files`, `album_assets`, `artist_photos`, `album_members`, `song_comments`, `activity`. Full idempotent schema in `supabase/schema.sql` — edit it and run in Supabase → SQL Editor to change the DB.
+- **File storage** — Cloudflare R2 bucket `albumap-audio` (audio + all images). Browser uploads via presigned PUT; playback/display via presigned GET (1h). Bucket CORS allows GET/PUT/HEAD from `https://albumap.vercel.app`.
+- **Vercel env vars**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
+- **API routes** live under `app/api/*` (one per action); `GET /api/studio-data` returns everything shaped as the mockup's `artists` array.
+- **Test data to clean up**: throwaway user "Grid Tester" (gridtest.claude+ap1@gmail.com) + album "Test Record" in the DB. Safe to delete. Also an earlier R2 token was pasted in chat then regenerated — the old one is dead.
 
 **Mockups built (reference for the real build):**
 - `mockups/00-full-app.html` — the unified app: roster → album → dashboard hub, recording grid, merged Songs view (audio + lyrics + notes + comments + references + credits), sequencer, schedule + reverse-timeline generator, artwork, merch, activity feed, waiting-on panel, share modal, video call bar.
@@ -114,9 +105,12 @@ R2 env vars live in Vercel; bucket CORS allows PUT/GET from the app origin. `SUP
 4. [x] Real data wired: roster/albums/songs/grid from Supabase; grid + create/add persist (verified)
 5. [x] Audio ideas via Cloudflare R2 — upload + playback (verified)
 6. [x] Lyrics, notes, artwork, merch (verified) + band photo, comments, members, schedule, refs, credits, activity, public share page
-7. [ ] **Next:** real multi-user membership — invited people log in and see/edit the album (RLS for members, invite links/email). Turns the display roster into true multiplayer.
-8. [ ] Use it on a real record with Jordan (the actual launch)
-9. [ ] Buy domain once name is decided (trivial to add later)
+7. [ ] **NEXT BUILD — real multi-user membership (the big one):** invited people get a login and can see/edit the album they're on. Needs: an `album_members.user_id` link + invite flow (link or email), and **RLS broadened** so members (not just the owner) can read/write their albums' rows across all tables. This is what turns the display roster into true multiplayer — albumap's core value.
+8. [ ] Smaller follow-ups when convenient: turn Supabase email confirmation back ON before real launch; delete the "Grid Tester" / "Test Record" test data; give brand-new albums a starter schedule; consider a real artist/band entity so band photos aren't keyed by name-slug.
+9. [ ] Use it on a real record with Jordan (the actual launch — the whole point).
+10. [ ] Buy domain once the name is decided (trivial to add in Vercel later).
+
+**Where to pick up next session:** the app is a complete, working single-user album workspace on real data. Start item 7 (multiplayer) — that's the highest-value next step and the one thing that's faked right now.
 
 ## Parking lot (ideas, not commitments)
 
