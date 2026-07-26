@@ -56,7 +56,22 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 ## Current status
 
-**Where we are:** Interactive HTML mockups built and validated (see `/mockups`). No real app code yet. No stack provisioned. No domain bought.
+**Where we are:** **Real app is live at https://albumap.vercel.app** (deployed from GitHub via Vercel, Supabase connected). Stack provisioned: Vercel + Supabase (own org `Albumap`, project id `ztfscbfdaqodrylvxtum`, region us-east-1). Domain not bought yet. R2 not set up yet.
+
+**What works in the live app (v1 core, in progress):**
+- **Auth / profiles** — email+password signup & login (Supabase), profile row auto-created via `handle_new_user` trigger. Email confirmation currently OFF (for testing).
+- **Albums** — create/list albums you own; each album has an instruments list (default Drums/Bass/Guitar/Vocals/Keys).
+- **Songs** — add songs to an album.
+- **Recording grid** — songs × instruments; click a cell to cycle not_started → tracking → tracked → done (dashed → amber → orange → green ✓), saves instantly to `song_tracks`, live % complete. Verified working + persisting on the live site.
+- **Security** — every table has RLS ON, only `authenticated` role granted, rows scoped to the album owner. Schema in `supabase/schema.sql`.
+
+**Stack notes for any new session:**
+- Next.js 15 (App Router) + TypeScript + Tailwind v4, `@supabase/ssr`. Supabase clients in `lib/supabase/`. Middleware refreshes sessions + protects `/albums`.
+- Env vars in Vercel: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`.
+- To change the DB: edit `supabase/schema.sql` and run it in Supabase → SQL Editor (idempotent).
+- Left in the DB from a live test: a throwaway user "Grid Tester" (gridtest.claude+ap1@gmail.com) + album "Test Record". Safe to delete anytime.
+
+**Still to build for a complete v1 core:** audio ideas (needs Cloudflare R2) → timestamped comments → activity feed. Then visual polish toward the mockup (left sidebar/roster, album cover art, tabbed album views).
 
 **Mockups built (reference for the real build):**
 - `mockups/00-full-app.html` — the unified app: roster → album → dashboard hub, recording grid, merged Songs view (audio + lyrics + notes + comments + references + credits), sequencer, schedule + reverse-timeline generator, artwork, merch, activity feed, waiting-on panel, share modal, video call bar.
@@ -72,12 +87,15 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 **→ Full step-by-step launch checklist now lives in `LAUNCH.md`.** Decision made: move to the real build. Summary of the path:
 
-1. [ ] **You:** create Vercel + Supabase accounts, connect the GitHub repo (`LAUNCH.md` Phase 1 — the 6 human-only steps)
-2. [ ] **Claude:** scaffold Next.js + Supabase, push → first live `.vercel.app` deploy (Phase 2)
-3. [ ] Wire auth + DB schema + Row Level Security (Phase 3)
-4. [ ] Build v1 core in chunks: grid → audio ideas (R2) → comments → activity feed (Phase 4)
-5. [ ] Use it on a real record with Jordan (Phase 5 — the actual launch)
-6. [ ] Buy domain once name is decided (trivial to add later)
+1. [x] Create Vercel + Supabase accounts, connect repo, first live deploy
+2. [x] Auth + profiles + DB schema + Row Level Security
+3. [x] Create albums, add songs, interactive recording grid (saves to DB)
+4. [ ] **Next:** audio ideas — set up Cloudflare R2 (bucket + keys → Vercel env), drop-in player per song
+5. [ ] Timestamped comments on audio
+6. [ ] Activity feed ("Scott marked Drums done on Coastline")
+7. [ ] Visual polish toward the mockup: left sidebar/roster, album cover art, tabbed album views
+8. [ ] Use it on a real record with Jordan (the actual launch)
+9. [ ] Buy domain once name is decided (trivial to add later)
 
 ## Parking lot (ideas, not commitments)
 
