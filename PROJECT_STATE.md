@@ -58,12 +58,14 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 **Where we are:** **Real app is live at https://albumap.vercel.app** (deployed from GitHub via Vercel, Supabase connected). Stack provisioned: Vercel + Supabase (own org `Albumap`, project id `ztfscbfdaqodrylvxtum`, region us-east-1). Domain not bought yet. R2 not set up yet.
 
-**What works in the live app (v1 core, in progress):**
-- **Auth / profiles** — email+password signup & login (Supabase), profile row auto-created via `handle_new_user` trigger. Email confirmation currently OFF (for testing).
-- **Albums** — create/list albums you own; each album has an instruments list (default Drums/Bass/Guitar/Vocals/Keys).
-- **Songs** — add songs to an album.
-- **Recording grid** — songs × instruments; click a cell to cycle not_started → tracking → tracked → done (dashed → amber → orange → green ✓), saves instantly to `song_tracks`, live % complete. Verified working + persisting on the live site.
-- **Security** — every table has RLS ON, only `authenticated` role granted, rows scoped to the album owner. Schema in `supabase/schema.sql`.
+**ARCHITECTURE DECISION (important):** The logged-in app IS the full mockup, served verbatim. `public/studio.html` is an exact copy of `mockups/00-full-app.html`; the auth-gated `/albums` route renders it full-screen in an iframe. This guarantees zero visual drift from the approved design. All mockup views work (roster, album dashboard, recording grid, songs w/ audio players + lyrics/notes/comments/refs/credits, sequencer w/ drag-reorder + playback, reverse-timeline schedule generator, artwork, merch, share modal, video call bar). Data in the mockup is still its built-in demo data (Novaway etc.), in-memory.
+
+**Plan from here:** wire real functionality into the mockup **view by view** — replace demo data with the user's real Supabase albums/songs/grid, then audio uploads (Cloudflare R2), comments, activity. As each view goes live it graduates from the static iframe to real components.
+
+**What's real underneath (built, ready to reconnect):**
+- **Auth / profiles** — email+password signup & login (Supabase), profile row auto-created via `handle_new_user` trigger. Email confirmation currently OFF (for testing). Login at `/login`; `/albums` is protected by middleware.
+- **DB schema** — `profiles`, `albums`, `songs`, `song_tracks` with full RLS (only `authenticated`, rows scoped to owner). In `supabase/schema.sql`. (The interim minimal album/song/grid UI that used these was removed in favor of the mockup; the tables + schema remain and will be reconnected.)
+- **Security** — every table has RLS ON, only `authenticated` role granted, rows scoped to the album owner.
 
 **Stack notes for any new session:**
 - Next.js 15 (App Router) + TypeScript + Tailwind v4, `@supabase/ssr`. Supabase clients in `lib/supabase/`. Middleware refreshes sessions + protects `/albums`.
@@ -89,11 +91,11 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 1. [x] Create Vercel + Supabase accounts, connect repo, first live deploy
 2. [x] Auth + profiles + DB schema + Row Level Security
-3. [x] Create albums, add songs, interactive recording grid (saves to DB)
-4. [ ] **Next:** audio ideas — set up Cloudflare R2 (bucket + keys → Vercel env), drop-in player per song
-5. [ ] Timestamped comments on audio
-6. [ ] Activity feed ("Scott marked Drums done on Coastline")
-7. [ ] Visual polish toward the mockup: left sidebar/roster, album cover art, tabbed album views
+3. [x] Full mockup live as the studio app behind login (all views, exact)
+4. [ ] **Next:** wire real data into the mockup, view by view — start with roster/albums/songs/grid reading from Supabase (replace Novaway demo data)
+5. [ ] Audio ideas — set up Cloudflare R2 (bucket + keys → Vercel env), real upload + playback in the song player
+6. [ ] Timestamped comments on audio
+7. [ ] Activity feed
 8. [ ] Use it on a real record with Jordan (the actual launch)
 9. [ ] Buy domain once name is decided (trivial to add later)
 
