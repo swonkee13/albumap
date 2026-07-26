@@ -70,11 +70,14 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 ## Next actions (in order)
 
-1. [ ] Decide: start real build now, or keep refining mockups?
-2. [ ] Set up repo + Vercel + Supabase (+ R2 when files needed) — see `GIT_AND_SETUP.md`
-3. [ ] Build v1 core: grid → audio ideas → comments → activity feed
-4. [ ] Deploy to free `.vercel.app` URL, use it on a real record with Jordan
-5. [ ] Buy domain once name is decided (trivial to add later)
+**→ Full step-by-step launch checklist now lives in `LAUNCH.md`.** Decision made: move to the real build. Summary of the path:
+
+1. [ ] **You:** create Vercel + Supabase accounts, connect the GitHub repo (`LAUNCH.md` Phase 1 — the 6 human-only steps)
+2. [ ] **Claude:** scaffold Next.js + Supabase, push → first live `.vercel.app` deploy (Phase 2)
+3. [ ] Wire auth + DB schema + Row Level Security (Phase 3)
+4. [ ] Build v1 core in chunks: grid → audio ideas (R2) → comments → activity feed (Phase 4)
+5. [ ] Use it on a real record with Jordan (Phase 5 — the actual launch)
+6. [ ] Buy domain once name is decided (trivial to add later)
 
 ## Parking lot (ideas, not commitments)
 
