@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>albumap.io — Song Ideas & Demos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --base:#0a0a0b;--panel:#141417;--panel-2:#17171b;--card:#1c1c21;--card-hi:#222228;
+    --hover:#26262c;--line:#2a2a30;--line-soft:#212127;
+    --txt:#f4f4f5;--txt-2:#a1a1aa;--txt-3:#6b6b73;
+    --accent:#FF4D1C;--accent-hi:#FF6338;--accent-dim:rgba(255,77,28,.15);
+    --amber:#F5A623;--green:#3ECF8E;--grey:#3a3a42;
+    --r-lg:18px;--r-md:14px;--r-sm:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--base);color:var(--txt);
+    font-family:'Inter',system-ui,sans-serif;font-size:14px;
+    -webkit-font-smoothing:antialiased;padding:40px 24px 120px;
+  }
+  .mono{font-family:'JetBrains Mono',monospace}
+  .wrap{max-width:920px;margin:0 auto}
+
+  .page-head{margin-bottom:8px}
+  .eyebrow{
+    color:var(--accent-hi);font-weight:700;font-size:12px;
+    text-transform:uppercase;letter-spacing:.14em;
+  }
+  h1{font-family:'Poppins';font-weight:700;font-size:34px;letter-spacing:-.02em;margin:8px 0 6px}
+  .sub{color:var(--txt-2);font-size:14.5px;max-width:60ch;line-height:1.5}
+
+  /* ---- song section ---- */
+  .song{
+    background:var(--card);border:1px solid var(--line-soft);
+    border-radius:var(--r-lg);margin-top:20px;overflow:hidden;
+  }
+  .song-head{
+    display:flex;align-items:center;gap:14px;
+    padding:18px 22px;cursor:pointer;user-select:none;
+    transition:.14s;
+  }
+  .song-head:hover{background:var(--panel-2)}
+  .song-num{
+    font-family:'JetBrains Mono';font-size:13px;color:var(--txt-3);
+    width:24px;flex:none;
+  }
+  .song-title{font-family:'Poppins';font-weight:600;font-size:17px;letter-spacing:-.01em;flex:1}
+  .song-meta{display:flex;align-items:center;gap:10px;color:var(--txt-3);font-size:12.5px}
+  .cnt-pill{
+    background:var(--panel-2);border:1px solid var(--line);
+    padding:3px 10px;border-radius:20px;font-weight:600;font-size:11.5px;
+    display:flex;align-items:center;gap:6px;
+  }
+  .cnt-pill.has{color:var(--accent-hi);border-color:rgba(255,77,28,.3)}
+  .chev{color:var(--txt-3);transition:.2s;flex:none}
+  .chev svg{width:18px;height:18px;display:block}
+  .song.collapsed .chev{transform:rotate(-90deg)}
+  .song.collapsed .song-body{display:none}
+
+  .song-body{padding:2px 16px 16px;border-top:1px solid var(--line-soft)}
+
+  /* ---- dropzone ---- */
+  .dropzone{
+    margin:14px 6px 6px;border:1.5px dashed var(--line);
+    border-radius:var(--r-md);padding:26px;text-align:center;
+    cursor:pointer;transition:.16s;color:var(--txt-3);
+  }
+  .dropzone:hover,.dropzone.drag{border-color:var(--accent);background:rgba(255,77,28,.05);color:var(--txt-2)}
+  .dropzone .dz-ic{
+    width:44px;height:44px;border-radius:12px;margin:0 auto 12px;
+    background:var(--accent-dim);color:var(--accent-hi);
+    display:grid;place-items:center;
+  }
+  .dropzone.drag .dz-ic{background:var(--accent);color:#fff}
+  .dropzone .dz-ic svg{width:22px;height:22px}
+  .dropzone .big{font-weight:600;color:var(--txt-2);font-size:14px}
+  .dropzone.drag .big{color:var(--txt)}
+  .dropzone .sm{font-size:12.5px;margin-top:4px}
+
+  /* ---- track rows ---- */
+  .tracks{display:flex;flex-direction:column;gap:8px;margin:12px 6px 4px}
+  .track{
+    display:flex;align-items:center;gap:16px;
+    background:var(--panel-2);border:1px solid var(--line-soft);
+    border-radius:var(--r-md);padding:12px 16px;transition:.14s;
+  }
+  .track.playing{border-color:rgba(255,77,28,.4);background:#1b1512}
+  .play-btn{
+    width:42px;height:42px;border-radius:50%;flex:none;border:none;
+    background:var(--accent);color:#fff;cursor:pointer;
+    display:grid;place-items:center;transition:.14s;
+  }
+  .play-btn:hover{background:var(--accent-hi)}
+  .play-btn svg{width:19px;height:19px}
+  .play-btn .pause-ic{display:none}
+  .track.playing .play-btn .play-ic{display:none}
+  .track.playing .play-btn .pause-ic{display:block}
+
+  .track-main{flex:1;min-width:0}
+  .track-top{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+  .track-name{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fmt-tag{
+    font-family:'JetBrains Mono';font-size:9.5px;font-weight:600;
+    padding:2px 6px;border-radius:5px;flex:none;text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .fmt-tag.wav{background:rgba(62,207,142,.15);color:var(--green)}
+  .fmt-tag.mp3{background:rgba(245,166,35,.15);color:var(--amber)}
+  .track-note{color:var(--txt-3);font-size:11.5px;margin-left:auto;flex:none}
+
+  /* scrubber / waveform */
+  .scrub{display:flex;align-items:center;gap:12px}
+  .wave{
+    flex:1;height:34px;position:relative;cursor:pointer;
+    display:flex;align-items:center;gap:2px;overflow:hidden;
+  }
+  .wave .bar{flex:1;background:var(--grey);border-radius:2px;transition:background .1s;min-width:2px}
+  .wave .bar.on{background:var(--accent)}
+  .time{font-family:'JetBrains Mono';font-size:11.5px;color:var(--txt-2);flex:none;width:82px;text-align:right}
+  .time .cur{color:var(--txt)}
+
+  .track-actions{display:flex;align-items:center;gap:4px;flex:none}
+  .ico-btn{
+    width:32px;height:32px;border-radius:8px;border:none;background:transparent;
+    color:var(--txt-3);cursor:pointer;display:grid;place-items:center;transition:.13s;
+  }
+  .ico-btn:hover{background:var(--hover);color:var(--txt)}
+  .ico-btn svg{width:16px;height:16px}
+
+  .uploading{display:flex;align-items:center;gap:12px;padding:12px 16px;color:var(--txt-2);font-size:13px}
+  .spin{width:18px;height:18px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .empty-note{color:var(--txt-3);font-size:12.5px;text-align:center;padding:8px 0 2px;font-style:italic}
+
+  ::-webkit-scrollbar{width:12px;height:12px}
+  ::-webkit-scrollbar-thumb{background:#2c2c33;border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+
+  .tip{
+    margin-top:28px;padding:16px 20px;border-radius:var(--r-md);
+    background:var(--accent-dim);border:1px solid rgba(255,77,28,.2);
+    color:var(--txt-2);font-size:13px;line-height:1.5;
+  }
+  .tip b{color:var(--txt)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="page-head">
+    <div class="eyebrow">Novaway · The West Coast Is Not Our Home</div>
+    <h1>Song ideas &amp; demos</h1>
+    <p class="sub">Drop a WAV or MP3 straight under the song it belongs to — a riff, a scratch vocal, a full demo. It uploads in place and plays right here. No more emailing files back and forth and hunting for <span class="mono" style="color:var(--txt-2)">Voice Memo 47.m4a</span>.</p>
+  </div>
+
+  <div id="songs"></div>
+
+  <div class="tip">
+    <b>This is a working mockup.</b> Drag any real MP3 or WAV onto a song (or click to browse) and it'll play with a live scrubber and timestamps. Files stay in your browser for this session only — nothing is uploaded anywhere. Try dropping a couple of actual demo files to feel the workflow.
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="audio/*,.wav,.mp3,.m4a,.aiff" multiple class="hidden" style="display:none">
+
+<script>
+const SONGS = [
+  {n:"01", title:"Ceiling Static", seed:[
+    {name:"ceiling_static_full-demo_v3.mp3", fmt:"mp3", note:"added by Jordan"},
+    {name:"intro-guitar-idea.wav", fmt:"wav", note:"added by Scott"},
+  ]},
+  {n:"02", title:"Wash", seed:[
+    {name:"wash_scratch-vox.mp3", fmt:"mp3", note:"added by Mara"},
+  ]},
+  {n:"03", title:"Slow Dissolve", seed:[]},
+  {n:"04", title:"Paper Sun", seed:[
+    {name:"paper-sun_chorus-bounce.wav", fmt:"wav", note:"added by Scott"},
+    {name:"paper-sun_bridge-try2.mp3", fmt:"mp3", note:"added by Jordan"},
+    {name:"synth-pad-layer.wav", fmt:"wav", note:"added by Scott"},
+  ]},
+  {n:"05", title:"Undertow", seed:[]},
+];
+
+// build fake but stable waveform bar heights per track
+function makeWave(str){
+  const bars=64; let h=[]; let s=0;
+  for(let i=0;i<str.length;i++) s+=str.charCodeAt(i);
+  for(let i=0;i<bars;i++){
+    s=(s*9301+49297)%233280;
+    const v=0.18+ (s/233280)*0.82;
+    // give it an envelope so it looks like audio
+    const env=Math.sin((i/bars)*Math.PI);
+    h.push(Math.max(0.12, v*(0.55+0.45*env)));
+  }
+  return h;
+}
+
+let uidc=0;
+const state={}; // songIndex -> [{id,name,fmt,note,url,dur,waveform}]
+SONGS.forEach((s,i)=>{
+  state[i]=s.seed.map(t=>({id:++uidc,...t,url:null,dur:null,waveform:makeWave(t.name)}));
+});
+
+let currentAudio=null, currentTrackId=null;
+
+const songsEl=document.getElementById('songs');
+function render(){
+  songsEl.innerHTML=SONGS.map((s,i)=>{
+    const tracks=state[i];
+    const collapsed = tracks.length===0 ? '' : '';
+    return `<div class="song ${tracks.length===0?'':''}" data-si="${i}">
+      <div class="song-head" onclick="toggleSong(${i})">
+        <div class="song-num">${s.n}</div>
+        <div class="song-title">${s.title}</div>
+        <div class="song-meta">
+          <span class="cnt-pill ${tracks.length?'has':''}">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+            ${tracks.length} ${tracks.length===1?'idea':'ideas'}
+          </span>
+          <span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m6 9 6 6 6-6"/></svg></span>
+        </div>
+      </div>
+      <div class="song-body">
+        ${tracks.length? `<div class="tracks">${tracks.map(t=>trackRow(t,i)).join('')}</div>`
+          : `<div class="empty-note">No ideas here yet — drop the first one below.</div>`}
+        <div class="dropzone" data-si="${i}" onclick="browse(${i})"
+          ondragover="dzOver(event,this)" ondragleave="dzLeave(this)" ondrop="dzDrop(event,${i},this)">
+          <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+          <div class="big">Drop a WAV or MP3 under “${s.title}”</div>
+          <div class="sm">or click to browse · uploads in place</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function trackRow(t,si){
+  const dur = t.dur!=null ? fmtTime(t.dur) : '—:—';
+  return `<div class="track" data-tid="${t.id}">
+    <button class="play-btn" onclick="togglePlay(${t.id},${si})">
+      <svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+    </button>
+    <div class="track-main">
+      <div class="track-top">
+        <span class="fmt-tag ${t.fmt}">${t.fmt}</span>
+        <span class="track-name">${t.name}</span>
+        <span class="track-note">${t.note||''}</span>
+      </div>
+      <div class="scrub">
+        <div class="wave" onclick="seek(event,${t.id})" data-tid="${t.id}">
+          ${t.waveform.map((h,bi)=>`<div class="bar" data-bi="${bi}" style="height:${Math.round(h*100)}%"></div>`).join('')}
+        </div>
+        <div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div>
+      </div>
+    </div>
+    <div class="track-actions">
+      <button class="ico-btn" title="Add timestamped comment" onclick="alert('Timestamped comments — next feature. This is where “the fill at 1:42 is wrong” lives.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
+      <button class="ico-btn" title="Download" onclick="download(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></button>
+      <button class="ico-btn" title="Remove" onclick="removeTrack(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div>
+  </div>`;
+}
+
+/* ---- song collapse ---- */
+function toggleSong(i){ document.querySelectorAll('.song')[i].classList.toggle('collapsed'); }
+
+/* ---- time helpers ---- */
+function fmtTime(s){ if(s==null||isNaN(s))return'0:00'; const m=Math.floor(s/60),ss=Math.floor(s%60); return m+':'+String(ss).padStart(2,'0'); }
+
+/* ---- upload handling ---- */
+let browseTarget=null;
+const fileInput=document.getElementById('fileInput');
+function browse(si){ browseTarget=si; fileInput.click(); }
+fileInput.addEventListener('change',e=>{ handleFiles([...e.target.files],browseTarget); fileInput.value=''; });
+
+function dzOver(e,el){ e.preventDefault(); el.classList.add('drag'); }
+function dzLeave(el){ el.classList.remove('drag'); }
+function dzDrop(e,si,el){ e.preventDefault(); el.classList.remove('drag'); handleFiles([...e.dataTransfer.files],si); }
+
+function handleFiles(files,si){
+  const audio=files.filter(f=>/audio|\.wav|\.mp3|\.m4a|\.aiff/i.test(f.type+f.name));
+  if(!audio.length){ if(files.length) alert('That doesn’t look like an audio file. Drop a WAV, MP3, M4A or AIFF.'); return; }
+  audio.forEach(f=>{
+    const fmt = /\.wav|wav/i.test(f.name)?'wav': /\.mp3|mpeg/i.test(f.name)?'mp3': /\.m4a|\.aiff/i.test(f.name)?'m4a':'mp3';
+    const url=URL.createObjectURL(f);
+    const t={id:++uidc,name:f.name,fmt,note:'just now',url,dur:null,waveform:makeWave(f.name+f.size)};
+    state[si].push(t);
+    render();
+    // ensure the song is open
+    document.querySelectorAll('.song')[si].classList.remove('collapsed');
+    // read duration
+    const probe=new Audio(); probe.src=url;
+    probe.addEventListener('loadedmetadata',()=>{ t.dur=probe.duration; render(); });
+  });
+}
+
+/* ---- playback ---- */
+function findTrack(id){ for(const k in state){ const t=state[k].find(x=>x.id===id); if(t) return t; } return null; }
+
+function togglePlay(id,si){
+  const t=findTrack(id);
+  if(!t.url){ alert('This is a seeded demo row with no real file behind it. Drop a real WAV or MP3 to hear playback — try it, it works!'); return; }
+  if(currentTrackId===id && currentAudio && !currentAudio.paused){ currentAudio.pause(); setPlayingUI(null); return; }
+  if(currentAudio){ currentAudio.pause(); }
+  currentAudio=new Audio(t.url); currentTrackId=id;
+  currentAudio.play();
+  setPlayingUI(id);
+  currentAudio.addEventListener('timeupdate',()=>updateProgress(id));
+  currentAudio.addEventListener('ended',()=>{ setPlayingUI(null); resetWave(id); });
+}
+function setPlayingUI(id){
+  document.querySelectorAll('.track').forEach(el=>el.classList.toggle('playing',+el.dataset.tid===id));
+}
+function updateProgress(id){
+  if(!currentAudio)return;
+  const t=findTrack(id); const pct=currentAudio.currentTime/(currentAudio.duration||1);
+  const wave=document.querySelector(`.wave[data-tid="${id}"]`);
+  if(wave){ const bars=wave.querySelectorAll('.bar'); const lit=Math.round(pct*bars.length);
+    bars.forEach((b,i)=>b.classList.toggle('on',i<lit)); }
+  const cur=document.querySelector(`[data-cur="${id}"]`);
+  if(cur) cur.textContent=fmtTime(currentAudio.currentTime);
+}
+function resetWave(id){
+  const wave=document.querySelector(`.wave[data-tid="${id}"]`);
+  if(wave) wave.querySelectorAll('.bar').forEach(b=>b.classList.remove('on'));
+  const cur=document.querySelector(`[data-cur="${id}"]`); if(cur)cur.textContent='0:00';
+}
+function seek(e,id){
+  if(currentTrackId!==id||!currentAudio)return;
+  const wave=e.currentTarget; const r=wave.getBoundingClientRect();
+  const pct=(e.clientX-r.left)/r.width;
+  currentAudio.currentTime=pct*(currentAudio.duration||0);
+  updateProgress(id);
+}
+function download(id){
+  const t=findTrack(id);
+  if(!t.url){ alert('No real file behind this demo row.'); return; }
+  const a=document.createElement('a'); a.href=t.url; a.download=t.name; a.click();
+}
+function removeTrack(id,si){
+  if(currentTrackId===id&&currentAudio){currentAudio.pause();currentAudio=null;currentTrackId=null;}
+  state[si]=state[si].filter(t=>t.id!==id); render();
+}
+
+/* global drag guard so dropping outside a zone doesn't navigate away */
+window.addEventListener('dragover',e=>e.preventDefault());
+window.addEventListener('drop',e=>e.preventDefault());
+
+render();
+</script>
+</body>
+</html>

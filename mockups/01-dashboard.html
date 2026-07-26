@@ -1,0 +1,1038 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>albumap.io — Album Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --base:#0a0a0b;
+    --panel:#141417;
+    --panel-2:#17171b;
+    --card:#1c1c21;
+    --card-hi:#222228;
+    --hover:#26262c;
+    --line:#2a2a30;
+    --line-soft:#212127;
+    --txt:#f4f4f5;
+    --txt-2:#a1a1aa;
+    --txt-3:#6b6b73;
+    --accent:#FF4D1C;
+    --accent-hi:#FF6338;
+    --accent-dim:rgba(255,77,28,.15);
+    --amber:#F5A623;
+    --green:#3ECF8E;
+    --grey:#3a3a42;
+    --r-lg:18px;
+    --r-md:14px;
+    --r-sm:10px;
+    --shadow:0 8px 30px rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--base);
+    color:var(--txt);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+    overflow:hidden;
+  }
+  .mono{font-family:'JetBrains Mono',monospace}
+  .display{font-family:'Space Grotesk',sans-serif}
+
+  /* ---------- App shell ---------- */
+  .app{display:grid;grid-template-columns:260px 1fr;height:100vh;padding:8px;gap:8px}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    background:var(--panel);
+    border-radius:var(--r-lg);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    border:1px solid var(--line-soft);
+  }
+  .brand{
+    display:flex;align-items:center;gap:10px;
+    padding:20px 20px 16px;
+  }
+  .brand .logo{
+    width:30px;height:30px;border-radius:9px;
+    background:linear-gradient(135deg,var(--accent),#FF8A4C);
+    display:grid;place-items:center;flex:none;
+    box-shadow:0 4px 14px rgba(255,77,28,.4);
+  }
+  .brand .logo svg{width:17px;height:17px}
+  .brand .name{font-weight:700;font-size:16px;letter-spacing:-.02em}
+  .brand .name span{color:var(--txt-3);font-weight:500}
+
+  .nav{padding:4px 12px}
+  .nav-item{
+    display:flex;align-items:center;gap:12px;
+    padding:9px 12px;border-radius:var(--r-sm);
+    color:var(--txt-2);font-weight:500;cursor:pointer;
+    transition:.15s;
+  }
+  .nav-item svg{width:18px;height:18px;flex:none}
+  .nav-item:hover{background:var(--hover);color:var(--txt)}
+  .nav-item.active{background:var(--accent-dim);color:var(--accent-hi)}
+
+  .lib{
+    margin:12px;margin-top:8px;
+    background:var(--panel-2);
+    border-radius:var(--r-md);
+    flex:1;overflow:hidden;
+    display:flex;flex-direction:column;
+    border:1px solid var(--line-soft);
+  }
+  .lib-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px 10px;
+  }
+  .lib-head .t{
+    display:flex;align-items:center;gap:9px;
+    color:var(--txt-2);font-weight:600;font-size:13px;
+  }
+  .lib-head .t svg{width:17px;height:17px}
+  .lib-list{overflow-y:auto;padding:4px 8px 8px}
+  .lib-row{
+    display:flex;align-items:center;gap:11px;
+    padding:7px 8px;border-radius:var(--r-sm);cursor:pointer;
+    transition:.12s;
+  }
+  .lib-row:hover{background:var(--hover)}
+  .lib-row .thumb{
+    width:42px;height:42px;border-radius:9px;flex:none;
+    background:var(--card-hi);object-fit:cover;
+    display:grid;place-items:center;color:var(--txt-3);
+    overflow:hidden;font-family:'Space Grotesk';font-weight:700;
+  }
+  .lib-row .thumb.round{border-radius:50%}
+  .lib-row .meta{min-width:0}
+  .lib-row .meta .l1{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib-row .meta .l2{color:var(--txt-3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+
+  /* ---------- Main ---------- */
+  .main{
+    background:linear-gradient(180deg,#161619 0%,var(--panel) 22%);
+    border-radius:var(--r-lg);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    border:1px solid var(--line-soft);
+    position:relative;
+  }
+  .topbar{
+    display:flex;align-items:center;gap:14px;
+    padding:14px 24px;
+    position:sticky;top:0;z-index:5;
+    background:rgba(20,20,23,.6);
+    backdrop-filter:blur(18px);
+    border-bottom:1px solid transparent;
+    transition:.2s;
+  }
+  .topbar.scrolled{border-bottom-color:var(--line-soft);background:rgba(15,15,17,.85)}
+  .navbtns{display:flex;gap:8px}
+  .circ{
+    width:32px;height:32px;border-radius:50%;
+    background:rgba(0,0,0,.4);border:none;color:var(--txt-2);
+    display:grid;place-items:center;cursor:pointer;transition:.15s;
+  }
+  .circ:hover:not(:disabled){background:rgba(0,0,0,.7);color:var(--txt)}
+  .circ:disabled{opacity:.35;cursor:default}
+  .circ svg{width:17px;height:17px}
+  .crumbs{display:flex;align-items:center;gap:8px;color:var(--txt-3);font-size:13px;font-weight:500}
+  .crumbs .c{cursor:pointer;transition:.12s}
+  .crumbs .c:hover{color:var(--txt)}
+  .crumbs .c.here{color:var(--txt);cursor:default}
+  .crumbs .sep{opacity:.5}
+
+  .scroll{overflow-y:auto;flex:1;scroll-behavior:smooth}
+  .content{padding:12px 32px 60px}
+
+  .view-title{
+    font-family:'Space Grotesk';font-weight:700;
+    letter-spacing:-.03em;line-height:1;
+  }
+
+  /* ---------- Grid galleries (artists / albums) ---------- */
+  .gallery{
+    display:grid;gap:18px;margin-top:24px;
+    grid-template-columns:repeat(auto-fill,minmax(180px,1fr));
+  }
+  .g-card{
+    background:var(--card);border-radius:var(--r-md);
+    padding:16px;cursor:pointer;transition:.18s;
+    border:1px solid transparent;
+  }
+  .g-card:hover{background:var(--card-hi);border-color:var(--line);transform:translateY(-2px)}
+  .g-card .art{
+    width:100%;aspect-ratio:1;border-radius:var(--r-sm);
+    background:var(--card-hi);margin-bottom:14px;
+    object-fit:cover;overflow:hidden;position:relative;
+    display:grid;place-items:center;
+    box-shadow:0 8px 20px rgba(0,0,0,.35);
+  }
+  .g-card .art.round{border-radius:50%;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+  .g-card .art img{width:100%;height:100%;object-fit:cover}
+  .g-card .art .ph{font-family:'Space Grotesk';font-weight:700;font-size:32px;color:var(--txt-3)}
+  .g-card .gt{font-weight:600;font-size:15px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .g-card .gs{color:var(--txt-3);font-size:13px;margin-top:4px;display:flex;align-items:center;gap:6px}
+  .status-dot{width:7px;height:7px;border-radius:50%;flex:none}
+  .g-card .playfab{
+    position:absolute;bottom:10px;right:10px;
+    width:44px;height:44px;border-radius:50%;
+    background:var(--accent);display:grid;place-items:center;
+    box-shadow:0 8px 18px rgba(255,77,28,.5);
+    opacity:0;transform:translateY(8px);transition:.2s;
+  }
+  .g-card:hover .playfab{opacity:1;transform:translateY(0)}
+  .g-card .playfab svg{width:20px;height:20px;color:#fff;margin-left:2px}
+
+  /* ---------- Album dashboard header ---------- */
+  .dash-hero{
+    display:flex;align-items:flex-end;gap:26px;
+    padding:36px 0 26px;
+  }
+  .profile-up{
+    width:150px;height:150px;border-radius:50%;flex:none;
+    background:var(--card-hi);border:1px solid var(--line);
+    display:grid;place-items:center;cursor:pointer;overflow:hidden;
+    position:relative;transition:.18s;
+    box-shadow:var(--shadow);
+  }
+  .profile-up:hover{border-color:var(--accent)}
+  .profile-up img{width:100%;height:100%;object-fit:cover}
+  .profile-up .up-hint{
+    position:absolute;inset:0;background:rgba(0,0,0,.55);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    color:var(--txt);opacity:0;transition:.18s;font-size:12px;font-weight:600;
+  }
+  .profile-up:hover .up-hint{opacity:1}
+  .profile-up .up-hint svg{width:22px;height:22px}
+  .profile-empty{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--txt-3);font-size:11px;font-weight:600;text-align:center;padding:0 12px}
+  .profile-empty svg{width:26px;height:26px}
+
+  .hero-meta{padding-bottom:6px;min-width:0}
+  .hero-eyebrow{
+    color:var(--txt-2);font-weight:600;font-size:12px;
+    text-transform:uppercase;letter-spacing:.14em;
+    display:flex;align-items:center;gap:8px;
+  }
+  .hero-eyebrow .verified{color:var(--accent-hi)}
+  .hero-eyebrow .verified svg{width:15px;height:15px;vertical-align:-3px}
+  .band-name{
+    font-family:'Poppins',sans-serif;font-weight:700;
+    font-size:clamp(28px,3vw,44px);letter-spacing:-.02em;
+    line-height:1.05;margin:8px 0 14px;max-width:18ch;
+  }
+  .hero-sub{display:flex;align-items:center;gap:8px;color:var(--txt-2);font-size:13.5px;flex-wrap:wrap}
+  .hero-sub b{color:var(--txt);font-weight:600}
+  .hero-sub .pill{
+    background:var(--card);border:1px solid var(--line);
+    padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;
+    display:flex;align-items:center;gap:6px;
+  }
+  .dot-sep{width:3px;height:3px;border-radius:50%;background:var(--txt-3)}
+
+  .hero-actions{display:flex;align-items:center;gap:16px;padding:20px 0 8px}
+  .play-lg{
+    width:56px;height:56px;border-radius:50%;border:none;
+    background:var(--accent);display:grid;place-items:center;cursor:pointer;
+    transition:.15s;
+  }
+  .play-lg:hover{transform:scale(1.05);background:var(--accent-hi)}
+  .play-lg svg{width:24px;height:24px;color:#fff;margin-left:3px}
+  .ghost-btn{
+    background:transparent;border:1px solid var(--line);color:var(--txt-2);
+    padding:9px 18px;border-radius:22px;font-weight:600;font-size:13px;cursor:pointer;
+    transition:.15s;font-family:inherit;
+  }
+  .ghost-btn:hover{border-color:var(--txt-2);color:var(--txt)}
+
+  .member-stack{display:flex;align-items:center;padding-left:4px}
+  .avatar{
+    width:38px;height:38px;border-radius:50%;
+    display:grid;place-items:center;
+    font-size:12px;font-weight:700;font-family:'Inter';
+    margin-left:-10px;border:2.5px solid var(--panel);
+    cursor:pointer;transition:.15s;letter-spacing:.02em;
+  }
+  .member-stack .avatar:first-child{margin-left:0}
+  .avatar:hover{transform:translateY(-3px);z-index:2}
+  .avatar.in{color:#fff}
+  .avatar.pending{
+    background:transparent;color:var(--txt-3);
+    border:2px dashed var(--txt-3);
+    position:relative;
+  }
+  .member-caption{
+    display:flex;align-items:center;gap:6px;
+    color:var(--txt-2);font-size:12.5px;font-weight:500;
+    padding:2px 0 6px;
+  }
+  .mc-dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .mc-dot.in{background:var(--green)}
+  .mc-dot.pending{background:transparent;border:1.5px dashed var(--txt-3)}
+
+  /* overall progress ring group */
+  .overall{margin-left:auto;display:flex;align-items:center;gap:22px;padding-bottom:4px}
+  .ov-stat{text-align:right}
+  .ov-stat .n{font-family:'Space Grotesk';font-weight:700;font-size:22px;letter-spacing:-.02em}
+  .ov-stat .l{color:var(--txt-3);font-size:11px;text-transform:uppercase;letter-spacing:.1em;font-weight:600;margin-top:2px}
+  .ring{position:relative;width:74px;height:74px;flex:none}
+  .ring svg{transform:rotate(-90deg)}
+  .ring .pct{
+    position:absolute;inset:0;display:grid;place-items:center;
+    font-family:'Space Grotesk';font-weight:700;font-size:17px;
+  }
+
+  /* ---------- Dashboard section grid ---------- */
+  .dash-grid{
+    display:grid;gap:18px;margin-top:14px;
+    grid-template-columns:1.5fr 1fr;
+    grid-auto-rows:min-content;
+  }
+  .section{
+    background:var(--card);border-radius:var(--r-lg);
+    border:1px solid var(--line-soft);
+    overflow:hidden;display:flex;flex-direction:column;
+  }
+  .sec-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px 14px;
+  }
+  .sec-head .lt{display:flex;align-items:center;gap:11px}
+  .sec-head .ic{
+    width:30px;height:30px;border-radius:9px;flex:none;
+    background:var(--accent-dim);display:grid;place-items:center;color:var(--accent-hi);
+  }
+  .sec-head .ic svg{width:17px;height:17px}
+  .sec-head h3{font-family:'Space Grotesk';font-weight:600;font-size:16px;letter-spacing:-.01em}
+  .sec-head .cnt{color:var(--txt-3);font-size:12.5px;font-weight:500;margin-top:1px}
+  .expand{
+    display:flex;align-items:center;gap:6px;
+    background:transparent;border:none;color:var(--txt-3);
+    font-family:inherit;font-weight:600;font-size:12.5px;cursor:pointer;
+    padding:6px 10px;border-radius:8px;transition:.14s;
+  }
+  .expand:hover{background:var(--hover);color:var(--txt)}
+  .expand svg{width:14px;height:14px}
+
+  /* songs list */
+  .song-row{
+    display:grid;grid-template-columns:24px 1fr auto;
+    align-items:center;gap:14px;
+    padding:9px 20px;cursor:pointer;transition:.12s;
+  }
+  .song-row:hover{background:var(--hover)}
+  .song-row .idx{color:var(--txt-3);font-size:13px;text-align:center}
+  .song-row .sname{min-width:0}
+  .song-row .sname .st{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .song-row .sname .parts{color:var(--txt-3);font-size:11.5px;margin-top:3px}
+  .song-prog{display:flex;align-items:center;gap:10px}
+  .pbar{width:120px;height:6px;border-radius:4px;background:var(--grey);overflow:hidden}
+  .pbar .fill{height:100%;border-radius:4px}
+  .pct-sm{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-2);width:36px;text-align:right}
+  .sec-foot{padding:8px 20px 16px}
+
+  /* schedule */
+  .sched-row{
+    display:flex;align-items:center;gap:14px;
+    padding:11px 20px;transition:.12s;cursor:pointer;
+  }
+  .sched-row:hover{background:var(--hover)}
+  .date-chip{
+    width:50px;flex:none;text-align:center;border-radius:9px;
+    background:var(--panel-2);border:1px solid var(--line);padding:7px 0;
+  }
+  .date-chip .mo{font-size:10px;color:var(--accent-hi);font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+  .date-chip .dy{font-family:'Space Grotesk';font-weight:700;font-size:19px;line-height:1;margin-top:1px}
+  .sched-row .info{flex:1;min-width:0}
+  .sched-row .info .tt{font-weight:600;font-size:13.5px}
+  .sched-row .info .meta{color:var(--txt-3);font-size:11.5px;margin-top:2px;display:flex;align-items:center;gap:6px}
+  .tag{padding:2px 8px;border-radius:6px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+  .tag.due{background:rgba(245,166,35,.14);color:var(--amber)}
+  .tag.done{background:rgba(62,207,142,.14);color:var(--green)}
+  .tag.up{background:var(--accent-dim);color:var(--accent-hi)}
+
+  /* artwork + merch upload areas */
+  .art-slot{
+    margin:0 20px 20px;border-radius:var(--r-md);overflow:hidden;
+    aspect-ratio:1;background:var(--panel-2);
+    border:1.5px dashed var(--line);cursor:pointer;
+    display:grid;place-items:center;position:relative;transition:.16s;
+  }
+  .art-slot:hover{border-color:var(--accent);background:#191920}
+  .art-slot img{width:100%;height:100%;object-fit:cover}
+  .art-slot .drop{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--txt-3);text-align:center;padding:20px}
+  .art-slot .drop svg{width:34px;height:34px}
+  .art-slot .drop .big{font-weight:600;color:var(--txt-2);font-size:14px}
+  .art-slot .drop .sm{font-size:12px}
+  .art-slot .replace{
+    position:absolute;inset:0;background:rgba(0,0,0,.55);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+    color:#fff;opacity:0;transition:.16s;font-weight:600;font-size:13px;
+  }
+  .art-slot:hover .replace{opacity:1}
+  .art-slot .replace svg{width:24px;height:24px}
+
+  .merch-grid{
+    display:grid;grid-template-columns:1fr 1fr;gap:12px;
+    padding:0 20px 20px;
+  }
+  .merch-slot{
+    border-radius:var(--r-md);overflow:hidden;aspect-ratio:1;
+    background:var(--panel-2);border:1.5px dashed var(--line);
+    cursor:pointer;display:grid;place-items:center;position:relative;transition:.16s;
+  }
+  .merch-slot:hover{border-color:var(--accent);background:#191920}
+  .merch-slot img{width:100%;height:100%;object-fit:cover}
+  .merch-slot .m-drop{display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--txt-3);text-align:center;padding:12px}
+  .merch-slot .m-drop svg{width:24px;height:24px}
+  .merch-slot .m-drop .lbl{font-size:11.5px;font-weight:600;color:var(--txt-2)}
+  .merch-slot .m-label{
+    position:absolute;left:0;right:0;bottom:0;
+    padding:18px 12px 9px;font-size:12px;font-weight:600;
+    background:linear-gradient(transparent,rgba(0,0,0,.8));
+    opacity:0;transition:.16s;
+  }
+  .merch-slot.filled:hover .m-label{opacity:1}
+  .merch-slot .replace{
+    position:absolute;inset:0;background:rgba(0,0,0,.5);
+    display:grid;place-items:center;color:#fff;opacity:0;transition:.16s;
+  }
+  .merch-slot.filled:hover .replace{opacity:1}
+  .merch-slot .replace svg{width:22px;height:22px}
+  .merch-slot.is-cover{border-style:solid;border-color:var(--accent);background:#20140f}
+  .merch-slot.is-cover:hover{background:#261812}
+  .cover-badge{
+    position:absolute;top:8px;left:8px;z-index:3;
+    background:var(--accent);color:#fff;
+    font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+    padding:3px 8px;border-radius:6px;
+    box-shadow:0 2px 8px rgba(255,77,28,.5);
+  }
+
+  /* ---------- Expanded section overlay view ---------- */
+  .expanded{
+    position:absolute;inset:0;z-index:20;
+    background:linear-gradient(180deg,#161619,var(--panel) 20%);
+    display:none;flex-direction:column;
+  }
+  .expanded.show{display:flex;animation:slideUp .28s cubic-bezier(.2,.7,.2,1)}
+  @keyframes slideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+  .exp-top{
+    display:flex;align-items:center;gap:16px;
+    padding:16px 28px;border-bottom:1px solid var(--line-soft);
+  }
+  .exp-top h2{font-family:'Space Grotesk';font-weight:700;font-size:22px;letter-spacing:-.02em}
+  .exp-top .sub{color:var(--txt-3);font-size:13px;margin-top:2px}
+  .exp-body{overflow-y:auto;flex:1;padding:26px 28px 50px}
+
+  /* full recording grid */
+  .grid-wrap{overflow-x:auto;border-radius:var(--r-md);border:1px solid var(--line-soft);background:var(--card)}
+  table.rec-grid{border-collapse:collapse;width:100%;min-width:640px}
+  .rec-grid th,.rec-grid td{border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft)}
+  .rec-grid thead th{
+    position:sticky;top:0;background:var(--panel-2);z-index:2;
+    padding:14px 10px;font-size:11px;font-weight:700;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--txt-2);
+  }
+  .rec-grid thead th.songcol{text-align:left;padding-left:20px;min-width:190px}
+  .rec-grid tbody td.songcol{
+    text-align:left;padding:0 20px;font-weight:600;font-size:13.5px;
+    background:var(--panel-2);position:sticky;left:0;
+  }
+  .rec-grid tbody td{height:52px;text-align:center;padding:0}
+  .cell{
+    width:100%;height:100%;display:grid;place-items:center;cursor:pointer;
+    transition:.12s;position:relative;
+  }
+  .cell:hover{filter:brightness(1.35)}
+  .cell .mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center}
+  .cell .mark svg{width:15px;height:15px}
+  .cell-empty .mark{background:transparent;border:1.5px dashed #38383f}
+  .cell-scratch .mark{background:rgba(245,166,35,.16);color:var(--amber)}
+  .cell-tracked .mark{background:rgba(255,77,28,.18);color:var(--accent-hi)}
+  .cell-comped .mark{background:rgba(62,207,142,.16);color:var(--green)}
+  .cell-done .mark{background:var(--green);color:#062;}
+  .cell-done .mark svg{color:#04371f}
+
+  .legend{display:flex;gap:20px;flex-wrap:wrap;margin:20px 2px 0;font-size:12px;color:var(--txt-2)}
+  .legend .li{display:flex;align-items:center;gap:8px}
+  .legend .sw{width:16px;height:16px;border-radius:6px}
+
+  /* expanded schedule (timeline) */
+  .timeline{position:relative;padding-left:8px}
+  .tl-row{display:flex;gap:20px;padding:2px 0}
+  .tl-mark{display:flex;flex-direction:column;align-items:center;flex:none;width:20px}
+  .tl-dot{width:14px;height:14px;border-radius:50%;border:3px solid var(--base);margin-top:20px}
+  .tl-line{width:2px;flex:1;background:var(--line)}
+  .tl-card{
+    flex:1;background:var(--card);border:1px solid var(--line-soft);
+    border-radius:var(--r-md);padding:16px 18px;margin-bottom:14px;
+    display:flex;align-items:center;gap:16px;
+  }
+  .tl-card .d{text-align:center;flex:none;width:56px}
+  .tl-card .d .mo{color:var(--accent-hi);font-weight:700;font-size:11px;text-transform:uppercase}
+  .tl-card .d .dy{font-family:'Space Grotesk';font-weight:700;font-size:24px;line-height:1}
+  .tl-card .d .yr{color:var(--txt-3);font-size:11px;font-family:'JetBrains Mono'}
+  .tl-card .body{flex:1}
+  .tl-card .body .tt{font-weight:600;font-size:15px}
+  .tl-card .body .ds{color:var(--txt-3);font-size:12.5px;margin-top:3px}
+
+  /* expanded artwork / merch galleries */
+  .exp-gallery{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+  .exp-tile{border-radius:var(--r-md);overflow:hidden;background:var(--panel-2);border:1.5px dashed var(--line);aspect-ratio:1;cursor:pointer;display:grid;place-items:center;position:relative;transition:.16s}
+  .exp-tile:hover{border-color:var(--accent);background:#191920}
+  .exp-tile img{width:100%;height:100%;object-fit:cover}
+  .exp-tile .m-drop{display:flex;flex-direction:column;align-items:center;gap:9px;color:var(--txt-3);text-align:center;padding:16px}
+  .exp-tile .m-drop svg{width:30px;height:30px}
+  .exp-tile .m-drop .lbl{font-weight:600;color:var(--txt-2);font-size:13px}
+  .exp-tile .m-drop .sm{font-size:11.5px}
+  .exp-tile .cap{position:absolute;left:0;right:0;bottom:0;padding:22px 14px 11px;font-weight:600;font-size:13px;background:linear-gradient(transparent,rgba(0,0,0,.82))}
+  .exp-tile.is-cover{border-style:solid;border-color:var(--accent);background:#20140f}
+  .exp-tile.is-cover:hover{background:#261812}
+
+  ::-webkit-scrollbar{width:12px;height:12px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#2c2c33;border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+  ::-webkit-scrollbar-thumb:hover{background:#3a3a42;background-clip:padding-box}
+
+  .hidden{display:none!important}
+
+  @media(max-width:900px){
+    .app{grid-template-columns:1fr}
+    .sidebar{display:none}
+    .dash-grid{grid-template-columns:1fr}
+    .overall{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="logo">
+        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="#fff"/></svg>
+      </div>
+      <div class="name">albumap<span>.io</span></div>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-item" onclick="goHome()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        Home
+      </div>
+      <div class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>
+        Roster
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>
+        Schedule
+      </div>
+    </nav>
+
+    <div class="lib">
+      <div class="lib-head">
+        <div class="t">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+          Your library
+        </div>
+      </div>
+      <div class="lib-list" id="libList"></div>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN ================= -->
+  <main class="main">
+    <div class="topbar" id="topbar">
+      <div class="navbtns">
+        <button class="circ" id="backBtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+        <button class="circ" id="fwdBtn" onclick="fwd()" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+      <div class="crumbs" id="crumbs"></div>
+    </div>
+
+    <div class="scroll" id="scroll">
+      <div class="content" id="content"></div>
+    </div>
+
+    <!-- expanded section overlay -->
+    <div class="expanded" id="expanded">
+      <div class="exp-top">
+        <button class="circ" onclick="closeExpanded()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
+        <div>
+          <h2 id="expTitle"></h2>
+          <div class="sub" id="expSub"></div>
+        </div>
+      </div>
+      <div class="exp-body" id="expBody"></div>
+    </div>
+  </main>
+</div>
+
+<input type="file" id="fileInput" accept="image/*" class="hidden">
+
+<script>
+/* ============ FAKE DATA ============ */
+const INSTRUMENTS = ["Drums","Bass","Guitar","Synth","Lead Vox","BGV"];
+// cell states: 0 empty, 1 scratch, 2 tracked, 3 comped, 4 done
+const STATE_NAMES = ["Not started","Scratch","Tracked","Comped","Done"];
+
+function songProg(cells){
+  const total = cells.length*4;
+  const got = cells.reduce((a,c)=>a+c,0);
+  return Math.round(got/total*100);
+}
+
+const artists = [
+  {
+    id:"static-bloom", name:"Novaway", type:"Band", photo:null,
+    listeners:"3 members · 2 releases",
+    albums:[
+      {
+        id:"halcyon", title:"The West Coast Is Not Our Home", year:"2026", status:"in-progress", cover:null,
+        members:[
+          {initials:"SC", name:"Scott", color:"#FF4D1C", status:"in"},
+          {initials:"JT", name:"Jordan", color:"#2E8B8B", status:"in"},
+          {initials:"MR", name:"Mara", color:"#B4644A", status:"in"},
+          {initials:"DK", name:"Devon", status:"pending"},
+          {initials:"AL", name:"Alex", status:"pending"},
+        ],
+        songs:[
+          {t:"Ceiling Static", cells:[4,4,4,3,2,1]},
+          {t:"Wash", cells:[4,4,3,2,1,0]},
+          {t:"Slow Dissolve", cells:[4,3,3,2,0,0]},
+          {t:"Paper Sun", cells:[4,4,4,4,3,2]},
+          {t:"Undertow", cells:[3,2,1,1,0,0]},
+          {t:"Halcyon", cells:[4,4,3,3,2,1]},
+          {t:"Glow / Fade", cells:[2,1,1,0,0,0]},
+          {t:"Cassette Bloom", cells:[1,0,0,0,0,0]},
+        ],
+        schedule:[
+          {mo:"AUG",dy:"14",yr:"2026",t:"Rhythm tracking — Jordan's",d:"Drums + scratch guitars, all 8 songs",tag:"done"},
+          {mo:"SEP",dy:"02",yr:"2026",t:"Vocal comping deadline",d:"Lead vox on tracks 1–6 comped & tuned",tag:"due"},
+          {mo:"SEP",dy:"20",yr:"2026",t:"Masters to Heba (mastering)",d:"Final mixes bounced, WAV 24/48",tag:"up"},
+          {mo:"OCT",dy:"01",yr:"2026",t:"Artwork final to distributor",d:"3000×3000 cover + back, credits locked",tag:"up"},
+          {mo:"OCT",dy:"08",yr:"2026",t:"Merch proofs due",d:"Tour tee + vinyl jacket approval",tag:"up"},
+          {mo:"NOV",dy:"07",yr:"2026",t:"Pre-save goes live",d:"Single 'Paper Sun' + campaign",tag:"up"},
+          {mo:"DEC",dy:"05",yr:"2026",t:"Release day",d:"Halcyon — all DSPs + vinyl ship",tag:"up"},
+        ],
+        artwork:[
+          {label:"Front cover",img:null},
+          {label:"Inside / gatefold",img:null},
+          {label:"Back cover",img:null},
+          {label:"Vinyl label",img:null},
+          {label:"Insert / lyric sheet",img:null},
+        ],
+        merch:[
+          {label:"Tour tee — front",img:null},
+          {label:"Tour tee — back",img:null},
+          {label:"Vinyl jacket",img:null},
+          {label:"Longsleeve",img:null},
+          {label:"Poster (18×24)",img:null},
+          {label:"Sticker pack",img:null},
+        ],
+      },
+      {
+        id:"nightswim", title:"Nightswim", year:"2023", status:"released", cover:null,
+        songs:[{t:"—",cells:[4,4,4,4,4,4]}], schedule:[], artwork:[], merch:[]
+      },
+    ]
+  },
+  {
+    id:"paper-lanterns", name:"Paper Lanterns", type:"Band", photo:null,
+    listeners:"4 members · 1 release",
+    albums:[{id:"embers",title:"Embers EP",year:"2026",status:"in-progress",cover:null,songs:[{t:"—",cells:[2,1,0,0,0,0]}],schedule:[],artwork:[],merch:[]}]
+  },
+  {
+    id:"low-tide", name:"Low Tide", type:"Solo", photo:null,
+    listeners:"1 member · 3 releases",
+    albums:[{id:"driftwood",title:"Driftwood",year:"2025",status:"released",cover:null,songs:[{t:"—",cells:[4,4,4,4,4,4]}],schedule:[],artwork:[],merch:[]}]
+  },
+];
+
+/* ============ STATE / ROUTER ============ */
+let route = {view:"artists", artist:null, album:null};
+let history = [{...route}];
+let histIdx = 0;
+
+function nav(newRoute, push=true){
+  route = newRoute;
+  if(push){ history = history.slice(0,histIdx+1); history.push({...route}); histIdx = history.length-1; }
+  render();
+}
+function back(){ if(histIdx>0){ histIdx--; route={...history[histIdx]}; render(); } }
+function fwd(){ if(histIdx<history.length-1){ histIdx++; route={...history[histIdx]}; render(); } }
+function goHome(){ nav({view:"artists"}); }
+
+function getArtist(id){ return artists.find(a=>a.id===id); }
+function getAlbum(art,id){ return art.albums.find(al=>al.id===id); }
+
+/* ============ RENDER ============ */
+const content = document.getElementById('content');
+const crumbs = document.getElementById('crumbs');
+
+function statusColor(s){ return s==="in-progress"?"var(--amber)":s==="released"?"var(--green)":"var(--txt-3)"; }
+function statusLabel(s){ return s==="in-progress"?"In progress":s==="released"?"Released":"Draft"; }
+
+function render(){
+  document.getElementById('backBtn').disabled = histIdx<=0;
+  document.getElementById('fwdBtn').disabled = histIdx>=history.length-1;
+  renderLibrary();
+  renderCrumbs();
+  closeExpanded();
+  if(route.view==="artists") renderArtists();
+  else if(route.view==="albums") renderAlbums();
+  else if(route.view==="dashboard") renderDashboard();
+  document.getElementById('scroll').scrollTop=0;
+}
+
+function renderCrumbs(){
+  let h = `<span class="c ${route.view==='artists'?'here':''}" onclick="goHome()">Roster</span>`;
+  if(route.artist){
+    const a=getArtist(route.artist);
+    h+=`<span class="sep">/</span><span class="c ${route.view==='albums'?'here':''}" onclick="nav({view:'albums',artist:'${a.id}'})">${a.name}</span>`;
+  }
+  if(route.album){
+    const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+    h+=`<span class="sep">/</span><span class="c here">${al.title}</span>`;
+  }
+  crumbs.innerHTML=h;
+}
+
+function renderLibrary(){
+  const list=document.getElementById('libList');
+  list.innerHTML = artists.map(a=>{
+    const initials=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+    const img = a.photo? `<img src="${a.photo}">` : initials;
+    return `<div class="lib-row" onclick="nav({view:'albums',artist:'${a.id}'})">
+      <div class="thumb round">${img}</div>
+      <div class="meta"><div class="l1">${a.name}</div><div class="l2">${a.type} · ${a.albums.length} album${a.albums.length>1?'s':''}</div></div>
+    </div>`;
+  }).join('');
+}
+
+/* ---- ARTISTS VIEW ---- */
+function renderArtists(){
+  content.innerHTML = `
+    <div style="padding-top:22px">
+      <div class="hero-eyebrow" style="margin-bottom:8px">Studio roster</div>
+      <div class="view-title" style="font-size:34px">Artists</div>
+    </div>
+    <div class="gallery">
+      ${artists.map(a=>{
+        const initials=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+        const art = a.photo? `<img src="${a.photo}">` : `<div class="ph">${initials}</div>`;
+        return `<div class="g-card" onclick="nav({view:'albums',artist:'${a.id}'})">
+          <div class="art round">${art}
+            <div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+          </div>
+          <div class="gt">${a.name}</div>
+          <div class="gs">${a.type} · ${a.listeners.split('·')[1]||''}</div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+/* ---- ALBUMS VIEW ---- */
+function renderAlbums(){
+  const a=getArtist(route.artist);
+  const initials=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
+  content.innerHTML = `
+    <div style="padding-top:22px;display:flex;align-items:center;gap:18px">
+      <div class="profile-up" style="width:96px;height:96px" onclick="uploadTo('artist','${a.id}')">
+        ${a.photo?`<img src="${a.photo}">`:`<div class="profile-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="9" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></div>`}
+        <div class="up-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>
+      </div>
+      <div>
+        <div class="hero-eyebrow">${a.type}</div>
+        <div class="view-title" style="font-size:40px;margin-top:6px">${a.name}</div>
+      </div>
+    </div>
+    <div style="margin-top:34px" class="hero-eyebrow">Albums &amp; releases</div>
+    <div class="gallery">
+      ${a.albums.map(al=>{
+        const art = al.cover? `<img src="${al.cover}">` : `<div class="ph">${al.title[0]}</div>`;
+        return `<div class="g-card" onclick="nav({view:'dashboard',artist:'${a.id}',album:'${al.id}'})">
+          <div class="art">${art}
+            <div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div>
+          </div>
+          <div class="gt">${al.title}</div>
+          <div class="gs"><span class="status-dot" style="background:${statusColor(al.status)}"></span>${al.year} · ${statusLabel(al.status)}</div>
+        </div>`;
+      }).join('')}
+      <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="alert('New album — demo only')">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg>
+        <div style="margin-top:12px;font-weight:600">New album</div>
+      </div>
+    </div>`;
+}
+
+/* ---- DASHBOARD VIEW ---- */
+function renderDashboard(){
+  const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+  const overall = Math.round(al.songs.reduce((s,so)=>s+songProg(so.cells),0)/al.songs.length);
+  const doneParts = al.songs.reduce((s,so)=>s+so.cells.filter(c=>c===4).length,0);
+  const totalParts = al.songs.length*INSTRUMENTS.length;
+  const nextDate = al.schedule.find(s=>s.tag!=="done");
+  const circ=2*Math.PI*32;
+
+  content.innerHTML = `
+    <div class="dash-hero">
+      <div class="profile-up" onclick="uploadTo('artist','${a.id}')">
+        ${a.photo?`<img src="${a.photo}">`:`<div class="profile-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="9" r="4"/><path d="M3 21a9 9 0 0 1 18 0"/></svg>Add band photo<br>or logo</div>`}
+        <div class="up-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Upload</div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-eyebrow">
+          <span class="verified"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5z"/></svg></span>
+          Album in production
+        </div>
+        <div class="band-name">${al.title}</div>
+        <div class="hero-sub">
+          <b>${a.name}</b><span class="dot-sep"></span>
+          <span>${al.songs.length} songs</span><span class="dot-sep"></span>
+          <span>${al.year}</span><span class="dot-sep"></span>
+          <span class="pill"><span class="status-dot" style="background:var(--amber)"></span>${statusLabel(al.status)}</span>
+        </div>
+        <div class="hero-actions">
+          <button class="play-lg"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+          <div class="member-stack">
+            ${(al.members||[]).map(m=>{
+              if(m.status==="in") return `<div class="avatar in" style="background:${m.color}" title="${m.name} · in the studio">${m.initials}</div>`;
+              return `<div class="avatar pending" title="${m.name} · invite pending">${m.initials}</div>`;
+            }).join('')}
+          </div>
+          <button class="ghost-btn">＋ Invite bandmate</button>
+          <button class="ghost-btn">Share progress</button>
+        </div>
+        <div class="member-caption">
+          <span class="mc-dot in"></span>${(al.members||[]).filter(m=>m.status==='in').length} in the studio
+          <span style="margin:0 8px;color:var(--txt-3)">·</span>
+          <span class="mc-dot pending"></span>${(al.members||[]).filter(m=>m.status==='pending').length} need inviting
+        </div>
+      </div>
+      <div class="overall">
+        <div class="ov-stat">
+          <div class="n mono">${doneParts}/${totalParts}</div>
+          <div class="l">Parts done</div>
+        </div>
+        <div class="ring">
+          <svg width="74" height="74"><circle cx="37" cy="37" r="32" stroke="var(--grey)" stroke-width="6" fill="none"/>
+          <circle cx="37" cy="37" r="32" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round"
+            stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-overall/100)}"/></svg>
+          <div class="pct">${overall}%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dash-grid">
+      <!-- SONGS -->
+      <div class="section">
+        <div class="sec-head">
+          <div class="lt">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+            <div><h3>Recording progress</h3><div class="cnt">${al.songs.length} songs · ${INSTRUMENTS.length} parts each</div></div>
+          </div>
+          <button class="expand" onclick="expandSongs()">Open grid <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button>
+        </div>
+        ${al.songs.slice(0,5).map((s,i)=>{
+          const p=songProg(s.cells); const done=s.cells.filter(c=>c===4).length;
+          const col = p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)';
+          return `<div class="song-row" onclick="expandSongs()">
+            <div class="idx mono">${String(i+1).padStart(2,'0')}</div>
+            <div class="sname"><div class="st">${s.t}</div><div class="parts">${done}/${INSTRUMENTS.length} parts tracked</div></div>
+            <div class="song-prog"><div class="pbar"><div class="fill" style="width:${p}%;background:${col}"></div></div><div class="pct-sm">${p}%</div></div>
+          </div>`;
+        }).join('')}
+        <div class="sec-foot"><button class="expand" style="padding-left:0" onclick="expandSongs()">See all ${al.songs.length} songs &amp; full checkerboard →</button></div>
+      </div>
+
+      <!-- SCHEDULE -->
+      <div class="section">
+        <div class="sec-head">
+          <div class="lt">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></div>
+            <div><h3>Schedule</h3><div class="cnt">${nextDate?('Next: '+nextDate.mo+' '+nextDate.dy):'No dates'}</div></div>
+          </div>
+          <button class="expand" onclick="expandSchedule()">Full timeline <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button>
+        </div>
+        ${al.schedule.slice(0,4).map(s=>`
+          <div class="sched-row" onclick="expandSchedule()">
+            <div class="date-chip"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div></div>
+            <div class="info"><div class="tt">${s.t}</div><div class="meta"><span class="tag ${s.tag}">${s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'}</span>${s.d}</div></div>
+          </div>`).join('')}
+        <div class="sec-foot"></div>
+      </div>
+
+      <!-- ARTWORK (full row, 5 boxes) -->
+      <div class="section" style="grid-column:1 / -1">
+        <div class="sec-head">
+          <div class="lt">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
+            <div><h3>Album artwork</h3><div class="cnt">${al.artwork.filter(x=>x.img).length}/${al.artwork.length} uploaded · print-ready</div></div>
+          </div>
+          <button class="expand" onclick="expandArtwork()">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button>
+        </div>
+        <div class="merch-grid" style="grid-template-columns:repeat(5,1fr)">
+          ${al.artwork.slice(0,5).map((m,i)=>`
+            <div class="merch-slot ${m.img?'filled':''} ${i===0?'is-cover':''}" onclick="uploadTo('artwork',${i})">
+              ${i===0?`<div class="cover-badge">Cover</div>`:''}
+              ${m.img?`<img src="${m.img}"><div class="m-label">${m.label}</div><div class="replace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`
+              :`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div>${i===0?'<div class="sm" style="font-size:10.5px;color:var(--txt-3);margin-top:1px">Front cover</div>':'<div class="sm" style="font-size:10.5px;color:var(--txt-3);margin-top:1px">Physical media</div>'}</div>`}
+            </div>`).join('')}
+        </div>
+      </div>
+
+      <!-- MERCH -->
+      <div class="section" style="grid-column:1 / -1">
+        <div class="sec-head">
+          <div class="lt">
+            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div>
+            <div><h3>Merch</h3><div class="cnt">${al.merch.filter(x=>x.img).length}/${al.merch.length} mockups uploaded</div></div>
+          </div>
+          <button class="expand" onclick="expandMerch()">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button>
+        </div>
+        <div class="merch-grid" style="grid-template-columns:repeat(5,1fr)">
+          ${al.merch.slice(0,5).map((m,i)=>`
+            <div class="merch-slot ${m.img?'filled':''}" onclick="uploadTo('merch',${i})">
+              ${m.img?`<img src="${m.img}"><div class="m-label">${m.label}</div><div class="replace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`
+              :`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div></div>`}
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ============ EXPANDED VIEWS ============ */
+const expanded=document.getElementById('expanded');
+function openExpanded(title,sub,body){
+  document.getElementById('expTitle').textContent=title;
+  document.getElementById('expSub').textContent=sub;
+  document.getElementById('expBody').innerHTML=body;
+  expanded.classList.add('show');
+}
+function closeExpanded(){ expanded.classList.remove('show'); }
+
+function expandSongs(){
+  const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+  const rows=al.songs.map((s,i)=>{
+    const cells=s.cells.map((c,ci)=>{
+      const cls=["cell-empty","cell-scratch","cell-tracked","cell-comped","cell-done"][c];
+      let mk="";
+      if(c===4) mk=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg>`;
+      else if(c===3) mk=`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>`;
+      else if(c===2) mk=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 6v12"/></svg>`;
+      else if(c===1) mk=`<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>`;
+      return `<td><div class="cell ${cls}" onclick="cycleCell(${i},${ci})" title="${s.t} · ${INSTRUMENTS[ci]} — ${STATE_NAMES[c]}"><div class="mark">${mk}</div></div></td>`;
+    }).join('');
+    return `<tr><td class="songcol">${s.t}</td>${cells}</tr>`;
+  }).join('');
+  const body=`
+    <div class="grid-wrap">
+      <table class="rec-grid">
+        <thead><tr><th class="songcol">Song</th>${INSTRUMENTS.map(i=>`<th>${i}</th>`).join('')}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <div class="li"><span class="sw" style="background:transparent;border:1.5px dashed #38383f"></span>Not started</div>
+      <div class="li"><span class="sw" style="background:rgba(245,166,35,.5)"></span>Scratch</div>
+      <div class="li"><span class="sw" style="background:rgba(255,77,28,.6)"></span>Tracked</div>
+      <div class="li"><span class="sw" style="background:rgba(62,207,142,.5)"></span>Comped</div>
+      <div class="li"><span class="sw" style="background:var(--green)"></span>Done</div>
+      <div class="li" style="margin-left:auto;color:var(--txt-3)">Tip: click any cell to cycle its state</div>
+    </div>`;
+  openExpanded("Recording grid", `${al.title} · ${al.songs.length} songs × ${INSTRUMENTS.length} parts`, body);
+}
+
+function cycleCell(si,ci){
+  const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+  al.songs[si].cells[ci]=(al.songs[si].cells[ci]+1)%5;
+  expandSongs();
+}
+
+function expandSchedule(){
+  const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+  const body=`<div class="timeline">${al.schedule.map((s,i)=>{
+    const col=s.tag==='done'?'var(--green)':s.tag==='due'?'var(--amber)':'var(--accent)';
+    return `<div class="tl-row">
+      <div class="tl-mark"><div class="tl-dot" style="background:${col}"></div>${i<al.schedule.length-1?'<div class="tl-line"></div>':''}</div>
+      <div class="tl-card">
+        <div class="d"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div><div class="yr">${s.yr}</div></div>
+        <div class="body"><div class="tt">${s.t}</div><div class="ds">${s.d}</div></div>
+        <span class="tag ${s.tag}">${s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'}</span>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+  openExpanded("Release schedule", `${al.title} · working back from ${al.schedule[al.schedule.length-1].mo} ${al.schedule[al.schedule.length-1].dy}`, body);
+}
+
+function expandArtwork(){
+  const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+  const body=`<div class="exp-gallery">${al.artwork.map((m,i)=>`
+    <div class="exp-tile ${i===0?'is-cover':''}" onclick="uploadTo('artwork',${i},true)">
+      ${i===0?`<div class="cover-badge">Cover</div>`:''}
+      ${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`
+      :`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">${i===0?'Front cover · click to upload':'Physical media · click to upload'}</div></div>`}
+    </div>`).join('')}</div>`;
+  openExpanded("Album artwork", `${al.title} · front cover + inside, back & label for physical`, body);
+}
+
+function expandMerch(){
+  const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+  const body=`<div class="exp-gallery">${al.merch.map((m,i)=>`
+    <div class="exp-tile" onclick="uploadTo('merch',${i},true)">
+      ${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`
+      :`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">Click to upload</div></div>`}
+    </div>`).join('')}</div>`;
+  openExpanded("Merch mockups", `${al.title} · ${al.merch.length} items`, body);
+}
+
+/* ============ UPLOAD ============ */
+const fileInput=document.getElementById('fileInput');
+let uploadTarget=null;
+function uploadTo(type,idx,fromExpanded=false){
+  uploadTarget={type,idx,fromExpanded};
+  fileInput.click();
+}
+fileInput.addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const url=ev.target.result;
+    const {type,idx,fromExpanded}=uploadTarget;
+    if(type==='artist'){ getArtist(idx).photo=url; }
+    else{
+      const a=getArtist(route.artist); const al=getAlbum(a,route.album);
+      if(type==='artwork') al.artwork[idx].img=url;
+      if(type==='merch') al.merch[idx].img=url;
+      if(type==='cover') al.cover=url;
+    }
+    render();
+    if(fromExpanded){ if(uploadTarget.type==='artwork')expandArtwork(); else expandMerch(); }
+  };
+  reader.readAsDataURL(f);
+  fileInput.value='';
+});
+
+/* scroll shadow */
+document.getElementById('scroll').addEventListener('scroll',function(){
+  document.getElementById('topbar').classList.toggle('scrolled',this.scrollTop>10);
+});
+
+/* start on the Halcyon dashboard so it's the first thing you see */
+nav({view:"dashboard",artist:"static-bloom",album:"halcyon"},false);
+history=[{view:"dashboard",artist:"static-bloom",album:"halcyon"}]; histIdx=0;
+render();
+</script>
+</body>
+</html>
