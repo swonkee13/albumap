@@ -908,11 +908,24 @@ function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAu
 function handleAudio(files,si){
   const al=AL();const audio=files.filter(f=>/audio|\.wav|\.mp3|\.m4a|\.aiff/i.test(f.type+f.name));
   if(!audio.length){if(files.length)alert('Drop a WAV, MP3, M4A or AIFF.');return;}
+  const song=al.songs[si];
   audio.forEach(f=>{const fmt=/wav/i.test(f.name)?'wav':/mp3|mpeg/i.test(f.name)?'mp3':/m4a|aiff/i.test(f.name)?'m4a':'mp3';
-    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'just now',url,dur:null,waveform:stableWave(f.name+f.size,120)};
-    al.songs[si].files.push(t);renderSongList();
+    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,waveform:stableWave(f.name+f.size,120)};
+    song.files.push(t);renderSongList();
     const probe=new Audio();probe.src=url;probe.addEventListener('loadedmetadata',()=>{t.dur=probe.duration;renderSongList();});
-    decodeWaveform(url,120).then(w=>{t.waveform=w;renderSongList();});});
+    decodeWaveform(url,120).then(w=>{t.waveform=w;renderSongList();});
+    uploadToR2(f,song.id,t);});
+}
+async function uploadToR2(f,songId,t){
+  try{
+    const up=await fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,name:f.name})}).then(r=>r.json());
+    if(!up.ok)throw new Error('url');
+    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});
+    if(!put.ok)throw new Error('put');
+    const meta=await fetch('/api/song-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,name:f.name,key:up.key,size:f.size,duration:t.dur})}).then(r=>r.json());
+    if(!meta.ok)throw new Error('save');
+    t.sid=meta.id;t.note='saved';renderSongList();
+  }catch(e){t.note='upload failed — check R2 setup';renderSongList();}
 }
 let curAudio=null,curTid=null;
 function findFile(id){const al=AL();for(const s of al.songs){const t=s.files.find(x=>x.id===id);if(t)return t;}return null;}
@@ -930,7 +943,7 @@ function updProg(id){if(!curAudio)return;const pct=curAudio.currentTime/(curAudi
 function resetWaveUI(id){const w=document.querySelector(`.wave[data-tid="${id}"]`);if(w)w.querySelectorAll('.bar').forEach(b=>b.classList.remove('on'));const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent='0:00';}
 function seekTrack(e,id){if(curTid!==id||!curAudio)return;const w=e.currentTarget,r=w.getBoundingClientRect();curAudio.currentTime=((e.clientX-r.left)/r.width)*(curAudio.duration||0);updProg(id);}
 function dlTrack(id){const t=findFile(id);if(!t.url){alert('No real file behind this demo row.');return;}const a=document.createElement('a');a.href=t.url;a.download=t.name;a.click();}
-function rmTrack(id,si){const al=AL();if(curTid===id&&curAudio){curAudio.pause();curAudio=null;curTid=null;}al.songs[si].files=al.songs[si].files.filter(t=>t.id!==id);renderSongList();}
+function rmTrack(id,si){const al=AL();const t=al.songs[si].files.find(x=>x.id===id);if(curTid===id&&curAudio){curAudio.pause();curAudio=null;curTid=null;}al.songs[si].files=al.songs[si].files.filter(x=>x.id!==id);renderSongList();if(t&&t.sid){fetch('/api/song-file?id='+encodeURIComponent(t.sid),{method:'DELETE'}).catch(()=>{});}}
 
 /* ===== SEQUENCER ===== */
 let seqSongs=[];

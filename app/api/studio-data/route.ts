@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createClient } from "@/lib/supabase/server";
+import { r2Client, R2_BUCKET } from "@/lib/r2";
 
 // The 6 parts the mockup's recording grid renders, in order.
 const INSTRUMENTS = ["Drums", "Bass", "Guitar", "Synth", "Lead Vox", "BGV"];
@@ -92,6 +95,47 @@ export async function GET() {
     cellMap[t.song_id][t.instrument] = toState(t.status);
   }
 
+  // Audio files per song, each with a short-lived presigned playback URL.
+  // Resilient: if the table or R2 env isn't set up yet, files stay empty.
+  const filesBySong: Record<string, unknown[]> = {};
+  try {
+    if (songIds.length) {
+      const { data: files } = await supabase
+        .from("song_files")
+        .select("id, song_id, name, fmt, r2_key, duration, created_at")
+        .in("song_id", songIds)
+        .order("created_at", { ascending: true });
+      if (files && files.length) {
+        const client = r2Client();
+        await Promise.all(
+          files.map(async (f) => {
+            let url: string | null = null;
+            try {
+              url = await getSignedUrl(
+                client,
+                new GetObjectCommand({ Bucket: R2_BUCKET, Key: f.r2_key }),
+                { expiresIn: 3600 },
+              );
+            } catch {
+              url = null;
+            }
+            if (!filesBySong[f.song_id]) filesBySong[f.song_id] = [];
+            filesBySong[f.song_id].push({
+              sid: f.id, // server id (UUID); the mockup assigns its own numeric id
+              name: f.name,
+              fmt: f.fmt,
+              note: "",
+              url,
+              dur: f.duration ?? null,
+            });
+          }),
+        );
+      }
+    }
+  } catch {
+    // song_files table not present yet — leave files empty.
+  }
+
   const songsByAlbum: Record<string, unknown[]> = {};
   for (const s of songs) {
     const cells = INSTRUMENTS.map((inst) => cellMap[s.id]?.[inst] ?? 0);
@@ -101,7 +145,7 @@ export async function GET() {
       t: s.title,
       cells,
       dur: 210,
-      files: [],
+      files: filesBySong[s.id] ?? [],
       comments: [],
       lyrics: "",
       notes: "",

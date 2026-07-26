@@ -127,9 +127,45 @@ create policy "tracks: via owned album"
   );
 
 -- ---------------------------------------------------------------------------
+-- SONG FILES  (audio ideas/demos — bytes live in Cloudflare R2, metadata here)
+-- ---------------------------------------------------------------------------
+create table if not exists public.song_files (
+  id uuid primary key default gen_random_uuid(),
+  song_id uuid not null references public.songs (id) on delete cascade,
+  name text not null,
+  fmt text,
+  r2_key text not null,
+  size bigint,
+  duration double precision,
+  uploaded_by uuid references auth.users (id),
+  created_at timestamptz default now()
+);
+
+alter table public.song_files enable row level security;
+
+drop policy if exists "song_files: via owned album" on public.song_files;
+create policy "song_files: via owned album"
+  on public.song_files for all
+  using (
+    exists (
+      select 1 from public.songs s
+      join public.albums a on a.id = s.album_id
+      where s.id = song_files.song_id and a.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.songs s
+      join public.albums a on a.id = s.album_id
+      where s.id = song_files.song_id and a.owner_id = auth.uid()
+    )
+  );
+
+-- ---------------------------------------------------------------------------
 -- GRANTS  (explicit, so this works even with "expose new tables" turned off)
 -- ---------------------------------------------------------------------------
 grant usage on schema public to authenticated;
 grant select, insert, update, delete
-  on public.profiles, public.albums, public.songs, public.song_tracks
+  on public.profiles, public.albums, public.songs, public.song_tracks,
+     public.song_files
   to authenticated;
