@@ -10,9 +10,12 @@ export default async function StudioPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // Cache-bust so the latest studio.html always loads while we iterate.
+  const v = Date.now();
+
   return (
     <iframe
-      src="/studio.html"
+      src={`/studio.html?v=${v}`}
       title="albumap studio"
       style={{
         position: "fixed",
