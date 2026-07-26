@@ -62,7 +62,24 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 
 **Plan from here:** wire real functionality into the mockup **view by view** — then audio uploads (Cloudflare R2), comments, activity.
 
-**DONE — real data wired (verified live):** The studio now boots from the user's real Supabase data, not the Novaway demo. API routes: `GET /api/studio-data` (albums→roster shape, 6 fixed parts Drums/Bass/Guitar/Synth/Lead Vox/BGV, cell states 0–4 stored in `song_tracks.status`), `POST /api/cell` (grid persistence — verified saving), `POST /api/album` (New album card), `POST /api/song` (Add song button on grid view). `public/studio.html` edited only at the data layer (demo array → `let artists=[]` + `reloadData()` fetch; `cycleCell` also persists; New album / Add song affordances). Iframe is cache-busted (`?v=Date.now()`) so latest studio.html always loads. Still demo-only (no backend yet): members, schedule, artwork, merch, comments, lyrics, notes, refs, credits, activity, audio files.
+**DONE — real data wired (grid verified live):** The studio boots from the user's real Supabase data, not the Novaway demo. `public/studio.html` edited only at the data layer (demo array → `let artists=[]` + `reloadData()` fetch). Iframe cache-busted (`?v=Date.now()`).
+
+**Wired & persisted (Supabase + R2), verified where noted:**
+- Grid cells (`/api/cell`) ✓ verified · New album / Add song (`/api/album`,`/api/song`) ✓
+- Audio upload + playback via **R2 presigned URLs** ✓ user-confirmed (`/api/upload-url`, `/api/song-file`; `song_files`)
+- Lyrics + notes (`/api/song-meta`; `songs.lyrics/notes`) ✓ user-confirmed
+- Artwork + merch images via R2 (`/api/asset-url`,`/api/album-asset`; `album_assets`) ✓ user-confirmed
+- Band photo/logo → R2 (`/api/artist-photo-url`,`/api/artist-photo`; `artist_photos`, keyed owner+slug)
+- Timestamped comments (`/api/comment`; `song_comments`) — composer auto-stamps from current playback time
+- Members/invites (`/api/member`; `album_members`) — owner seeded on create + backfilled for existing albums; **note: display roster only, not real multi-user login yet**
+- Schedule reverse-timeline generator persists (`/api/schedule`; `albums.schedule`/`release_date`)
+- References + credits per song (`/api/song-meta`; `songs.refs`/`credits` jsonb)
+- Activity feed — logged server-side across actions (`activity` table), newest-first, relative times
+- **Public share page** `/share/[shareId]` — read-only progress card, no login, via service-role admin client (`lib/supabase/admin.ts`); album `share_id` column; share modal link is real
+
+R2 env vars live in Vercel; bucket CORS allows PUT/GET from the app origin. `SUPABASE_SERVICE_ROLE_KEY` used only by the share page.
+
+**Still demo-only (no backend yet):** real multi-user membership/login (members are display roster), and the schedule seed for brand-new albums starts empty (generator fills it).
 
 **What's real underneath (built, ready to reconnect):**
 - **Auth / profiles** — email+password signup & login (Supabase), profile row auto-created via `handle_new_user` trigger. Email confirmation currently OFF (for testing). Login at `/login`; `/albums` is protected by middleware.
@@ -94,10 +111,10 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 1. [x] Create Vercel + Supabase accounts, connect repo, first live deploy
 2. [x] Auth + profiles + DB schema + Row Level Security
 3. [x] Full mockup live as the studio app behind login (all views, exact)
-4. [x] Real data wired: roster/albums/songs/grid read from Supabase; grid + create-album + add-song persist (verified live)
-5. [ ] **Next:** Audio ideas — set up Cloudflare R2 (bucket + keys → Vercel env), real upload + playback in the song player (drop zone in the Songs view)
-6. [ ] Timestamped comments on audio
-7. [ ] Activity feed
+4. [x] Real data wired: roster/albums/songs/grid from Supabase; grid + create/add persist (verified)
+5. [x] Audio ideas via Cloudflare R2 — upload + playback (verified)
+6. [x] Lyrics, notes, artwork, merch (verified) + band photo, comments, members, schedule, refs, credits, activity, public share page
+7. [ ] **Next:** real multi-user membership — invited people log in and see/edit the album (RLS for members, invite links/email). Turns the display roster into true multiplayer.
 8. [ ] Use it on a real record with Jordan (the actual launch)
 9. [ ] Buy domain once name is decided (trivial to add later)
 
