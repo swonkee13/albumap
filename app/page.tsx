@@ -1,9 +1,17 @@
-export default function Home() {
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   return (
     <main className="wrap">
       <span className="badge">
         <span className="dot" />
-        Live · scaffold deployed
+        Live · v1 core
       </span>
 
       <h1>
@@ -16,16 +24,24 @@ export default function Home() {
         behind.
       </p>
 
-      <div className="steps">
-        <span className="chip on">Next.js + Supabase wired</span>
-        <span className="chip">Auth</span>
-        <span className="chip">Recording grid</span>
-        <span className="chip">Audio ideas</span>
-        <span className="chip">Comments</span>
-        <span className="chip">Activity feed</span>
+      <div className="row">
+        {user ? (
+          <Link href="/albums" className="btn btn-primary">
+            Go to your albums
+          </Link>
+        ) : (
+          <>
+            <Link href="/login" className="btn btn-primary">
+              Create a profile
+            </Link>
+            <Link href="/login" className="btn btn-ghost">
+              Log in
+            </Link>
+          </>
+        )}
       </div>
 
-      <footer>v0.1.0 — building v1 core</footer>
+      <footer className="mono">v0.1.0 — grid · songs · albums</footer>
     </main>
   );
 }
