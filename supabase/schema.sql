@@ -162,10 +162,47 @@ create policy "song_files: via owned album"
   );
 
 -- ---------------------------------------------------------------------------
+-- SONG WRITING  (lyrics + notes live on the song row)
+-- ---------------------------------------------------------------------------
+alter table public.songs add column if not exists lyrics text;
+alter table public.songs add column if not exists notes text;
+
+-- ---------------------------------------------------------------------------
+-- ALBUM ASSETS  (artwork + merch images — bytes in R2, one row per slot)
+-- ---------------------------------------------------------------------------
+create table if not exists public.album_assets (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references public.albums (id) on delete cascade,
+  kind text not null,          -- 'artwork' | 'merch'
+  slot int not null,           -- 0..4
+  r2_key text not null,
+  created_at timestamptz default now(),
+  unique (album_id, kind, slot)
+);
+
+alter table public.album_assets enable row level security;
+
+drop policy if exists "album_assets: via owned album" on public.album_assets;
+create policy "album_assets: via owned album"
+  on public.album_assets for all
+  using (
+    exists (
+      select 1 from public.albums a
+      where a.id = album_assets.album_id and a.owner_id = auth.uid()
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.albums a
+      where a.id = album_assets.album_id and a.owner_id = auth.uid()
+    )
+  );
+
+-- ---------------------------------------------------------------------------
 -- GRANTS  (explicit, so this works even with "expose new tables" turned off)
 -- ---------------------------------------------------------------------------
 grant usage on schema public to authenticated;
 grant select, insert, update, delete
   on public.profiles, public.albums, public.songs, public.song_tracks,
-     public.song_files
+     public.song_files, public.album_assets
   to authenticated;

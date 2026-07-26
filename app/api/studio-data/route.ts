@@ -68,11 +68,13 @@ export async function GET() {
     title: string;
     position: number;
     album_id: string;
+    lyrics: string | null;
+    notes: string | null;
   }> = [];
   if (albumIds.length) {
     const { data } = await supabase
       .from("songs")
-      .select("id, title, position, album_id")
+      .select("id, title, position, album_id, lyrics, notes")
       .in("album_id", albumIds)
       .order("position", { ascending: true });
     songs = data ?? [];
@@ -147,11 +149,53 @@ export async function GET() {
       dur: 210,
       files: filesBySong[s.id] ?? [],
       comments: [],
-      lyrics: "",
-      notes: "",
+      lyrics: s.lyrics ?? "",
+      notes: s.notes ?? "",
       refs: [],
       credits: [],
     });
+  }
+
+  // Album artwork/merch images (presigned GET), resilient if not set up yet.
+  const assetMap: Record<
+    string,
+    { artwork: Record<number, string>; merch: Record<number, string> }
+  > = {};
+  try {
+    if (albumIds.length) {
+      const { data: assets } = await supabase
+        .from("album_assets")
+        .select("album_id, kind, slot, r2_key")
+        .in("album_id", albumIds);
+      if (assets && assets.length) {
+        const client = r2Client();
+        await Promise.all(
+          assets.map(async (a) => {
+            let url: string | null = null;
+            try {
+              url = await getSignedUrl(
+                client,
+                new GetObjectCommand({ Bucket: R2_BUCKET, Key: a.r2_key }),
+                { expiresIn: 3600 },
+              );
+            } catch {
+              url = null;
+            }
+            if (!url) return;
+            if (!assetMap[a.album_id]) {
+              assetMap[a.album_id] = { artwork: {}, merch: {} };
+            }
+            const target =
+              a.kind === "merch"
+                ? assetMap[a.album_id].merch
+                : assetMap[a.album_id].artwork;
+            target[a.slot] = url;
+          }),
+        );
+      }
+    }
+  } catch {
+    // album_assets table not present yet — leave images null.
   }
 
   // Group albums under their artist/band name to form the roster.
@@ -179,8 +223,14 @@ export async function GET() {
       members: [],
       songs: songsByAlbum[al.id] ?? [],
       schedule: [],
-      artwork: ARTWORK_LABELS.map((label) => ({ label, img: null })),
-      merch: MERCH_LABELS.map((label) => ({ label, img: null })),
+      artwork: ARTWORK_LABELS.map((label, i) => ({
+        label,
+        img: assetMap[al.id]?.artwork?.[i] ?? null,
+      })),
+      merch: MERCH_LABELS.map((label, i) => ({
+        label,
+        img: assetMap[al.id]?.merch?.[i] ?? null,
+      })),
       activity: [],
     });
   }

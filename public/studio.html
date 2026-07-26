@@ -847,11 +847,11 @@ function songBody(s,i){
     <div class="song-cols">
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h10M4 18h14"/></svg></div><div class="zh-t">Lyrics</div></div>
-        <div class="zone-body"><textarea class="lyrics-area" placeholder="Write the lyrics here — drafts, revisions, all in one place.">${s.lyrics}</textarea></div>
+        <div class="zone-body"><textarea class="lyrics-area" placeholder="Write the lyrics here — drafts, revisions, all in one place." onblur="saveSongMeta('${s.id}','lyrics',this.value)">${s.lyrics}</textarea></div>
       </div>
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="zh-t">Song notes</div></div>
-        <div class="zone-body"><textarea class="notes-area" placeholder="Key, tempo, what still needs doing...">${s.notes}</textarea></div>
+        <div class="zone-body"><textarea class="notes-area" placeholder="Key, tempo, what still needs doing..." onblur="saveSongMeta('${s.id}','notes',this.value)">${s.notes}</textarea></div>
       </div>
     </div>
 
@@ -1070,7 +1070,30 @@ function closeCall(){document.getElementById('callbar').classList.remove('open')
 /* ===== IMAGE UPLOAD ===== */
 let imgTarget=null;const fileInput=document.getElementById('fileInput');fileInput.accept='image/*';
 function uploadImg(type,idx){imgTarget={type,idx};fileInput.click();}
-fileInput.addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{const url=ev.target.result;const{type,idx}=imgTarget;if(type==='artist')getArtist(idx).photo=url;else{const al=AL();if(type==='artwork')al.artwork[idx].img=url;if(type==='merch')al.merch[idx].img=url;}render();};r.readAsDataURL(f);e.target.value='';});
+fileInput.addEventListener('change',async e=>{
+  const f=e.target.files[0];if(!f)return;
+  const target=imgTarget||{};const type=target.type,idx=target.idx;
+  e.target.value='';
+  // Band photo: in-memory only for now (no artist entity to persist to yet).
+  if(type==='artist'){const r=new FileReader();r.onload=ev=>{getArtist(idx).photo=ev.target.result;render();};r.readAsDataURL(f);return;}
+  const al=AL();if(!al)return;
+  const localUrl=URL.createObjectURL(f);
+  if(type==='artwork'&&al.artwork[idx])al.artwork[idx].img=localUrl;
+  if(type==='merch'&&al.merch[idx])al.merch[idx].img=localUrl;
+  render();
+  try{
+    const up=await fetch('/api/asset-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,kind:type,slot:idx,name:f.name})}).then(r=>r.json());
+    if(!up.ok)throw new Error('url');
+    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});
+    if(!put.ok)throw new Error('put');
+    await fetch('/api/album-asset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,kind:type,slot:idx,key:up.key})});
+  }catch(err){/* local preview stays this session; will not persist if upload failed */}
+});
+function saveSongMeta(songId,field,value){
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(s)s[field]=value;
+  const b={songId};b[field]=value;
+  fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
+}
 
 /* ===== audio cleanup on nav ===== */
 function stopAllAudio(){if(curAudio){curAudio.pause();curAudio=null;curTid=null;}if(seqPlaying){seqPause();}seqManual=0;}
