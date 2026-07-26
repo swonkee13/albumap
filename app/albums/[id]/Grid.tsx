@@ -69,6 +69,10 @@ export default function Grid({
 
   return (
     <div>
+      <p className="hint">
+        Click any cell to cycle its status: dashed = not started → amber
+        (tracking) → orange (tracked) → green ✓ (done). Saves instantly.
+      </p>
       <div className="progress-wrap">
         <div className="progress-bar">
           <div className="progress-fill" style={{ width: `${progress}%` }} />
@@ -92,16 +96,28 @@ export default function Grid({
                 <td className="song-col">{s.title}</td>
                 {instruments.map((inst) => {
                   const status = cells[keyOf(s.id, inst)] ?? "not_started";
-                  const cls =
-                    status === "not_started" ? "" : ` ${status}`;
                   return (
                     <td key={inst}>
                       <button
-                        className={`cell${cls}`}
+                        className={`cell cell-${status}`}
                         onClick={() => cycle(s.id, inst)}
                         title={`${s.title} · ${inst}: ${status.replace("_", " ")}`}
                         aria-label={`${s.title} ${inst} ${status}`}
-                      />
+                      >
+                        <span className="chip">
+                          {status === "done" && (
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+                              <path
+                                d="M5 13l4 4L19 7"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                      </button>
                     </td>
                   );
                 })}
@@ -112,10 +128,10 @@ export default function Grid({
       </div>
 
       <div className="legend">
-        <span><i className="swatch" style={{ background: "var(--grey)" }} /> Not started</span>
-        <span><i className="swatch" style={{ background: "var(--amber)" }} /> Tracking</span>
-        <span><i className="swatch" style={{ background: "var(--accent)" }} /> Tracked</span>
-        <span><i className="swatch" style={{ background: "var(--green)" }} /> Done</span>
+        <span><i className="lchip empty" /> Not started</span>
+        <span><i className="lchip amber" /> Tracking</span>
+        <span><i className="lchip orange" /> Tracked</span>
+        <span><i className="lchip green" /> Done</span>
       </div>
     </div>
   );

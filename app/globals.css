@@ -349,11 +349,12 @@ label.field span {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 14px;
+  background: var(--panel);
 }
 table.grid {
   border-collapse: collapse;
   width: 100%;
-  min-width: 520px;
+  min-width: 560px;
 }
 table.grid th,
 table.grid td {
@@ -362,62 +363,122 @@ table.grid td {
   padding: 0;
   text-align: center;
 }
-table.grid th {
-  background: var(--panel);
+table.grid thead th {
+  background: var(--panel-2);
   font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.07em;
   color: var(--muted);
-  padding: 10px 8px;
-  font-weight: 600;
+  padding: 13px 10px;
+  font-weight: 700;
 }
 table.grid th.song-col,
 table.grid td.song-col {
   text-align: left;
-  padding: 12px 14px;
-  min-width: 160px;
-  background: var(--panel);
-  font-size: 14px;
+  padding: 0 18px;
+  min-width: 180px;
+  background: var(--panel-2);
+  font-size: 13.5px;
+  font-weight: 600;
   position: sticky;
   left: 0;
   z-index: 1;
 }
+table.grid tbody td {
+  height: 52px;
+}
+
+/* Grid cells: a small rounded "chip" per song x instrument, like the mockup. */
 .cell {
   width: 100%;
-  height: 46px;
+  height: 100%;
   border: none;
+  background: transparent;
   cursor: pointer;
-  background: var(--grey);
-  transition: background 0.1s ease;
+  display: grid;
+  place-items: center;
+  transition: filter 0.12s ease;
 }
 .cell:hover {
-  filter: brightness(1.15);
+  filter: brightness(1.4);
 }
-.cell.tracking {
+.cell .chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  transition: all 0.12s ease;
+}
+.cell-not_started .chip {
+  background: transparent;
+  border: 1.5px dashed #52525c;
+}
+.cell-tracking .chip {
+  background: rgba(245, 166, 35, 0.18);
+  border: 1.5px solid rgba(245, 166, 35, 0.5);
+}
+.cell-tracking .chip::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   background: var(--amber);
 }
-.cell.tracked {
-  background: var(--accent);
+.cell-tracked .chip {
+  background: rgba(255, 77, 28, 0.2);
+  border: 1.5px solid rgba(255, 77, 28, 0.55);
 }
-.cell.done {
+.cell-tracked .chip::after {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-hi);
+}
+.cell-done .chip {
   background: var(--green);
+  color: #04371f;
+}
+.cell-done .chip svg {
+  width: 15px;
+  height: 15px;
 }
 .legend {
   display: flex;
-  gap: 16px;
+  gap: 18px;
   flex-wrap: wrap;
-  margin-top: 14px;
+  margin-top: 16px;
   font-size: 12px;
   color: var(--muted);
 }
 .legend span {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
 }
-.swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
+.legend .lchip {
+  width: 15px;
+  height: 15px;
+  border-radius: 5px;
   display: inline-block;
+}
+.lchip.empty {
+  border: 1.5px dashed #52525c;
+}
+.lchip.amber {
+  background: rgba(245, 166, 35, 0.35);
+  border: 1.5px solid var(--amber);
+}
+.lchip.orange {
+  background: rgba(255, 77, 28, 0.35);
+  border: 1.5px solid var(--accent);
+}
+.lchip.green {
+  background: var(--green);
+}
+.hint {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin: 0 0 14px;
 }
