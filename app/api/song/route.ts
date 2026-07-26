@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity } from "@/lib/activity";
 
 // Add a real song to one of the user's albums.
 export async function POST(req: Request) {
@@ -27,5 +28,7 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
+
+  await logActivity(supabase, user, albumId, `added the song <b>${title}</b>`);
   return NextResponse.json({ ok: true, id: data.id });
 }

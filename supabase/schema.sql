@@ -199,10 +199,92 @@ create policy "album_assets: via owned album"
   );
 
 -- ---------------------------------------------------------------------------
+-- ALBUM EXTRAS: public share link, release date, saved schedule
+-- ---------------------------------------------------------------------------
+alter table public.albums add column if not exists share_id uuid default gen_random_uuid();
+alter table public.albums add column if not exists release_date date;
+alter table public.albums add column if not exists schedule jsonb default '[]'::jsonb;
+
+-- SONG EXTRAS: references + credits (JSON arrays)
+alter table public.songs add column if not exists refs jsonb default '[]'::jsonb;
+alter table public.songs add column if not exists credits jsonb default '[]'::jsonb;
+
+-- ARTIST PHOTOS (band photo / logo, keyed per owner + artist slug)
+create table if not exists public.artist_photos (
+  owner_id uuid not null references auth.users (id) on delete cascade,
+  slug text not null,
+  r2_key text not null,
+  created_at timestamptz default now(),
+  primary key (owner_id, slug)
+);
+alter table public.artist_photos enable row level security;
+drop policy if exists "artist_photos: owner" on public.artist_photos;
+create policy "artist_photos: owner" on public.artist_photos for all
+  using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+
+-- ALBUM MEMBERS (owner-managed roster)
+create table if not exists public.album_members (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references public.albums (id) on delete cascade,
+  name text not null,
+  initials text,
+  color text,
+  status text not null default 'pending',
+  created_at timestamptz default now()
+);
+alter table public.album_members enable row level security;
+drop policy if exists "album_members: via owned album" on public.album_members;
+create policy "album_members: via owned album" on public.album_members for all
+  using (exists (select 1 from public.albums a where a.id = album_members.album_id and a.owner_id = auth.uid()))
+  with check (exists (select 1 from public.albums a where a.id = album_members.album_id and a.owner_id = auth.uid()));
+
+-- SONG COMMENTS (timestamped)
+create table if not exists public.song_comments (
+  id uuid primary key default gen_random_uuid(),
+  song_id uuid not null references public.songs (id) on delete cascade,
+  author text not null,
+  color text,
+  stamp text,
+  body text not null,
+  created_at timestamptz default now()
+);
+alter table public.song_comments enable row level security;
+drop policy if exists "song_comments: via owned album" on public.song_comments;
+create policy "song_comments: via owned album" on public.song_comments for all
+  using (exists (select 1 from public.songs s join public.albums a on a.id = s.album_id where s.id = song_comments.song_id and a.owner_id = auth.uid()))
+  with check (exists (select 1 from public.songs s join public.albums a on a.id = s.album_id where s.id = song_comments.song_id and a.owner_id = auth.uid()));
+
+-- ACTIVITY FEED
+create table if not exists public.activity (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references public.albums (id) on delete cascade,
+  actor text,
+  body text not null,
+  created_at timestamptz default now()
+);
+alter table public.activity enable row level security;
+drop policy if exists "activity: via owned album" on public.activity;
+create policy "activity: via owned album" on public.activity for all
+  using (exists (select 1 from public.albums a where a.id = activity.album_id and a.owner_id = auth.uid()))
+  with check (exists (select 1 from public.albums a where a.id = activity.album_id and a.owner_id = auth.uid()));
+
+-- Backfill: give every existing album an owner "in" member if it has none.
+insert into public.album_members (album_id, name, initials, color, status)
+select a.id,
+       coalesce(p.display_name, 'You'),
+       upper(left(coalesce(p.display_name, 'Yo'), 2)),
+       '#FF4D1C',
+       'in'
+from public.albums a
+left join public.profiles p on p.id = a.owner_id
+where not exists (select 1 from public.album_members m where m.album_id = a.id);
+
+-- ---------------------------------------------------------------------------
 -- GRANTS  (explicit, so this works even with "expose new tables" turned off)
 -- ---------------------------------------------------------------------------
 grant usage on schema public to authenticated;
 grant select, insert, update, delete
   on public.profiles, public.albums, public.songs, public.song_tracks,
-     public.song_files, public.album_assets
+     public.song_files, public.album_assets, public.artist_photos,
+     public.album_members, public.song_comments, public.activity
   to authenticated;

@@ -694,7 +694,7 @@ function renderDashboard(){
       <div class="hero-actions">
         <button class="play-lg" onclick="nav({view:'sequencer',artistId:'${a.id}',albumId:'${al.id}'})"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
         <div class="member-stack">${(al.members||[]).map(m=>m.status==='in'?`<div class="avatar in" style="background:${m.color}" title="${m.name}">${m.initials}</div>`:`<div class="avatar pending" title="${m.name} · pending">${m.initials}</div>`).join('')}</div>
-        <button class="ghost-btn">＋ Invite</button>
+        <button class="ghost-btn" onclick="inviteMember()">＋ Invite</button>
         <button class="solid-btn" onclick="openShare()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg>Share progress</button>
       </div>
       <div class="member-caption"><span class="mc-dot in"></span>${(al.members||[]).filter(m=>m.status==='in').length} in the studio<span style="margin:0 6px;color:var(--txt-3)">·</span><span class="mc-dot pending"></span>${(al.members||[]).filter(m=>m.status==='pending').length} need inviting</div>
@@ -859,15 +859,15 @@ function songBody(s,i){
     <div class="song-cols three">
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="zh-t">Comments</div><div class="zh-c">${s.comments.length}</div></div>
-        <div class="zone-body">${s.comments.length?s.comments.map(c=>`<div class="cmt-row"><div class="cmt-av" style="background:${c.color}">${c.who[0]}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${c.who}</span><span class="cstamp">@ ${c.stamp}</span></div><div class="ctext">${c.text}</div></div></div>`).join(''):'<div class="empty-note">"The fill at 1:42 is wrong" goes here — pinned to the audio.</div>'}</div>
+        <div class="zone-body">${s.comments.length?s.comments.map(c=>`<div class="cmt-row"><div class="cmt-av" style="background:${c.color}">${c.who[0]}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${c.who}</span><span class="cstamp">@ ${c.stamp}</span></div><div class="ctext">${c.text}</div></div></div>`).join(''):'<div class="empty-note">"The fill at 1:42 is wrong" goes here — pinned to the audio.</div>'}<div style="display:flex;gap:8px;margin-top:10px"><input id="cmt-${s.id}" placeholder="Add a comment…" style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px 10px;font-family:inherit;font-size:12.5px;outline:none" onkeydown="if(event.key==='Enter')postComment('${s.id}')"><button class="ico-btn" title="Post comment" onclick="postComment('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
       </div>
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="zh-t">References</div></div>
-        <div class="zone-body">${s.refs.length?s.refs.map(r=>`<div class="ref-row"><div class="ri"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div><div style="flex:1;min-width:0"><div style="font-weight:600">${r.t}</div><div style="color:var(--txt-3);font-size:11.5px">${r.u}</div></div></div>`).join(''):'<div class="empty-note">Songs you want this to feel like.</div>'}</div>
+        <div class="zone-body">${s.refs.length?s.refs.map(r=>`<div class="ref-row"><div class="ri"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div><div style="flex:1;min-width:0"><div style="font-weight:600">${r.t}</div><div style="color:var(--txt-3);font-size:11.5px">${r.u}</div></div></div>`).join(''):'<div class="empty-note">Songs you want this to feel like.</div>'}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="addRef('${s.id}')">＋ Add reference</button></div>
       </div>
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 7h20M2 17h20"/></svg></div><div class="zh-t">Credits &amp; splits</div></div>
-        <div class="zone-body">${s.credits.length?s.credits.map(c=>`<div class="credit-row"><span class="who">${c.who}</span><span class="split">${c.split}</span></div>`).join(''):'<div class="empty-note">Settle splits before release.</div>'}</div>
+        <div class="zone-body">${s.credits.length?s.credits.map(c=>`<div class="credit-row"><span class="who">${c.who}</span><span class="split">${c.split}</span></div>`).join(''):'<div class="empty-note">Settle splits before release.</div>'}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="addCredit('${s.id}')">＋ Add credit</button></div>
       </div>
     </div>
    </div>`;
@@ -1012,7 +1012,8 @@ function genTimeline(){
   const rel=new Date(v+'T00:00:00');const MO=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
   const mk=(weeksBefore,t,d)=>{const dt=new Date(rel);dt.setDate(dt.getDate()-weeksBefore*7);return{mo:MO[dt.getMonth()],dy:String(dt.getDate()).padStart(2,'0'),yr:String(dt.getFullYear()),t,d,tag:'up'};};
   const sched=[mk(10,"Masters to mastering engineer","Final mixes bounced, WAV 24/48"),mk(8,"Artwork final to distributor","3000×3000 cover, credits locked"),mk(6,"Merch proofs due","Tee + vinyl jacket approval"),mk(6,"Distribution upload","Deliver to DSPs with 4-week lead"),mk(4,"Pre-save campaign live","Lead single + socials"),mk(1,"Vinyl arrives / press kit","Final checks before release"),{mo:MO[rel.getMonth()],dy:String(rel.getDate()).padStart(2,'0'),yr:String(rel.getFullYear()),t:"Release day",d:"All DSPs + physical ship",tag:'up'}];
-  AL().schedule=sched;drawSchedule(sched);
+  const al=AL();al.schedule=sched;drawSchedule(sched);
+  fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,schedule:sched,releaseDate:v})}).catch(()=>{});
 }
 
 /* ===== ARTWORK / MERCH full ===== */
@@ -1038,7 +1039,7 @@ function openShare(){
       <div class="share-card"><div class="sc-band">${a.name}</div><div class="sc-album">${al.title}</div>
         <div class="sc-ring"><svg width="120" height="120" style="transform:rotate(-90deg)"><circle cx="60" cy="60" r="40" stroke="var(--grey)" stroke-width="8" fill="none"/><circle cx="60" cy="60" r="40" stroke="var(--accent)" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-overall/100)}"/></svg></div>
         <div class="sc-pct">${overall}%</div><div class="sc-l">Album complete</div></div>
-      <div class="share-link"><input value="albumap.io/novaway/the-west-coast" readonly><button class="solid-btn" onclick="this.textContent='Copied ✓'">Copy link</button></div>
+      <div class="share-link"><input value="${al.shareId?location.origin+'/share/'+al.shareId:location.origin}" readonly><button class="solid-btn" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent='Copied ✓'">Copy link</button></div>
     </div>`;
   document.getElementById('modalBg').classList.add('show');
 }
@@ -1074,8 +1075,18 @@ fileInput.addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
   const target=imgTarget||{};const type=target.type,idx=target.idx;
   e.target.value='';
-  // Band photo: in-memory only for now (no artist entity to persist to yet).
-  if(type==='artist'){const r=new FileReader();r.onload=ev=>{getArtist(idx).photo=ev.target.result;render();};r.readAsDataURL(f);return;}
+  // Band photo / logo → uploads to R2, keyed by artist slug.
+  if(type==='artist'){
+    const localUrl=URL.createObjectURL(f);const art=getArtist(idx);if(art)art.photo=localUrl;render();
+    try{
+      const up=await fetch('/api/artist-photo-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:idx,name:f.name})}).then(r=>r.json());
+      if(!up.ok)throw new Error('url');
+      const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});
+      if(!put.ok)throw new Error('put');
+      await fetch('/api/artist-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slug:idx,key:up.key})});
+    }catch(err){/* local preview stays this session */}
+    return;
+  }
   const al=AL();if(!al)return;
   const localUrl=URL.createObjectURL(f);
   if(type==='artwork'&&al.artwork[idx])al.artwork[idx].img=localUrl;
@@ -1129,6 +1140,32 @@ async function addSongFlow(){
   const res=await fetch('/api/song',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,title:title.trim()})});
   if(!res.ok){alert('Could not add the song.');return;}
   await reloadData({...route});
+}
+async function inviteMember(){
+  const al=AL();if(!al)return;const name=prompt('Invite who? (name)');if(!name||!name.trim())return;
+  const res=await fetch('/api/member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,name:name.trim()})});
+  if(!res.ok){alert('Could not add member.');return;}
+  await reloadData({...route});
+}
+function curStamp(){return (curAudio&&!curAudio.paused)?fmtT(curAudio.currentTime):'';}
+function postComment(songId){
+  const inp=document.getElementById('cmt-'+songId);if(!inp)return;const text=inp.value.trim();if(!text)return;
+  const stamp=curStamp();inp.value='';
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);
+  if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text});route.songId=songId;renderSongList();}
+  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp})}).catch(()=>{});
+}
+function addRef(songId){
+  const t=prompt('Reference — song / artist');if(!t||!t.trim())return;const u=(prompt('What for? (feel, tone, guitar texture…)')||'').trim();
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;
+  s.refs.push({t:t.trim(),u});route.songId=songId;renderSongList();
+  fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,refs:s.refs})}).catch(()=>{});
+}
+function addCredit(songId){
+  const who=prompt('Credit — who?');if(!who||!who.trim())return;const role=(prompt('Role (guitar, vox, writing…)')||'').trim();const split=(prompt('Split % (optional, e.g. 40%)')||'').trim();
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;
+  s.credits.push({who:who.trim(),role,split});route.songId=songId;renderSongList();
+  fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,credits:s.credits})}).catch(()=>{});
 }
 reloadData();
 </script>

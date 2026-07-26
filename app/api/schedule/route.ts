@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/activity";
 
-// Save (upsert) an album artwork/merch slot's uploaded image key.
+// Persist an album's generated release schedule + release date.
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -12,20 +12,16 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const albumId = body?.albumId as string | undefined;
-  const kind = body?.kind as string | undefined;
-  const slot = body?.slot as number | undefined;
-  const key = body?.key as string | undefined;
-  if (!albumId || (kind !== "artwork" && kind !== "merch") || typeof slot !== "number" || !key) {
+  const schedule = body?.schedule;
+  const releaseDate = (body?.releaseDate as string | undefined) || null;
+  if (!albumId || !Array.isArray(schedule)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  // RLS guards ownership through the album_assets policy.
   const { error } = await supabase
-    .from("album_assets")
-    .upsert(
-      { album_id: albumId, kind, slot, r2_key: key },
-      { onConflict: "album_id,kind,slot" },
-    );
+    .from("albums")
+    .update({ schedule, release_date: releaseDate })
+    .eq("id", albumId);
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
@@ -34,7 +30,9 @@ export async function POST(req: Request) {
     supabase,
     user,
     albumId,
-    kind === "merch" ? "uploaded a merch mockup" : "uploaded album artwork",
+    releaseDate
+      ? `set the release date to <b>${releaseDate}</b>`
+      : "updated the release schedule",
   );
   return NextResponse.json({ ok: true });
 }

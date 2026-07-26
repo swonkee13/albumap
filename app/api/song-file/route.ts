@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createClient } from "@/lib/supabase/server";
 import { r2Client, R2_BUCKET, fmtForName } from "@/lib/r2";
+import { logActivity } from "@/lib/activity";
 
 // Record a finished upload's metadata (the file bytes are already in R2).
 export async function POST(req: Request) {
@@ -37,6 +38,25 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
+
+  try {
+    const { data: song } = await supabase
+      .from("songs")
+      .select("title, album_id")
+      .eq("id", songId)
+      .maybeSingle();
+    if (song) {
+      await logActivity(
+        supabase,
+        user,
+        song.album_id,
+        `uploaded <b>${name}</b> to ${song.title}`,
+      );
+    }
+  } catch {
+    // non-critical
+  }
+
   return NextResponse.json({ ok: true, id: data.id, fmt: data.fmt });
 }
 

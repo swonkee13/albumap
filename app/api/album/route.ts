@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logActivity, initialsFor } from "@/lib/activity";
 
-// Create a real album owned by the signed-in user.
+// Create a real album owned by the signed-in user, seeding the owner as the
+// first "in the studio" member and logging the activity.
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -22,5 +24,26 @@ export async function POST(req: Request) {
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
+
+  // Seed the owner as an "in" member (best-effort).
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+    const name = profile?.display_name || user.email || "You";
+    await supabase.from("album_members").insert({
+      album_id: data.id,
+      name,
+      initials: initialsFor(name),
+      color: "#FF4D1C",
+      status: "in",
+    });
+  } catch {
+    // members table may not exist yet
+  }
+
+  await logActivity(supabase, user, data.id, `started the album “${title}”`);
   return NextResponse.json({ ok: true, id: data.id });
 }
