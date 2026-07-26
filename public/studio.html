@@ -538,7 +538,8 @@ const SONG_COLORS=["#FF4D1C","#F5A623","#3ECF8E","#4EA8E8","#B06BFF","#FF6B9D","
 
 function mkSong(t,cells,extra={}){return {id:t.toLowerCase().replace(/[^a-z0-9]+/g,'-'),t,cells,dur:extra.dur||210,files:extra.files||[],comments:extra.comments||[],lyrics:extra.lyrics||"",notes:extra.notes||"",refs:extra.refs||[],credits:extra.credits||[]};}
 
-const artists=[
+let artists=[];
+const DEMO_ARTISTS=[
  {id:"novaway",name:"Novaway",type:"Band",photo:null,sub:"3 members · 2 releases",
   albums:[
    {id:"westcoast",title:"The West Coast Is Not Our Home",year:"2026",status:"in-progress",cover:null,
@@ -657,7 +658,8 @@ function renderRoster(){
   <div class="gallery">${artists.map(a=>{const ini=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
     return `<div class="g-card" onclick="nav({view:'albums',artistId:'${a.id}'})">
       <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}<div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
-      <div class="gt">${a.name}</div><div class="gs">${a.type} · ${a.sub.split('·')[1]}</div></div>`;}).join('')}</div>`;
+      <div class="gt">${a.name}</div><div class="gs">${a.type} · ${a.sub}</div></div>`;}).join('')}
+    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow(null)"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
 }
 /* ===== ALBUMS ===== */
 function renderAlbums(){
@@ -669,7 +671,7 @@ function renderAlbums(){
   <div class="gallery">${a.albums.map(al=>`<div class="g-card" onclick="nav({view:'dashboard',artistId:'${a.id}',albumId:'${al.id}'})">
     <div class="art">${al.cover?`<img src="${al.cover}">`:`<div class="ph">${al.title[0]}</div>`}<div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
     <div class="gt">${al.title}</div><div class="gs"><span class="status-dot" style="background:${statusColor(al.status)}"></span>${al.year} · ${statusLabel(al.status)}</div></div>`).join('')}
-    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="alert('New album — demo only')"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
+    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow('${a.name}')"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
 }
 
 /* ===== DASHBOARD (HUB) ===== */
@@ -783,12 +785,13 @@ function computeWaiting(al){
 function renderGrid(){
   const a=A(),al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Recording grid</div><div class="ws-sub">The checkerboard — every song against every part. Click a cell to cycle its state as you track. Click a song name to open its page.</div></div>
+  <div style="margin:0 0 14px"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button></div>
   <div class="grid-wrap"><table class="rec-grid"><thead><tr><th class="songcol">Song</th>${INSTRUMENTS.map(i=>`<th>${i}</th>`).join('')}</tr></thead><tbody>
   ${al.songs.map((s,si)=>`<tr><td class="songcol" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${s.t}</td>${s.cells.map((c,ci)=>{const cls=["cell-empty","cell-scratch","cell-tracked","cell-comped","cell-done"][c];let mk="";if(c===4)mk='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg>';else if(c===3)mk='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>';else if(c===2)mk='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 6v12"/></svg>';else if(c===1)mk='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>';return `<td><div class="cell ${cls}" onclick="cycleCell(${si},${ci})" title="${s.t} · ${INSTRUMENTS[ci]} — ${STATE_NAMES[c]}"><div class="mark">${mk}</div></div></td>`;}).join('')}</tr>`).join('')}
   </tbody></table></div>
   <div class="legend"><div class="li"><span class="sw" style="background:transparent;border:1.5px dashed #38383f"></span>Not started</div><div class="li"><span class="sw" style="background:rgba(245,166,35,.5)"></span>Scratch</div><div class="li"><span class="sw" style="background:rgba(255,77,28,.6)"></span>Tracked</div><div class="li"><span class="sw" style="background:rgba(62,207,142,.5)"></span>Comped</div><div class="li"><span class="sw" style="background:var(--green)"></span>Done</div><div class="li" style="margin-left:auto;color:var(--txt-3)">Click any cell to cycle</div></div>`;
 }
-function cycleCell(si,ci){const al=AL();al.songs[si].cells[ci]=(al.songs[si].cells[ci]+1)%5;renderGrid();}
+function cycleCell(si,ci){const al=AL();const s=al.songs[si];s.cells[ci]=(s.cells[ci]+1)%5;renderGrid();persistCell(s.id,INSTRUMENTS[ci],s.cells[ci]);}
 
 /* ===== SONG IDEAS (audio player) ===== */
 let uidc=1000;
@@ -1062,7 +1065,36 @@ function stopAllAudio(){if(curAudio){curAudio.pause();curAudio=null;curTid=null;
 document.getElementById('scroll').addEventListener('scroll',function(){document.getElementById('topbar').classList.toggle('scrolled',this.scrollTop>10);});
 window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
 
-render();
+/* ===== REAL DATA (Supabase via /api) ===== */
+function defaultRoute(){
+  if(!artists.length)return{view:'roster'};
+  const a0=artists[0],al0=a0.albums[0];
+  return al0?{view:'dashboard',artistId:a0.id,albumId:al0.id}:{view:'albums',artistId:a0.id};
+}
+async function reloadData(nextRoute){
+  try{const res=await fetch('/api/studio-data',{cache:'no-store'});if(res.ok){const d=await res.json();artists=Array.isArray(d.artists)?d.artists:[];}}catch(e){}
+  route=nextRoute||defaultRoute();hist=[{...route}];hi=0;render();
+}
+function persistCell(songId,instrument,state){
+  fetch('/api/cell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,instrument,state})}).catch(()=>{});
+}
+async function createAlbumFlow(artistName){
+  const title=prompt('Album title');if(!title||!title.trim())return;
+  const artist=((artistName!=null?artistName:(prompt('Artist / band name')||''))||'').trim();
+  const res=await fetch('/api/album',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title.trim(),artist})});
+  if(!res.ok){alert('Could not create the album.');return;}
+  const {id}=await res.json();
+  await reloadData();
+  for(const a of artists){const al=a.albums.find(x=>x.id===id);if(al){nav({view:'dashboard',artistId:a.id,albumId:al.id});break;}}
+}
+async function addSongFlow(){
+  const al=AL();if(!al)return;
+  const title=prompt('Song title');if(!title||!title.trim())return;
+  const res=await fetch('/api/song',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,title:title.trim()})});
+  if(!res.ok){alert('Could not add the song.');return;}
+  await reloadData({...route});
+}
+reloadData();
 </script>
 </body>
 </html>
