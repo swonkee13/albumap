@@ -60,6 +60,44 @@ export async function POST(req: Request) {
   return NextResponse.json({ ok: true, id: data.id, fmt: data.fmt });
 }
 
+// Set (or clear) the per-song master flag. Setting a master first clears any
+// other master on the same song so exactly one file is ever flagged.
+export async function PATCH(req: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const id = body?.id as string | undefined;
+  const master = body?.master;
+  if (!id || typeof master !== "boolean")
+    return NextResponse.json({ ok: false }, { status: 400 });
+
+  const { data: row } = await supabase
+    .from("song_files")
+    .select("id, song_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!row) return NextResponse.json({ ok: false }, { status: 404 });
+
+  if (master && row.song_id) {
+    // Un-flag every other file on this song first (RLS-scoped to owner).
+    await supabase
+      .from("song_files")
+      .update({ is_master: false })
+      .eq("song_id", row.song_id);
+  }
+  const { error } = await supabase
+    .from("song_files")
+    .update({ is_master: master })
+    .eq("id", id);
+  if (error)
+    return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}
+
 // Delete a file: remove the DB row (RLS-guarded) and the R2 object.
 export async function DELETE(req: Request) {
   const supabase = await createClient();

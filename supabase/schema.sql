@@ -161,6 +161,10 @@ create policy "song_files: via owned album"
     )
   );
 
+-- SONG FILES v2: one file per song may be flagged the "master" (the current
+-- most-complete version). Setting a new master clears the song's previous one.
+alter table public.song_files add column if not exists is_master boolean not null default false;
+
 -- ---------------------------------------------------------------------------
 -- SONG WRITING  (lyrics + notes live on the song row)
 -- ---------------------------------------------------------------------------

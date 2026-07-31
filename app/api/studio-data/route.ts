@@ -134,7 +134,7 @@ export async function GET() {
     if (songIds.length) {
       const { data: files } = await supabase
         .from("song_files")
-        .select("id, song_id, name, fmt, r2_key, duration, created_at")
+        .select("id, song_id, name, fmt, r2_key, duration, is_master, created_at")
         .in("song_id", songIds)
         .order("created_at", { ascending: true });
       await Promise.all(
@@ -148,9 +148,16 @@ export async function GET() {
             note: "",
             url,
             dur: f.duration ?? null,
+            master: f.is_master === true,
           });
         }),
       );
+      // Pin the master file to the top of each song's list.
+      for (const sid of Object.keys(filesBySong)) {
+        (filesBySong[sid] as Array<{ master?: boolean }>).sort(
+          (a, b) => (b.master ? 1 : 0) - (a.master ? 1 : 0),
+        );
+      }
     }
   } catch {
     /* table not present yet */
