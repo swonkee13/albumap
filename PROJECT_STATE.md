@@ -2,7 +2,9 @@
 
 > **This is the single source of truth for where the project stands.** Update it at the end of every work session. Any new Claude conversation should be able to read this file and get fully up to speed without re-explaining anything. Keep it plain-language and current.
 
-_Last updated: 2026-07-31 (v2 change-spec session — 11 fixes shipped; see "v2 changes" below)_
+_Last updated: 2026-07-31 (v2 + v2.1 + v2.2 change sessions — see the change logs below)_
+
+**v2.2 (latest follow-up — 11 tweaks/bugs):** real logo PNG in sidebar (`public/albumap-io-logo.png`); merch size-qty inputs save on `oninput` (debounced) so they persist across size clicks + totals stay live; song-list grid icon is orange; dashboard card renamed "Song ideas"→"Songs"; **add song from the Songs page** + **delete song** from song header or grid row (`DELETE /api/song`, both views sync via shared `al.songs`); roster tile says **"New artist"** (asks artist first); single-song artwork upload moved into the song header between number and title (no description block); **Sequencer "Placeholder" blocks** — draggable 2:30 reserved slots, unique muted color each, removable, sequencer-only, persisted per album in `localStorage:'albumap:seq:<albumId>'` (songs still persist order to `songs.position`; placeholders are layout-only, skipped in playback but count toward runtime/vinyl sides); **per-file comments** — each track has its own comment thread + composer directly beneath it (the combined comments zone was removed); larger merch collapsed rows. **No new DB migrations this batch** — but C9 (per-file comments) needs the v2.1 `song_comments.file_id` column, so run that if you haven't.
 
 ---
 
