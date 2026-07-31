@@ -88,7 +88,20 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 10. **Grid blank-start + N/A** — covered above. **Cell-cycle decision:** left-click cycles Not started→Scratch→Tracked→Comped→Done→**N/A**→Not started; **right-click toggles N/A** directly. **N/A semantics:** state 5 is excluded from *every* denominator — song %, album ring, parts-done, waiting-on, and the public share card (server-side in `app/share/[shareId]/page.tsx`). Percentages are partial-credit: `sum(min(state,4) for non-N/A)/(non-N/A count × 4)`. `cells` is now an **object map `{instrument: state}`** (was a fixed array).
 11. **Artist cards** — removed the non-functional hover play FAB from roster artist cards (kept `.playfab` CSS; album cards unchanged).
 
-**⚠️ Migrations to run in Supabase → SQL Editor** (idempotent; all folded into `supabase/schema.sql`, or re-run the whole file): the `merch_items` table (item 3), `song_files.is_master` (item 6), `song_files.labels`/`album_id`/nullable `song_id` + broadened RLS (item 7), and the backfill setting existing albums' `instruments` to the legacy 6 columns (item 10). Until these run, those features degrade gracefully (studio-data try/catches missing columns) but won't persist.
+**v2.1 changes (follow-up batch — 15 tweaks/bugs, each its own commit):**
+- **Waveform bars now fill the container** (`flex:1 1 0`, no max-width, 160 bars) — this fixed both "click-to-seek lands behind" (visual now matches the click math) and "player too small".
+- **Comments are per-file** now (`song_comments.file_id`) — markers line up with the right audio file; a comment's popup **auto-reveals for ~2.4s as the playhead passes it** during playback (updProg). Composer attaches to the currently-playing file (or master/first).
+- **Sequencer block waves** restyled to match the song-player waveform (centered fine bars).
+- **Recording-grid topbar button is orange/solid**; sequencer order-list **song names link to the song** (drag now only via the ≡ grip).
+- **Per-song single artwork** (`songs.artwork_key`, `/api/song-art`) — uploaded on the song page, auto-mirrored into Album artwork labeled with the song name (blue "Single" badge; opens the song).
+- **Merch:** collapsed row shows big artwork + total qty/brand/budget; expanded has **per-size quantity inputs** (apparel) or a **total** field (non-apparel). `merch_items.size_qty jsonb`, `total_qty int`. Collapsed shows only the total.
+- **Editable tag sets** per album (`albums.section_tags`, `instrument_tags`, `/api/album-tags`) via a **Manage tags** modal on the Songs page (and a link in each label palette). Rename migrates existing file labels.
+- **Activity** capped to 6 on the dashboard with **View all → Notifications page** (`view:'activity'`); server keeps up to 50.
+- **Refresh restores the current view** (route persisted to `localStorage:'albumap:route'`, restored in `reloadData`).
+- **Sidebar is a nav tree**: active artist expands to its albums; active album expands to sections (Overview/Grid/Songs/Tracklist/Schedule/Artwork/Merch/Notifications).
+- **Logo** replaced with an inline SVG concentric-pin mark (recreated to match the user's logo — swap for the exact raster later by dropping it in `public/` if desired).
+
+**⚠️ Migrations to run in Supabase → SQL Editor** (idempotent; all folded into `supabase/schema.sql`, or just re-run the whole file). v2: `merch_items` table (item 3), `song_files.is_master` (6), `song_files.labels`/`album_id`/nullable `song_id` + broadened RLS (7), backfill existing albums' `instruments` (10). v2.1: `song_comments.file_id`, `songs.artwork_key`, `merch_items.size_qty`+`total_qty`, `albums.section_tags`+`instrument_tags`. Until these run, those features degrade gracefully (studio-data try/catches missing columns) but won't persist — and **comments won't load until `song_comments.file_id` exists**.
 
 **Known limitation (this is the #1 next build):** members are a **display roster only** — inviting adds an avatar / "waiting on" entry but does NOT give that person a login into the album. Real multi-user membership (invited people sign in and edit) is not built yet. Also: brand-new albums start with an empty schedule until the generator is run; band-photo persistence is per artist-name-slug (no artist entity table yet).
 
