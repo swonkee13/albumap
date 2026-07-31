@@ -384,8 +384,8 @@
   .ruler{display:flex;height:18px;margin-bottom:8px;padding:0 2px}
   .ruler .tick{flex:1;border-left:1px solid var(--line-soft);font-family:'JetBrains Mono';font-size:9.5px;color:var(--txt-3);padding-left:4px;padding-top:2px}
   .ruler .tick:first-child{border-left:none}
-  .timeline{position:relative;display:flex;height:104px;padding:2px;border-radius:var(--r-md);background:var(--panel-2);border:1px solid var(--line-soft)}
-  .block{position:relative;height:100%;flex:none;display:flex;flex-direction:column;justify-content:space-between;padding:9px 11px;cursor:grab;overflow:hidden;user-select:none;border-right:1.5px solid rgba(0,0,0,.35);transition:box-shadow .15s,filter .12s;min-width:44px}
+  .timeline{position:relative;height:104px;padding:0;border-radius:var(--r-md);background:var(--panel-2);border:1px solid var(--line-soft)}
+  .block{position:absolute;top:3px;bottom:3px;display:flex;flex-direction:column;justify-content:space-between;padding:9px 11px;cursor:grab;overflow:hidden;user-select:none;border-radius:var(--r-sm);transition:left .22s cubic-bezier(.2,.85,.25,1),width .22s cubic-bezier(.2,.85,.25,1),transform .12s,box-shadow .15s,filter .12s;min-width:30px}
   .block.is-first{border-top-left-radius:var(--r-sm);border-bottom-left-radius:var(--r-sm)}
   .block.is-last{border-top-right-radius:var(--r-sm);border-bottom-right-radius:var(--r-sm);border-right:none}
   .block:hover{filter:brightness(1.08)}
@@ -1443,17 +1443,27 @@ function renderSeq(){
   const tl=document.getElementById('seqTimeline'),ph=document.getElementById('seqPlayhead'),total=seqTotal();
   const ruler=document.getElementById('seqRuler');ruler.innerHTML='';for(let i=0;i<8;i++){const d=document.createElement('div');d.className='tick';d.textContent=fmtT(total*i/8);ruler.appendChild(d);}
   [...tl.querySelectorAll('.block')].forEach(b=>b.remove());
-  seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(idx===0?' is-first':'')+(idx===seqSongs.length-1?' is-last':'')+(s.placeholder?' placeholder':(s.url?'':' no-audio'));b.style.flexGrow=s.dur;b.style.flexBasis='0';b.dataset.id=s.id;
+  seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(s.placeholder?' placeholder':(s.url?'':' no-audio'));b.dataset.id=s.id;b.style.transition='none';
     if(s.placeholder){b.style.background=s.color+'26';b.style.boxShadow='inset 0 0 0 1.5px '+s.color+'aa';
       b.innerHTML=`<button class="ph-x" title="Remove placeholder" onpointerdown="event.stopPropagation()" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg></button><div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="ph-label"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M12 3 2 12l10 9 10-9z"/></svg>PLACEHOLDER</div>`;
     }else{b.style.background=`linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;const wave=stableWave(s.name,Math.max(24,Math.round(s.dur/3)));
       b.innerHTML=`<div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="b-name">${esc(s.name)}</div>${s.url?'':'<span class="no-audio-tag">no audio</span>'}<div class="b-wave">${wave.map(h=>`<div class="wb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>`;}
     b.addEventListener('pointerdown',e=>blockPointerDown(e,s.id));tl.insertBefore(b,ph);});
-  document.getElementById('seqCount').textContent=seqSongs.length;
-  document.getElementById('seqLen').textContent=fmtT(total);
-  document.getElementById('seqTot').textContent=fmtT(total);
-  document.getElementById('seqSides').textContent=seqSides();
-  document.getElementById('seqOrder').innerHTML=`<div class="ol-head">Album order · ${seqSongs.length} tracks · ${fmtT(total)} · drag ≡ to reorder</div>`+seqSongs.map((s,i)=>{const grip=`<span class="ol-grip" onpointerdown="rowPointerDown(event,'${s.id}')" title="Drag to reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></span><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span class="ol-sw" style="background:${s.color}"></span>`;
+  layoutBlocks();
+  // enable the sliding transition only after the initial positions are set
+  requestAnimationFrame(()=>{tl.querySelectorAll('.block').forEach(b=>{if(!b.classList.contains('seq-lift'))b.style.transition='';});});
+  updateSeqStats();renderSeqOrder();
+}
+function layoutBlocks(exceptId){
+  const total=seqTotal();let acc=0;
+  seqSongs.forEach((s,idx)=>{const leftPct=total?(acc/total*100):0;const widthPct=total?(s.dur/total*100):0;acc+=s.dur;const el=blockEl(s.id);if(!el)return;
+    el.style.width='calc('+widthPct.toFixed(4)+'% - 3px)';
+    if(s.id!==exceptId)el.style.left='calc('+leftPct.toFixed(4)+'% + 2px)';
+    const num=el.querySelector('.b-num');if(num)num.textContent=String(idx+1).padStart(2,'0');});
+}
+function updateSeqStats(){const total=seqTotal();const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};set('seqCount',seqSongs.length);set('seqLen',fmtT(total));set('seqTot',fmtT(total));set('seqSides',seqSides());}
+function renderSeqOrder(){const total=seqTotal();const host=document.getElementById('seqOrder');if(!host)return;
+  host.innerHTML=`<div class="ol-head">Album order · ${seqSongs.length} tracks · ${fmtT(total)} · drag ≡ to reorder</div>`+seqSongs.map((s,i)=>{const grip=`<span class="ol-grip" onpointerdown="rowPointerDown(event,'${s.id}')" title="Drag to reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></span><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span class="ol-sw" style="background:${s.color}"></span>`;
     if(s.placeholder)return `<div class="ol-row placeholder" data-id="${s.id}">${grip}<span class="ol-name" style="color:var(--txt-3)">◇ Placeholder</span><span class="ol-dur">${fmtT(s.dur)}</span><button class="ph-x sm" title="Remove" onpointerdown="event.stopPropagation()" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`;
     return `<div class="ol-row${s.url?'':' no-audio'}" data-id="${s.id}">${grip}<span class="ol-name" style="cursor:pointer" title="Open song" onclick="nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${s.id}'})">${esc(s.name)}</span>${s.url?'':'<span class="ol-noaudio">no audio</span>'}<span class="ol-dur">${fmtT(s.dur)}</span></div>`;
   }).join('');
@@ -1484,8 +1494,8 @@ function seqStartSong(idx,into){
 }
 function seqSongEnded(){const n=seqPlayableFrom(seqIdx+1);if(n<0){seqPos=0;seqStop();return;}seqPos=accBefore(n);seqStartSong(n,0);}
 function seqPause(){if(!seqPlaying)return;seqPos=seqCurGlobal();seqPlaying=false;document.body.classList.remove('seqplaying');if(seqRaf)cancelAnimationFrame(seqRaf);if(seqAudio)seqAudio.pause();}
-function seqStop(){seqPlaying=false;document.body.classList.remove('seqplaying');if(seqRaf)cancelAnimationFrame(seqRaf);if(seqAudio)seqAudio.pause();const ph=document.getElementById('seqPlayhead');if(ph)ph.style.left='2px';const c=document.getElementById('seqCur');if(c)c.textContent=fmtT(seqPos);seqClearCurrent();}
-function positionPlayhead(off,total){const tl=document.getElementById('seqTimeline');if(!tl)return;const w=tl.clientWidth-4;const ph=document.getElementById('seqPlayhead');if(ph)ph.style.left=(2+(total?off/total:0)*w)+'px';}
+function seqStop(){seqPlaying=false;document.body.classList.remove('seqplaying');if(seqRaf)cancelAnimationFrame(seqRaf);if(seqAudio)seqAudio.pause();const ph=document.getElementById('seqPlayhead');if(ph)ph.style.left='0px';const c=document.getElementById('seqCur');if(c)c.textContent=fmtT(seqPos);seqClearCurrent();}
+function positionPlayhead(off,total){const tl=document.getElementById('seqTimeline');if(!tl)return;const w=tl.clientWidth;const ph=document.getElementById('seqPlayhead');if(ph)ph.style.left=((total?off/total:0)*w)+'px';}
 function seqTick(){const total=seqTotal();const off=seqCurGlobal();positionPlayhead(off,total);const c=document.getElementById('seqCur');if(c)c.textContent=fmtT(off);seqUpdCurrent(off);if(seqPlaying)seqRaf=requestAnimationFrame(seqTick);}
 function seqUpdCurrent(off){const{idx,into}=seqAt(off);const s=seqSongs[idx];if(!s)return;document.querySelectorAll('#seqTimeline .block').forEach((b,i)=>b.classList.toggle('current',seqPlaying&&i===idx));document.querySelectorAll('#seqOrder .ol-row').forEach((r,i)=>r.classList.toggle('current',seqPlaying&&i===idx));if(seqPlaying){document.getElementById('seqNow').innerHTML=`<span class="swatch" style="background:${s.color}"></span>${String(idx+1).padStart(2,'0')} · ${esc(s.name)}`;document.getElementById('seqSub').textContent=`${fmtT(into)} / ${fmtT(s.dur)} — playing ${s.url?'master/most-recent':'(no audio)'}`;}}
 function seqClearCurrent(){document.querySelectorAll('#seqTimeline .block').forEach(b=>b.classList.remove('current'));document.querySelectorAll('#seqOrder .ol-row').forEach(r=>r.classList.remove('current'));}
@@ -1508,32 +1518,35 @@ function persistSeqOrder(){const al=AL();if(!al)return;const order=seqSongs.filt
 /* ---- pointer drag: timeline blocks ---- */
 function blockEl(id){return document.querySelector(`#seqTimeline .block[data-id="${id}"]`);}
 let blockDrag=null;
-function blockPointerDown(e,id){if(e.button)return;const idx=seqSongs.findIndex(s=>s.id===id);if(idx<0)return;blockDrag={id,startX:e.clientX,moved:false};}
-// Live reorder: drop the dragged block into the slot the pointer is over,
-// measured against the OTHER blocks' real widths, and re-render so blocks
-// cascade aside in real time (not just on release). Works dragging a long
-// block over shorter ones because insertion is by pointer position, not size.
-function seqLiveReorder(clientX,dragId){
-  const dragged=seqSongs.find(s=>s.id===dragId);if(!dragged)return;
-  const others=seqSongs.filter(s=>s.id!==dragId);
-  let insert=others.length;
-  for(let i=0;i<others.length;i++){const el=blockEl(others[i].id);if(!el)continue;const r=el.getBoundingClientRect();if(clientX<r.left+r.width/2){insert=i;break;}}
-  const next=others.slice();next.splice(insert,0,dragged);
+function blockPointerDown(e,id){if(e.button)return;const el=blockEl(id);if(!el)return;const r=el.getBoundingClientRect();blockDrag={id,startX:e.clientX,grabDx:e.clientX-r.left,moved:false};}
+// The held block follows the cursor 1:1 (no transition); the others slide to
+// their new slots via the CSS `left` transition — fluid, not snap-on-release.
+function seqDraggedFollow(clientX){const el=blockEl(blockDrag.id);if(!el)return;const tr=document.getElementById('seqTimeline').getBoundingClientRect();const w=el.offsetWidth;let leftPx=clientX-tr.left-blockDrag.grabDx;leftPx=Math.max(0,Math.min(tr.width-w,leftPx));el.style.left=leftPx+'px';}
+function seqReorderByCursor(){
+  const el=blockEl(blockDrag.id);if(!el)return;const dr=el.getBoundingClientRect();const dc=dr.left+dr.width/2;
+  // Compare the held block's center against each OTHER slot's target center
+  // (computed from the running order, so transitions don't cause jitter).
+  const tr=document.getElementById('seqTimeline').getBoundingClientRect();const total=seqTotal();let acc=0;const centers=[];
+  seqSongs.forEach(s=>{centers.push({id:s.id,c:tr.left+((acc+s.dur/2)/total)*tr.width});acc+=s.dur;});
+  const others=centers.filter(x=>x.id!==blockDrag.id);
+  let insert=others.length;for(let i=0;i<others.length;i++){if(dc<others[i].c){insert=i;break;}}
+  const dragged=seqSongs.find(s=>s.id===blockDrag.id);const rest=seqSongs.filter(s=>s.id!==blockDrag.id);
+  const next=rest.slice();next.splice(insert,0,dragged);
   if(next.length===seqSongs.length&&next.every((s,i)=>s.id===seqSongs[i].id))return;
-  seqSongs=next;renderSeq();
+  seqSongs=next;layoutBlocks(blockDrag.id);updateSeqStats();renderSeqOrder();
 }
-function liftDragged(id){const el=blockEl(id);if(el){el.classList.add('seq-lift');el.style.transform='translateY(-7px) scale(1.03)';}}
 document.addEventListener('pointermove',e=>{
   if(!blockDrag)return;
-  if(!blockDrag.moved){if(Math.abs(e.clientX-blockDrag.startX)<5)return;blockDrag.moved=true;document.body.style.cursor='grabbing';}
-  seqLiveReorder(e.clientX,blockDrag.id);
-  liftDragged(blockDrag.id);
+  if(!blockDrag.moved){if(Math.abs(e.clientX-blockDrag.startX)<5)return;blockDrag.moved=true;document.body.style.cursor='grabbing';const el=blockEl(blockDrag.id);if(el){el.classList.add('seq-lift');el.style.transform='translateY(-7px) scale(1.03)';}}
+  seqDraggedFollow(e.clientX);
+  seqReorderByCursor();
 });
 document.addEventListener('pointerup',e=>{
   if(!blockDrag)return;const bd=blockDrag;blockDrag=null;document.body.style.cursor='';
-  const el=blockEl(bd.id);if(el){el.classList.remove('seq-lift');el.style.transform='';}
-  if(!bd.moved){seqSeekClient(e.clientX);return;}
-  seqStop();seqPos=0;renderSeq();seqPersist();
+  const el=blockEl(bd.id);
+  if(!bd.moved){if(el){el.classList.remove('seq-lift');el.style.transform='';}seqSeekClient(e.clientX);return;}
+  if(el){el.classList.remove('seq-lift');el.style.transform='';}
+  layoutBlocks();updateSeqStats();renderSeqOrder();seqStop();seqPos=0;seqPersist();
 });
 /* ---- pointer drag: order-list rows ---- */
 let rowDrag=null;
