@@ -2,7 +2,7 @@
 
 > **This is the single source of truth for where the project stands.** Update it at the end of every work session. Any new Claude conversation should be able to read this file and get fully up to speed without re-explaining anything. Keep it plain-language and current.
 
-_Last updated: 2026-07-25 (end of build session — full album workspace live on real data)_
+_Last updated: 2026-07-31 (v2 change-spec session — 11 fixes shipped; see "v2 changes" below)_
 
 ---
 
@@ -61,11 +61,12 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 **ARCHITECTURE DECISION (important — read before changing the UI):** The logged-in app IS the approved mockup, served verbatim. `public/studio.html` started as an exact copy of `mockups/00-full-app.html`; the auth-gated `/albums` route renders it full-screen in an iframe (cache-busted `?v=Date.now()`). This guarantees zero visual drift. **studio.html was edited ONLY at the data layer** — the hardcoded demo `artists` array became `let artists=[]` filled by `reloadData()` from `/api/studio-data`, and each interaction (cell click, upload, comment, etc.) calls an API to persist. All rendering/CSS/JS is still the mockup's. Keep it that way: to change data behavior edit the API + the small data-layer hooks; don't rewrite the views.
 
 **Everything wired & persisted (Supabase + R2), all user-confirmed working:**
-- Recording grid cells → `/api/cell` (states 0–4 in `song_tracks.status`; 6 fixed parts Drums/Bass/Guitar/Synth/Lead Vox/BGV)
+- Recording grid cells → `/api/cell` (states **0–5** in `song_tracks.status`; **5 = N/A**). Instrument columns are now **per-album & dynamic** (`albums.instruments` text[]) — add/rename/delete via `/api/instruments`. New albums start with **no** columns.
 - Create album / add song → `/api/album`, `/api/song`
 - **Audio** upload + playback via R2 presigned URLs → `/api/upload-url`, `/api/song-file`; table `song_files`
 - Lyrics + notes → `/api/song-meta`; `songs.lyrics/notes`
-- Artwork + merch images (R2) → `/api/asset-url`, `/api/album-asset`; `album_assets`
+- Artwork (R2) → `/api/asset-url`, `/api/album-asset`; `album_assets` (artwork slot 0 also feeds album-card covers)
+- **Merch is now full records** (v2) → `/api/merch-item` (create/update/upload-url/set-image/delete); table `merch_items` (mockup+print files, budget, brand/style, color, sizes, has_sizes, vendor). The old slot-based `album_assets kind='merch'` path is retired in the UI.
 - Band photo/logo (R2) → `/api/artist-photo-url`, `/api/artist-photo`; `artist_photos` (keyed owner+slug)
 - Timestamped comments → `/api/comment`; `song_comments` (composer auto-stamps from current playback time)
 - Members/invites → `/api/member`; `album_members` (owner seeded on create + backfilled)
@@ -74,15 +75,30 @@ albumap is a SaaS "album production hub" for self-producing / semi-pro bands. It
 - Activity feed → logged server-side across actions; `activity` table; newest-first, relative times
 - **Public share page** `/share/[shareId]` — read-only "% complete" card, no login, via service-role admin client (`lib/supabase/admin.ts`); `albums.share_id`; the Share-progress modal link is real
 
+**v2 changes (2026-07-31 change-spec session — 11 items, each its own commit):**
+1. **Album-card covers** — album grid cards auto-pull artwork slot 0; `/api/studio-data` sets `album.cover` from it, card falls back to `artwork[0].img` for live update.
+2. **Dashboard slots** — a *filled* artwork/merch thumb now navigates to the section page (scrolled + flashed on that item); only *empty* slots upload.
+3. **Merch full records** — see above; Songs-page-style expandable list, collapsed row shows brand/color/size-count/budget, grows past 5. New table `merch_items`.
+4. **Waveform seek** — precise click-to-seek anywhere (playing or paused), measured off the container rect; removed the "only seek if playing" guard; bars are `pointer-events:none`; paused seek stores `t.seekFrac` and starts there on play; pointer-drag scrubbing added.
+5. **SoundCloud comment markers** — timestamped comments render as avatar dots on the waveform (positioned by stamp/duration), hover popover, click-to-seek. NOTE: comments are per-song (not per-file) so markers show on every file's waveform in that song.
+6. **Master track** — `song_files.is_master`; exactly one per song, pinned to top with a `MASTER` badge; set via `PATCH /api/song-file` (clears siblings). Sequencer prefers it.
+7. **Idea bank + labels** — album-level audio not tied to a song. `song_files.song_id` is now **nullable**, `song_files.album_id` added, RLS broadened (song-path OR album-path). `song_files.labels` text[] = section/instrument tags. Assign-to-song / send-to-bank via `PATCH /api/song-file {assignTo}`. Bank upload path in `/api/upload-url` & `/api/song-file` (`bank:true, albumId`).
+8. **Sequencer** — real audio playback (HTMLAudioElement, plays each song's master/most-recent file, skips + hatches "no audio" songs); pointer-based drag with a real lift affordance + insertion edge; the album-order list rows are drag-reorderable by a ≡ grip; order persists via `/api/song-order` (`songs.position`). Placeholder oscillator tones removed.
+9. **Recording-grid links** — a grid icon on every song row + a persistent "Recording grid" button in the topbar for any album view; both deep-link and flash the target row (`route.gridSong`).
+10. **Grid blank-start + N/A** — covered above. **Cell-cycle decision:** left-click cycles Not started→Scratch→Tracked→Comped→Done→**N/A**→Not started; **right-click toggles N/A** directly. **N/A semantics:** state 5 is excluded from *every* denominator — song %, album ring, parts-done, waiting-on, and the public share card (server-side in `app/share/[shareId]/page.tsx`). Percentages are partial-credit: `sum(min(state,4) for non-N/A)/(non-N/A count × 4)`. `cells` is now an **object map `{instrument: state}`** (was a fixed array).
+11. **Artist cards** — removed the non-functional hover play FAB from roster artist cards (kept `.playfab` CSS; album cards unchanged).
+
+**⚠️ Migrations to run in Supabase → SQL Editor** (idempotent; all folded into `supabase/schema.sql`, or re-run the whole file): the `merch_items` table (item 3), `song_files.is_master` (item 6), `song_files.labels`/`album_id`/nullable `song_id` + broadened RLS (item 7), and the backfill setting existing albums' `instruments` to the legacy 6 columns (item 10). Until these run, those features degrade gracefully (studio-data try/catches missing columns) but won't persist.
+
 **Known limitation (this is the #1 next build):** members are a **display roster only** — inviting adds an avatar / "waiting on" entry but does NOT give that person a login into the album. Real multi-user membership (invited people sign in and edit) is not built yet. Also: brand-new albums start with an empty schedule until the generator is run; band-photo persistence is per artist-name-slug (no artist entity table yet).
 
 **Stack / facts for any new session:**
 - **Auth** — email+password signup & login (Supabase), profile auto-created via `handle_new_user` trigger. Email confirmation is OFF (for testing — turn on before real launch). Login at `/login`; `/albums` protected by middleware.
 - **Framework** — Next.js 15 (App Router) + TypeScript + Tailwind v4, `@supabase/ssr`. Supabase clients in `lib/supabase/` (`client`, `server`, `admin`=service-role). Middleware refreshes sessions + protects `/albums`, and excludes `.html` so `studio.html` serves directly.
-- **DB tables** (all RLS ON, only `authenticated`, rows scoped to album owner): `profiles`, `albums`, `songs`, `song_tracks`, `song_files`, `album_assets`, `artist_photos`, `album_members`, `song_comments`, `activity`. Full idempotent schema in `supabase/schema.sql` — edit it and run in Supabase → SQL Editor to change the DB.
+- **DB tables** (all RLS ON, only `authenticated`, rows scoped to album owner): `profiles`, `albums`, `songs`, `song_tracks`, `song_files`, `album_assets`, `artist_photos`, `album_members`, `song_comments`, `activity`, **`merch_items`** (v2). `albums.instruments` (text[]) now holds each album's dynamic grid columns. `song_files` gained `is_master`, `labels`, `album_id`, and a nullable `song_id`. Full idempotent schema in `supabase/schema.sql` — edit it and run in Supabase → SQL Editor to change the DB.
 - **File storage** — Cloudflare R2 bucket `albumap-audio` (audio + all images). Browser uploads via presigned PUT; playback/display via presigned GET (1h). Bucket CORS allows GET/PUT/HEAD from `https://albumap.vercel.app`.
 - **Vercel env vars**: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`.
-- **API routes** live under `app/api/*` (one per action); `GET /api/studio-data` returns everything shaped as the mockup's `artists` array.
+- **API routes** live under `app/api/*` (one per action); `GET /api/studio-data` returns everything shaped as the mockup's `artists` array (now includes `album.instruments`, object `cells`, `album.cover`, `merchItems`, `bank`, and per-file `master`/`labels`). New in v2: `/api/merch-item`, `/api/instruments`, `/api/song-order`; extended: `/api/song-file` (PATCH master/labels/assignTo; bank uploads), `/api/upload-url` (bank), `/api/album` (blank instruments).
 - **Test data to clean up**: throwaway user "Grid Tester" (gridtest.claude+ap1@gmail.com) + album "Test Record" in the DB. Safe to delete. Also an earlier R2 token was pasted in chat then regenerated — the old one is dead.
 
 **Mockups built (reference for the real build):**
