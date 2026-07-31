@@ -289,6 +289,23 @@
   .ico-btn:hover{background:var(--hover);color:var(--txt)}
   .ico-btn svg{width:16px;height:16px}
   .empty-note{color:var(--txt-3);font-size:12.5px;text-align:center;padding:8px 0 2px;font-style:italic}
+  /* idea labels (section + instrument tags) */
+  .label-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .lchip{padding:3px 9px;border-radius:20px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-size:10.5px;font-weight:600;cursor:pointer;transition:.12s;font-family:inherit;white-space:nowrap}
+  .lchip:hover{border-color:var(--txt-2)}
+  .lchip.on{background:var(--accent-dim);border-color:rgba(255,77,28,.4);color:var(--accent-hi)}
+  .ltag-btn{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;border:1px dashed var(--line);background:transparent;color:var(--txt-3);font-size:10.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .ltag-btn:hover{border-color:var(--accent);color:var(--txt-2)}
+  .ltag-btn svg{width:11px;height:11px}
+  .label-palette{flex-basis:100%;margin-top:6px;padding:10px 12px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:10px;display:flex;flex-direction:column;gap:8px}
+  .lp-group{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
+  .lp-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-3);width:74px;flex:none;padding-top:4px}
+  .lp-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+  .assign-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto}
+  .assign-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);color:var(--txt);font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:.12s;text-align:left}
+  .assign-row:hover{background:var(--hover);border-color:var(--accent)}
+  .assign-row .ol-num{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-3);width:22px}
+  .assign-row svg{width:16px;height:16px;color:var(--txt-3)}
 
   /* sequencer */
   .transport{display:flex;align-items:center;gap:16px;margin:8px 0 14px;background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);padding:16px 20px}
@@ -582,6 +599,9 @@
 const INSTRUMENTS=["Drums","Bass","Guitar","Synth","Lead Vox","BGV"];
 const STATE_NAMES=["Not started","Scratch","Tracked","Comped","Done"];
 const SONG_COLORS=["#FF4D1C","#F5A623","#3ECF8E","#4EA8E8","#B06BFF","#FF6B9D","#2ED3C6","#E8564E"];
+// Idea labels (item 7): song-section tags + instrument tags, multi-select.
+const SECTION_LABELS=["Intro","Verse","Chorus","Bridge","Hook","Outro"];
+const INSTRUMENT_LABELS=["Guitar","Bass","Drums","Synth","Vox","Keys","Perc","FX"];
 
 function mkSong(t,cells,extra={}){return {id:t.toLowerCase().replace(/[^a-z0-9]+/g,'-'),t,cells,dur:extra.dur||210,files:extra.files||[],comments:extra.comments||[],lyrics:extra.lyrics||"",notes:extra.notes||"",refs:extra.refs||[],credits:extra.credits||[]};}
 
@@ -865,13 +885,33 @@ let uidc=1000;
 function renderSongs(){
   const al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Songs</div><div class="ws-sub">Every song, everything in one place — drop demos, write lyrics, leave timestamped notes, set references and splits. Click a song to open it.</div></div>
-  <div id="songList"></div>`;
+  <div id="songList"></div>
+  <div id="ideaBank"></div>`;
   renderSongList();
+  renderBank();
   // auto-expand + scroll to a requested song
   if(route.songId){
     const el=document.querySelector(`.idea-song[data-song="${route.songId}"]`);
     if(el){ el.classList.remove('collapsed'); const b=el.querySelector('.idea-body'); if(b)b.style.display=''; setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),60); }
   }
+}
+function renderBank(){
+  const host=document.getElementById('ideaBank');if(!host)return;
+  const al=AL();const bank=al.bank||[];
+  host.innerHTML=`<div class="idea-song" style="margin-top:28px;border-color:rgba(255,77,28,.28)">
+    <div class="idea-head" style="cursor:default">
+      <div class="idea-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M9 11h6"/></svg></div>
+      <div style="flex:1;min-width:0"><div class="idea-title">Idea bank</div><div style="color:var(--txt-3);font-size:11.5px;margin-top:2px">Unassigned audio — riffs, demos &amp; snippets not tied to a song yet. Tag them, then assign to a song when ready.</div></div>
+      <div class="cnt-pill ${bank.length?'has':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${bank.length}</div>
+    </div>
+    <div class="idea-body" style="display:block">
+      ${bank.length?`<div class="tracks">${bank.map(t=>trackRow(t,-1)).join('')}</div>`:'<div class="empty-note">Nothing here yet — drop an idea below, or send a song idea back to the bank.</div>'}
+      <div class="dropzone slim" onclick="browseBankAudio()" ondragover="dzOver(event,this)" ondragleave="this.classList.remove('drag')" ondrop="dzDrop(event,'bank',this)">
+        <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+        <div class="big">Drop an unassigned idea here</div><div class="sm">or click to browse · lands in the bank</div>
+      </div>
+    </div>
+  </div>`;
 }
 function renderSongList(){
   const al=AL();
@@ -949,15 +989,35 @@ function trackRow(t,si){
   const cdur=t.dur||(song&&song.dur)||210;
   const marks=cmts.map(c=>{const sec=parseStamp(c.stamp);if(sec==null)return '';const frac=Math.max(0,Math.min(1,sec/cdur));
     return `<div class="wave-mark" style="left:${(frac*100).toFixed(2)}%;background:${c.color||'#FF4D1C'}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();seekAt(${t.id},${frac})" title="${esc(c.who)} @ ${esc(c.stamp)} — ${esc(c.text)}"><span>${esc((c.who||'?')[0])}</span><div class="wm-pop"><b>${esc(c.who)}</b> · ${esc(c.stamp)}<br>${esc(c.text)}</div></div>`;}).join('');
-  const isM=!!t.master;
+  const bank=si<0;
+  const isM=!bank&&!!t.master;
+  const acts=bank
+    ? `<button class="ico-btn" title="Assign to a song" onclick="assignIdea(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+    <button class="ico-btn" title="Download" onclick="dlTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></button>
+    <button class="ico-btn" title="Remove" onclick="rmBankTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>`
+    : `<button class="ico-btn ${isM?'is-master':''}" title="${isM?'Master — click to unset':'Set as master (most-complete version)'}" onclick="setMaster(${t.id},${si})"><svg viewBox="0 0 24 24" fill="${isM?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 9.4l6.9-.6z"/></svg></button>
+    <button class="ico-btn" title="Send to idea bank" onclick="sendToBank(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h5l2 3h4l2-3h5"/><path d="M4 6h16v12H4z"/></svg></button>
+    <button class="ico-btn" title="Download" onclick="dlTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></button>
+    <button class="ico-btn" title="Remove" onclick="rmTrack(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>`;
   return `<div class="track ${isM?'master':''}" data-tid="${t.id}">
     <button class="play-btn" onclick="togglePlay(${t.id})"><svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
     <div class="track-main"><div class="track-top"><span class="fmt-tag ${t.fmt}">${t.fmt}</span>${isM?'<span class="master-badge">MASTER</span>':''}<span class="track-name">${t.name}</span><span class="track-note">${t.note||''}</span></div>
-      <div class="scrub"><div class="wave" onpointerdown="waveDown(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}${marks}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div></div>
-    <div class="track-actions"><button class="ico-btn ${isM?'is-master':''}" title="${isM?'Master — click to unset':'Set as master (most-complete version)'}" onclick="setMaster(${t.id},${si})"><svg viewBox="0 0 24 24" fill="${isM?'currentColor':'none'}" stroke="currentColor" stroke-width="2"><path d="M12 2l2.9 6.3 6.9.6-5.2 4.5 1.6 6.7L12 17.3 5.8 20.6l1.6-6.7L2.2 9.4l6.9-.6z"/></svg></button>
-    <button class="ico-btn" title="Timestamped comment" onclick="alert('Timestamped comments live on the song page — open the song to see them threaded to the audio.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
-    <button class="ico-btn" title="Download" onclick="dlTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></button>
-    <button class="ico-btn" title="Remove" onclick="rmTrack(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div></div>`;
+      <div class="scrub"><div class="wave" onpointerdown="waveDown(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}${marks}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div>
+      ${labelBarHTML(t)}</div>
+    <div class="track-actions">${acts}</div></div>`;
+}
+function labelChipsAssigned(t){return (t.labels||[]).map(l=>`<span class="lchip on" data-label="${esc(l)}" onclick="toggleLabel(${t.id},'${esc(l)}')">${esc(l)}</span>`).join('');}
+function paletteChip(t,l){return `<span class="lchip ${(t.labels||[]).includes(l)?'on':''}" data-label="${l}" onclick="toggleLabel(${t.id},'${l}')">${l}</span>`;}
+function labelBarHTML(t){
+  return `<div class="label-bar"><span class="label-assigned" data-tid="${t.id}">${labelChipsAssigned(t)}</span><button class="ltag-btn" onclick="toggleLabelPalette(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>tag</button><div class="label-palette" id="lp-${t.id}" style="display:none"><div class="lp-group"><span class="lp-h">Section</span><span class="lp-chips">${SECTION_LABELS.map(l=>paletteChip(t,l)).join('')}</span></div><div class="lp-group"><span class="lp-h">Instrument</span><span class="lp-chips">${INSTRUMENT_LABELS.map(l=>paletteChip(t,l)).join('')}</span></div></div></div>`;
+}
+function toggleLabelPalette(id){const lp=document.getElementById('lp-'+id);if(lp)lp.style.display=lp.style.display==='none'?'':'none';}
+function toggleLabel(id,label){
+  const t=findFile(id);if(!t)return;t.labels=t.labels||[];
+  t.labels=t.labels.includes(label)?t.labels.filter(x=>x!==label):[...t.labels,label];
+  const lp=document.getElementById('lp-'+id);if(lp)lp.querySelectorAll('.lchip').forEach(c=>c.classList.toggle('on',t.labels.includes(c.dataset.label)));
+  const as=document.querySelector(`.label-assigned[data-tid="${id}"]`);if(as)as.innerHTML=labelChipsAssigned(t);
+  if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,labels:t.labels})}).catch(()=>{});
 }
 function stableWave(seed,n){n=n||120;let h=[],s=0;for(let i=0;i<seed.length;i++)s+=seed.charCodeAt(i);let prev=0.4;for(let i=0;i<n;i++){s=(s*9301+49297)%233280;const r=s/233280;const env=Math.pow(Math.sin((i/n)*Math.PI),0.6);const target=(0.12+r*0.88)*(0.35+0.65*env);prev=prev*0.55+target*0.45;h.push(Math.max(.08,Math.min(1,prev)));}return h;}
 /* decode real audio into a peak waveform */
@@ -977,34 +1037,71 @@ async function decodeWaveform(url,n){
 }
 let browseTarget=null;
 function browseAudio(si){browseTarget=si;document.getElementById('audioInput').click();}
+function browseBankAudio(){browseTarget='bank';document.getElementById('audioInput').click();}
 document.getElementById('audioInput').addEventListener('change',e=>{handleAudio([...e.target.files],browseTarget);e.target.value='';});
 document.getElementById('merchImgInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadMerchImg(f);});
 function dzOver(e,el){e.preventDefault();el.classList.add('drag');}
 function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAudio([...e.dataTransfer.files],si);}
-function handleAudio(files,si){
+function renderSongsAudio(){renderSongList();renderBank();}
+function handleAudio(files,target){
   const al=AL();const audio=files.filter(f=>/audio|\.wav|\.mp3|\.m4a|\.aiff/i.test(f.type+f.name));
   if(!audio.length){if(files.length)alert('Drop a WAV, MP3, M4A or AIFF.');return;}
-  const song=al.songs[si];
+  const isBank=(target==='bank');
+  const song=isBank?null:al.songs[target];
+  if(!isBank&&!song)return;
   audio.forEach(f=>{const fmt=/wav/i.test(f.name)?'wav':/mp3|mpeg/i.test(f.name)?'mp3':/m4a|aiff/i.test(f.name)?'m4a':'mp3';
-    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,waveform:stableWave(f.name+f.size,120)};
-    song.files.push(t);renderSongList();
-    const probe=new Audio();probe.src=url;probe.addEventListener('loadedmetadata',()=>{t.dur=probe.duration;renderSongList();});
-    decodeWaveform(url,120).then(w=>{t.waveform=w;renderSongList();});
-    uploadToR2(f,song.id,t);});
+    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,labels:[],waveform:stableWave(f.name+f.size,120)};
+    if(isBank){al.bank=al.bank||[];al.bank.push(t);}else{song.files.push(t);}
+    renderSongsAudio();
+    const probe=new Audio();probe.src=url;probe.addEventListener('loadedmetadata',()=>{t.dur=probe.duration;renderSongsAudio();});
+    decodeWaveform(url,120).then(w=>{t.waveform=w;renderSongsAudio();});
+    uploadToR2(f,isBank?{albumId:al.id,bank:true}:{songId:song.id},t);});
 }
-async function uploadToR2(f,songId,t){
+async function uploadToR2(f,dest,t){
   try{
-    const up=await fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,name:f.name})}).then(r=>r.json());
+    const b1=dest.songId?{songId:dest.songId,name:f.name}:{albumId:dest.albumId,bank:true,name:f.name};
+    const up=await fetch('/api/upload-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b1)}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
     const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});
     if(!put.ok)throw new Error('put');
-    const meta=await fetch('/api/song-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,name:f.name,key:up.key,size:f.size,duration:t.dur})}).then(r=>r.json());
+    const b2=dest.songId?{songId:dest.songId,name:f.name,key:up.key,size:f.size,duration:t.dur}:{albumId:dest.albumId,bank:true,name:f.name,key:up.key,size:f.size,duration:t.dur};
+    const meta=await fetch('/api/song-file',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b2)}).then(r=>r.json());
     if(!meta.ok)throw new Error('save');
-    t.sid=meta.id;t.note='saved';renderSongList();
-  }catch(e){t.note='upload failed — check R2 setup';renderSongList();}
+    t.sid=meta.id;t.note='saved';
+    if(t.labels&&t.labels.length)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,labels:t.labels})}).catch(()=>{});
+    if(t.master)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,master:true})}).catch(()=>{});
+    renderSongsAudio();
+  }catch(e){t.note='upload failed — check R2 setup';renderSongsAudio();}
+}
+/* ---- idea bank: assign / send-back / remove ---- */
+function assignIdea(id){
+  const al=AL();if(!al.songs.length){alert('Add a song first, then you can assign ideas to it.');return;}
+  const rows=al.songs.map((s,i)=>`<button class="assign-row" onclick="doAssign(${id},'${s.id}')"><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span style="flex:1">${esc(s.t)}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>`).join('');
+  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Assign idea to a song</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="modal-body"><div class="assign-list">${rows}</div></div>`;
+  document.getElementById('modalBg').classList.add('show');
+}
+function doAssign(fileId,songId){
+  const al=AL();const t=(al.bank||[]).find(x=>x.id===fileId);const song=al.songs.find(s=>s.id===songId);
+  if(!t||!song)return;
+  al.bank=al.bank.filter(x=>x.id!==fileId);song.files=song.files||[];song.files.push(t);
+  closeModal();route.songId=songId;renderSongsAudio();
+  const el=document.querySelector(`.idea-song[data-song="${songId}"]`);if(el){el.classList.remove('collapsed');const b=el.querySelector('.idea-body');if(b)b.style.display='';setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),60);}
+  if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,assignTo:songId})}).catch(()=>{});
+}
+function sendToBank(id,si){
+  const al=AL();const song=al.songs[si];if(!song)return;const t=song.files.find(x=>x.id===id);if(!t)return;
+  song.files=song.files.filter(x=>x.id!==id);t.master=false;al.bank=al.bank||[];al.bank.push(t);
+  renderSongsAudio();
+  if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,assignTo:'bank'})}).catch(()=>{});
+}
+function rmBankTrack(id){
+  const al=AL();const t=(al.bank||[]).find(x=>x.id===id);
+  if(curTid===id&&curAudio){curAudio.pause();curAudio=null;curTid=null;}
+  al.bank=(al.bank||[]).filter(x=>x.id!==id);renderBank();
+  if(t&&t.sid)fetch('/api/song-file?id='+encodeURIComponent(t.sid),{method:'DELETE'}).catch(()=>{});
 }
 let curAudio=null,curTid=null;
-function findFile(id){const al=AL();for(const s of al.songs){const t=s.files.find(x=>x.id===id);if(t)return t;}return null;}
+function findFile(id){const al=AL();if(!al)return null;for(const s of al.songs){const t=s.files.find(x=>x.id===id);if(t)return t;}for(const t of (al.bank||[])){if(t.id===id)return t;}return null;}
 function togglePlay(id){
   const t=findFile(id);
   if(!t||!t.url){alert('This is a seeded demo row with no real file. Drop a real WAV or MP3 to hear playback.');return;}

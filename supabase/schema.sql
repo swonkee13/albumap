@@ -165,6 +165,41 @@ create policy "song_files: via owned album"
 -- most-complete version). Setting a new master clears the song's previous one.
 alter table public.song_files add column if not exists is_master boolean not null default false;
 
+-- SONG FILES v2 (idea bank + labels): song_id becomes nullable so a file can
+-- live in the album-level idea bank (unassigned). album_id links every file to
+-- its album (so bank files are reachable). labels = section/instrument tags.
+alter table public.song_files add column if not exists labels text[] not null default '{}';
+alter table public.song_files add column if not exists album_id uuid references public.albums (id) on delete cascade;
+alter table public.song_files alter column song_id drop not null;
+
+-- Backfill album_id for existing song-linked files.
+update public.song_files f
+  set album_id = s.album_id
+  from public.songs s
+  where f.song_id = s.id and f.album_id is null;
+
+-- Broaden RLS: a file is accessible if the user owns it via its song OR (for
+-- bank files with no song) directly via its album.
+drop policy if exists "song_files: via owned album" on public.song_files;
+create policy "song_files: via owned album"
+  on public.song_files for all
+  using (
+    (song_id is not null and exists (
+      select 1 from public.songs s join public.albums a on a.id = s.album_id
+      where s.id = song_files.song_id and a.owner_id = auth.uid()))
+    or (album_id is not null and exists (
+      select 1 from public.albums a
+      where a.id = song_files.album_id and a.owner_id = auth.uid()))
+  )
+  with check (
+    (song_id is not null and exists (
+      select 1 from public.songs s join public.albums a on a.id = s.album_id
+      where s.id = song_files.song_id and a.owner_id = auth.uid()))
+    or (album_id is not null and exists (
+      select 1 from public.albums a
+      where a.id = song_files.album_id and a.owner_id = auth.uid()))
+  );
+
 -- ---------------------------------------------------------------------------
 -- SONG WRITING  (lyrics + notes live on the song row)
 -- ---------------------------------------------------------------------------

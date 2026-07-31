@@ -15,20 +15,37 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const songId = body?.songId as string | undefined;
+  const albumId = body?.albumId as string | undefined;
+  const bank = body?.bank === true;
   const name = (body?.name as string | undefined)?.trim();
-  if (!songId || !name) return NextResponse.json({ ok: false }, { status: 400 });
+  if (!name) return NextResponse.json({ ok: false }, { status: 400 });
 
-  // Verify the song belongs to an album this user owns (RLS on the read).
-  const { data: song } = await supabase
-    .from("songs")
-    .select("id")
-    .eq("id", songId)
-    .maybeSingle();
-  if (!song) return NextResponse.json({ ok: false }, { status: 403 });
+  let keyPrefix: string;
+  if (bank && albumId) {
+    // Idea-bank upload: verify the album is owned (RLS on the read).
+    const { data: album } = await supabase
+      .from("albums")
+      .select("id")
+      .eq("id", albumId)
+      .maybeSingle();
+    if (!album) return NextResponse.json({ ok: false }, { status: 403 });
+    keyPrefix = `bank/${albumId}`;
+  } else if (songId) {
+    // Verify the song belongs to an album this user owns (RLS on the read).
+    const { data: song } = await supabase
+      .from("songs")
+      .select("id")
+      .eq("id", songId)
+      .maybeSingle();
+    if (!song) return NextResponse.json({ ok: false }, { status: 403 });
+    keyPrefix = `songs/${songId}`;
+  } else {
+    return NextResponse.json({ ok: false }, { status: 400 });
+  }
 
   const safe = name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
   const rand = crypto.randomUUID();
-  const key = `songs/${songId}/${rand}-${safe}`;
+  const key = `${keyPrefix}/${rand}-${safe}`;
   const contentType = contentTypeForName(name);
 
   const uploadUrl = await getSignedUrl(
