@@ -201,7 +201,7 @@ export async function GET() {
     if (songIds.length) {
       const { data: comments } = await supabase
         .from("song_comments")
-        .select("song_id, author, color, stamp, body, created_at")
+        .select("song_id, file_id, author, color, stamp, body, created_at")
         .in("song_id", songIds)
         .order("created_at", { ascending: true });
       for (const c of comments ?? []) {
@@ -211,6 +211,7 @@ export async function GET() {
           color: c.color || colorFor(c.author || "?"),
           stamp: c.stamp || "",
           text: c.body,
+          fileSid: c.file_id || null,
         });
       }
     }

@@ -12,6 +12,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const songId = body?.songId as string | undefined;
+  const fileId = (body?.fileId as string | undefined) || null;
   const text = (body?.text as string | undefined)?.trim();
   const stamp = ((body?.stamp as string | undefined) ?? "").trim();
   if (!songId || !text) return NextResponse.json({ ok: false }, { status: 400 });
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
 
   const { error } = await supabase.from("song_comments").insert({
     song_id: songId,
+    file_id: fileId,
     author,
     color: colorFor(author),
     stamp: stamp || null,

@@ -295,7 +295,8 @@
   .wave-mark{position:absolute;top:-5px;transform:translateX(-50%);width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:8.5px;font-weight:700;color:#fff;cursor:pointer;z-index:4;border:1.5px solid var(--panel-2);box-shadow:0 1px 4px rgba(0,0,0,.55);font-family:'Inter'}
   .wave-mark:hover{transform:translateX(-50%) scale(1.18);z-index:8}
   .wave-mark .wm-pop{display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card-hi);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--txt);width:200px;line-height:1.4;box-shadow:0 10px 28px rgba(0,0,0,.55);z-index:12;white-space:normal;text-align:left;pointer-events:none}
-  .wave-mark:hover .wm-pop{display:block}
+  .wave-mark:hover .wm-pop,.wave-mark.wm-show .wm-pop{display:block}
+  .wave-mark.wm-show{transform:translateX(-50%) scale(1.18);z-index:9}
   .wave-mark .wm-pop b{color:var(--accent-hi)}
   .wave .bar{flex:1 1 0;background:var(--grey);border-radius:1px;min-width:1px;transition:background .05s}
   .wave .bar.on{background:var(--accent)}
@@ -1077,10 +1078,14 @@ function trackRow(t,si){
   if(!t.waveform)t.waveform=stableWave((t.name||'')+si,160);
   const dur=t.dur!=null?fmtT(t.dur):'—:—';
   const song=(AL()&&AL().songs)?AL().songs[si]:null;
-  const cmts=(song&&song.comments)?song.comments:[];
+  const allc=(song&&song.comments)?song.comments:[];
   const cdur=t.dur||(song&&song.dur)||210;
+  // Comments belong to a specific file (t.sid). Legacy comments with no file_id
+  // fall onto the song's master/first file so they still appear somewhere.
+  const firstSid=(song&&song.files&&song.files.length)?((song.files.find(f=>f.master)||song.files[0]).sid||null):null;
+  const cmts=allc.filter(c=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
   const marks=cmts.map(c=>{const sec=parseStamp(c.stamp);if(sec==null)return '';const frac=Math.max(0,Math.min(1,sec/cdur));
-    return `<div class="wave-mark" style="left:${(frac*100).toFixed(2)}%;background:${c.color||'#FF4D1C'}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();seekAt(${t.id},${frac})" title="${esc(c.who)} @ ${esc(c.stamp)} — ${esc(c.text)}"><span>${esc((c.who||'?')[0])}</span><div class="wm-pop"><b>${esc(c.who)}</b> · ${esc(c.stamp)}<br>${esc(c.text)}</div></div>`;}).join('');
+    return `<div class="wave-mark" data-sec="${sec}" style="left:${(frac*100).toFixed(2)}%;background:${c.color||'#FF4D1C'}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();seekAt(${t.id},${frac})" title="${esc(c.who)} @ ${esc(c.stamp)} — ${esc(c.text)}"><span>${esc((c.who||'?')[0])}</span><div class="wm-pop"><b>${esc(c.who)}</b> · ${esc(c.stamp)}<br>${esc(c.text)}</div></div>`;}).join('');
   const bank=si<0;
   const isM=!bank&&!!t.master;
   const acts=bank
@@ -1217,7 +1222,12 @@ function togglePlay(id){
 }
 function setPlayUI(id){document.querySelectorAll('.track').forEach(el=>el.classList.toggle('playing',+el.dataset.tid===id));}
 function fillWaveTo(id,frac){const w=document.querySelector(`.wave[data-tid="${id}"]`);if(!w)return;const bars=w.querySelectorAll('.bar');const lit=Math.round(Math.max(0,Math.min(1,frac))*bars.length);bars.forEach((b,i)=>b.classList.toggle('on',i<lit));}
-function updProg(id){if(!curAudio)return;const pct=curAudio.currentTime/(curAudio.duration||1);fillWaveTo(id,pct);const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent=fmtT(curAudio.currentTime);}
+function updProg(id){if(!curAudio)return;const pct=curAudio.currentTime/(curAudio.duration||1);fillWaveTo(id,pct);const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent=fmtT(curAudio.currentTime);
+  // Auto-reveal a comment's popup for a couple seconds as the playhead passes it.
+  const w=document.querySelector(`.wave[data-tid="${id}"]`);
+  if(w){const t=curAudio.currentTime;const last=(w._lastT==null)?t:w._lastT;w._lastT=t;
+    if(t>=last)w.querySelectorAll('.wave-mark').forEach(m=>{const sec=+m.dataset.sec;if(sec>last&&sec<=t){m.classList.add('wm-show');clearTimeout(m._ht);m._ht=setTimeout(()=>m.classList.remove('wm-show'),2400);}});}
+}
 function resetWaveUI(id){fillWaveTo(id,0);const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent='0:00';}
 /* Precise seek anywhere on the waveform — playing or paused, backward or forward.
    Proportion is measured from the waveform container's bounding rect. */
@@ -1627,10 +1637,15 @@ async function inviteMember(){
 function curStamp(){return (curAudio&&!curAudio.paused)?fmtT(curAudio.currentTime):'';}
 function postComment(songId){
   const inp=document.getElementById('cmt-'+songId);if(!inp)return;const text=inp.value.trim();if(!text)return;
-  const stamp=curStamp();inp.value='';
+  inp.value='';
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);
-  if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text});route.songId=songId;renderSongList();}
-  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp})}).catch(()=>{});
+  // Attach to the file currently playing in this song (with its timestamp), else
+  // the song's master/first file so the marker lands somewhere sensible.
+  let fileSid=null,stamp='';
+  if(curTid){const t=findFile(curTid);if(t&&s&&s.files.indexOf(t)>=0){fileSid=t.sid||null;stamp=curStamp();}}
+  if(!fileSid&&s&&s.files.length){fileSid=(s.files.find(f=>f.master)||s.files[0]).sid||null;}
+  if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text,fileSid});route.songId=songId;renderSongList();}
+  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).catch(()=>{});
 }
 function addRef(songId){
   const t=prompt('Reference — song / artist');if(!t||!t.trim())return;const u=(prompt('What for? (feel, tone, guitar texture…)')||'').trim();

@@ -327,6 +327,8 @@ create table if not exists public.song_comments (
   body text not null,
   created_at timestamptz default now()
 );
+-- v2: comments attach to a specific audio file (so waveform markers line up).
+alter table public.song_comments add column if not exists file_id uuid references public.song_files (id) on delete cascade;
 alter table public.song_comments enable row level security;
 drop policy if exists "song_comments: via owned album" on public.song_comments;
 create policy "song_comments: via owned album" on public.song_comments for all
