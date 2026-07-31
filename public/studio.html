@@ -449,9 +449,14 @@
   @keyframes slotFlash{0%,100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}20%{box-shadow:0 0 0 3px var(--accent),0 0 22px rgba(255,77,28,.6)}}
 
   /* merch items (full records — v2) */
-  .merch-thumb{width:74px;height:74px;border-radius:12px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3);border:1px solid var(--line-soft)}
+  .merch-thumb{width:104px;height:104px;border-radius:14px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3);border:1px solid var(--line-soft)}
   .merch-thumb img{width:100%;height:100%;object-fit:cover}
-  .merch-thumb svg{width:26px;height:26px}
+  .merch-thumb svg{width:38px;height:38px}
+  /* larger collapsed merch rows */
+  .idea-song[data-mi] .idea-head{padding:16px 20px;gap:18px}
+  .idea-song[data-mi] .idea-title{font-size:19px}
+  .idea-song[data-mi] .merch-sub{font-size:13px;gap:10px;margin-top:6px}
+  .idea-song[data-mi] .merch-sub .swatch{width:14px;height:14px}
   .size-qty-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
   .sq{display:flex;flex-direction:column;gap:4px;width:58px}
   .sq-tog{padding:6px 0;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-weight:600;font-size:12px;cursor:pointer;font-family:inherit}
