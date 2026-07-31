@@ -328,6 +328,15 @@
   .ico-btn.grid-ico:hover{background:var(--accent-hi);color:#fff}
   .ico-btn svg{width:16px;height:16px}
   .empty-note{color:var(--txt-3);font-size:12.5px;text-align:center;padding:8px 0 2px;font-style:italic}
+  /* per-file comments, attached under each track */
+  .track-group{display:flex;flex-direction:column}
+  .track-group .track{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none}
+  .track-cmts{background:var(--panel-2);border:1px solid var(--line-soft);border-top:1px dashed var(--line);border-radius:0 0 var(--r-md) var(--r-md);padding:6px 14px 10px}
+  .track-cmts .cmt-row{padding:8px 0}
+  .tc-empty{color:var(--txt-3);font-size:11.5px;font-style:italic;padding:8px 0 6px}
+  .tc-add{display:flex;gap:8px;margin-top:6px}
+  .tc-add input{flex:1;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px 10px;font-family:inherit;font-size:12.5px;outline:none}
+  .tc-add input:focus{border-color:var(--accent)}
   /* idea labels (section + instrument tags) */
   .label-bar{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:9px}
   .lchip{padding:3px 9px;border-radius:20px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-size:10.5px;font-weight:600;cursor:pointer;transition:.12s;font-family:inherit;white-space:nowrap}
@@ -1116,7 +1125,7 @@ function songBody(s,i){
     <div class="zone">
       <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="zh-t">Ideas &amp; demos</div><div class="zh-c">${s.files.length} file${s.files.length!==1?'s':''}</div></div>
       <div class="zone-body">
-        ${s.files.length?`<div class="tracks">${[...s.files].sort((a,b)=>(b.master?1:0)-(a.master?1:0)).map(t=>trackRow(t,i)).join('')}</div>`:`<div class="empty-note">No ideas here yet — drop the first one below.</div>`}
+        ${s.files.length?`<div class="tracks">${[...s.files].sort((a,b)=>(b.master?1:0)-(a.master?1:0)).map(t=>`<div class="track-group">${trackRow(t,i)}${trackComments(t,i,s)}</div>`).join('')}</div>`:`<div class="empty-note">No ideas here yet — drop the first one below.</div>`}
         <div class="dropzone slim" onclick="browseAudio(${i})" ondragover="dzOver(event,this)" ondragleave="this.classList.remove('drag')" ondrop="dzDrop(event,${i},this)">
           <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
           <div class="big">Drop a WAV or MP3 here</div><div class="sm">or click to browse · uploads in place</div>
@@ -1136,12 +1145,8 @@ function songBody(s,i){
       </div>
     </div>
 
-    <!-- ZONE 3: feedback + meta (comments | references | credits) -->
-    <div class="song-cols three">
-      <div class="zone">
-        <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div><div class="zh-t">Comments</div><div class="zh-c">${s.comments.length}</div></div>
-        <div class="zone-body">${s.comments.length?s.comments.map(c=>`<div class="cmt-row"><div class="cmt-av" style="background:${c.color}">${c.who[0]}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${c.who}</span><span class="cstamp">@ ${c.stamp}</span></div><div class="ctext">${c.text}</div></div></div>`).join(''):'<div class="empty-note">"The fill at 1:42 is wrong" goes here — pinned to the audio.</div>'}<div style="display:flex;gap:8px;margin-top:10px"><input id="cmt-${s.id}" placeholder="Add a comment…" style="flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:8px 10px;font-family:inherit;font-size:12.5px;outline:none" onkeydown="if(event.key==='Enter')postComment('${s.id}')"><button class="ico-btn" title="Post comment" onclick="postComment('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>
-      </div>
+    <!-- ZONE 3: meta (references | credits) — comments now live under each file -->
+    <div class="song-cols">
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="zh-t">References</div></div>
         <div class="zone-body">${s.refs.length?s.refs.map(r=>`<div class="ref-row"><div class="ri"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div><div style="flex:1;min-width:0"><div style="font-weight:600">${r.t}</div><div style="color:var(--txt-3);font-size:11.5px">${r.u}</div></div></div>`).join(''):'<div class="empty-note">Songs you want this to feel like.</div>'}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="addRef('${s.id}')">＋ Add reference</button></div>
@@ -1224,6 +1229,21 @@ function toggleLabel(id,label){
   const lp=document.getElementById('lp-'+id);if(lp)lp.querySelectorAll('.lchip').forEach(c=>c.classList.toggle('on',t.labels.includes(c.dataset.label)));
   const as=document.querySelector(`.label-assigned[data-tid="${id}"]`);if(as)as.innerHTML=labelChipsAssigned(t);
   if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,labels:t.labels})}).catch(()=>{});
+}
+// Per-file comments shown directly under each track, with its own composer.
+function trackComments(t,i,s){
+  const firstSid=(s.files&&s.files.length)?((s.files.find(f=>f.master)||s.files[0]).sid||null):null;
+  const cmts=(s.comments||[]).filter(c=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
+  const rows=cmts.length?cmts.map(c=>`<div class="cmt-row"><div class="cmt-av" style="background:${c.color}">${esc((c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
+  return `<div class="track-cmts">${rows}<div class="tc-add"><input id="fcmt-${t.id}" placeholder="Comment on this file…" onkeydown="if(event.key==='Enter')postFileComment('${s.id}',${t.id})"><button class="ico-btn" title="Post comment" onclick="postFileComment('${s.id}',${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>`;
+}
+function postFileComment(songId,trackId){
+  const inp=document.getElementById('fcmt-'+trackId);if(!inp)return;const text=inp.value.trim();if(!text)return;inp.value='';
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);const t=findFile(trackId);
+  let stamp='';if(curTid===trackId&&curAudio&&!curAudio.paused)stamp=curStamp();
+  const fileSid=t?t.sid:null;
+  if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text,fileSid});route.songId=songId;renderSongList();}
+  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).catch(()=>{});
 }
 function stableWave(seed,n){n=n||120;let h=[],s=0;for(let i=0;i<seed.length;i++)s+=seed.charCodeAt(i);let prev=0.4;for(let i=0;i<n;i++){s=(s*9301+49297)%233280;const r=s/233280;const env=Math.pow(Math.sin((i/n)*Math.PI),0.6);const target=(0.12+r*0.88)*(0.35+0.65*env);prev=prev*0.55+target*0.45;h.push(Math.max(.08,Math.min(1,prev)));}return h;}
 /* decode real audio into a peak waveform */
