@@ -313,7 +313,8 @@ export async function GET() {
       title: al.title,
       year: String(new Date(al.created_at as string).getFullYear()),
       status: "in-progress",
-      cover: null,
+      // Album card thumbnail auto-pulls artwork slot 0 ("Front cover").
+      cover: assetMap[al.id]?.artwork?.[0] ?? null,
       members: membersByAlbum[al.id] ?? [],
       songs: songsByAlbum[al.id] ?? [],
       schedule,

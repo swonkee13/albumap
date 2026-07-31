@@ -668,9 +668,9 @@ function renderAlbums(){
     <div class="profile-up" style="width:92px;height:92px" onclick="uploadImg('artist','${a.id}')">${a.photo?`<img src="${a.photo}">`:`<div class="profile-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="9" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></div>`}<div class="up-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
     <div><div class="eyebrow">${a.type}</div><div class="view-title" style="font-size:38px;margin-top:6px">${a.name}</div></div></div>
   <div style="margin-top:32px" class="eyebrow">Albums &amp; releases</div>
-  <div class="gallery">${a.albums.map(al=>`<div class="g-card" onclick="nav({view:'dashboard',artistId:'${a.id}',albumId:'${al.id}'})">
-    <div class="art">${al.cover?`<img src="${al.cover}">`:`<div class="ph">${al.title[0]}</div>`}<div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
-    <div class="gt">${al.title}</div><div class="gs"><span class="status-dot" style="background:${statusColor(al.status)}"></span>${al.year} · ${statusLabel(al.status)}</div></div>`).join('')}
+  <div class="gallery">${a.albums.map(al=>{const cover=al.cover||(al.artwork&&al.artwork[0]&&al.artwork[0].img)||null;return `<div class="g-card" onclick="nav({view:'dashboard',artistId:'${a.id}',albumId:'${al.id}'})">
+    <div class="art">${cover?`<img src="${cover}">`:`<div class="ph">${al.title[0]}</div>`}<div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+    <div class="gt">${al.title}</div><div class="gs"><span class="status-dot" style="background:${statusColor(al.status)}"></span>${al.year} · ${statusLabel(al.status)}</div></div>`;}).join('')}
     <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow('${a.name}')"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
 }
 
