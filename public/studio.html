@@ -269,7 +269,8 @@
   .fmt-tag.m4a{background:rgba(78,168,232,.15);color:var(--blue)}
   .track-note{color:var(--txt-3);font-size:11px;margin-left:auto;flex:none}
   .scrub{display:flex;align-items:center;gap:12px}
-  .wave{flex:1;height:34px;position:relative;cursor:pointer;display:flex;align-items:center;gap:1px;overflow:hidden}
+  .wave{flex:1;height:34px;position:relative;cursor:pointer;display:flex;align-items:center;gap:1px;overflow:hidden;touch-action:none}
+  .wave .bar{pointer-events:none}
   .wave .bar{flex:1;background:var(--grey);border-radius:1px;min-width:1px;max-width:3px;transition:background .05s}
   .wave .bar.on{background:var(--accent)}
   .time{font-family:'JetBrains Mono';font-size:11.5px;color:var(--txt-2);flex:none;width:80px;text-align:right}
@@ -936,7 +937,7 @@ function trackRow(t,si){
   return `<div class="track" data-tid="${t.id}">
     <button class="play-btn" onclick="togglePlay(${t.id})"><svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
     <div class="track-main"><div class="track-top"><span class="fmt-tag ${t.fmt}">${t.fmt}</span><span class="track-name">${t.name}</span><span class="track-note">${t.note||''}</span></div>
-      <div class="scrub"><div class="wave" onclick="seekTrack(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div></div>
+      <div class="scrub"><div class="wave" onpointerdown="waveDown(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div></div>
     <div class="track-actions"><button class="ico-btn" title="Timestamped comment" onclick="alert('Timestamped comments live on the song page — open the song to see them threaded to the audio.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
     <button class="ico-btn" title="Download" onclick="dlTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></button>
     <button class="ico-btn" title="Remove" onclick="rmTrack(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div></div>`;
@@ -989,17 +990,42 @@ let curAudio=null,curTid=null;
 function findFile(id){const al=AL();for(const s of al.songs){const t=s.files.find(x=>x.id===id);if(t)return t;}return null;}
 function togglePlay(id){
   const t=findFile(id);
-  if(!t.url){alert('This is a seeded demo row with no real file. Drop a real WAV or MP3 to hear playback.');return;}
-  if(curTid===id&&curAudio&&!curAudio.paused){curAudio.pause();setPlayUI(null);return;}
+  if(!t||!t.url){alert('This is a seeded demo row with no real file. Drop a real WAV or MP3 to hear playback.');return;}
+  // Same track already loaded → pause/resume in place (keeps the seek position).
+  if(curTid===id&&curAudio){
+    if(curAudio.paused){curAudio.play().catch(()=>{});setPlayUI(id);}
+    else{curAudio.pause();setPlayUI(null);}
+    return;
+  }
   if(curAudio)curAudio.pause();
-  curAudio=new Audio(t.url);curTid=id;curAudio.play();setPlayUI(id);
+  curAudio=new Audio(t.url);curTid=id;
   curAudio.addEventListener('timeupdate',()=>updProg(id));
-  curAudio.addEventListener('ended',()=>{setPlayUI(null);resetWaveUI(id);});
+  curAudio.addEventListener('ended',()=>{setPlayUI(null);resetWaveUI(id);t.seekFrac=0;});
+  // Start from a click-seeked point chosen while paused, if any.
+  const startFrac=t.seekFrac||0;
+  const applySeek=()=>{if(startFrac)try{curAudio.currentTime=startFrac*(curAudio.duration||t.dur||0);}catch(e){}};
+  if(curAudio.readyState>=1)applySeek();
+  curAudio.addEventListener('loadedmetadata',applySeek,{once:true});
+  curAudio.play().catch(()=>{});
+  setPlayUI(id);
 }
 function setPlayUI(id){document.querySelectorAll('.track').forEach(el=>el.classList.toggle('playing',+el.dataset.tid===id));}
-function updProg(id){if(!curAudio)return;const pct=curAudio.currentTime/(curAudio.duration||1);const w=document.querySelector(`.wave[data-tid="${id}"]`);if(w){const bars=w.querySelectorAll('.bar');const lit=Math.round(pct*bars.length);bars.forEach((b,i)=>b.classList.toggle('on',i<lit));}const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent=fmtT(curAudio.currentTime);}
-function resetWaveUI(id){const w=document.querySelector(`.wave[data-tid="${id}"]`);if(w)w.querySelectorAll('.bar').forEach(b=>b.classList.remove('on'));const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent='0:00';}
-function seekTrack(e,id){if(curTid!==id||!curAudio)return;const w=e.currentTarget,r=w.getBoundingClientRect();curAudio.currentTime=((e.clientX-r.left)/r.width)*(curAudio.duration||0);updProg(id);}
+function fillWaveTo(id,frac){const w=document.querySelector(`.wave[data-tid="${id}"]`);if(!w)return;const bars=w.querySelectorAll('.bar');const lit=Math.round(Math.max(0,Math.min(1,frac))*bars.length);bars.forEach((b,i)=>b.classList.toggle('on',i<lit));}
+function updProg(id){if(!curAudio)return;const pct=curAudio.currentTime/(curAudio.duration||1);fillWaveTo(id,pct);const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent=fmtT(curAudio.currentTime);}
+function resetWaveUI(id){fillWaveTo(id,0);const cur=document.querySelector(`[data-cur="${id}"]`);if(cur)cur.textContent='0:00';}
+/* Precise seek anywhere on the waveform — playing or paused, backward or forward.
+   Proportion is measured from the waveform container's bounding rect. */
+let waveDragId=null;
+function fracFromEvent(e,id){const w=document.querySelector(`.wave[data-tid="${id}"]`);if(!w)return 0;const r=w.getBoundingClientRect();return (e.clientX-r.left)/r.width;}
+function seekAt(id,frac){
+  const t=findFile(id);if(!t)return;
+  frac=Math.max(0,Math.min(1,frac));
+  if(curTid===id&&curAudio){curAudio.currentTime=frac*(curAudio.duration||t.dur||0);updProg(id);}
+  else{t.seekFrac=frac;fillWaveTo(id,frac);const cur=document.querySelector(`[data-cur="${id}"]`);if(cur&&t.dur)cur.textContent=fmtT(frac*t.dur);}
+}
+function waveDown(e,id){e.preventDefault();waveDragId=id;seekAt(id,fracFromEvent(e,id));}
+document.addEventListener('pointermove',e=>{if(waveDragId!=null)seekAt(waveDragId,fracFromEvent(e,waveDragId));});
+document.addEventListener('pointerup',()=>{waveDragId=null;});
 function dlTrack(id){const t=findFile(id);if(!t.url){alert('No real file behind this demo row.');return;}const a=document.createElement('a');a.href=t.url;a.download=t.name;a.click();}
 function rmTrack(id,si){const al=AL();const t=al.songs[si].files.find(x=>x.id===id);if(curTid===id&&curAudio){curAudio.pause();curAudio=null;curTid=null;}al.songs[si].files=al.songs[si].files.filter(x=>x.id!==id);renderSongList();if(t&&t.sid){fetch('/api/song-file?id='+encodeURIComponent(t.sid),{method:'DELETE'}).catch(()=>{});}}
 
