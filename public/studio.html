@@ -457,6 +457,20 @@
   .mini-toggle.on .tg::after{left:17px}
 
   /* song detail */
+  /* per-song single artwork */
+  .song-art-row{display:flex;align-items:center;gap:16px;margin-top:14px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);padding:14px 16px}
+  .song-art{width:84px;height:84px;flex:none;border-radius:var(--r-sm);overflow:hidden;background:var(--card-hi);border:1.5px dashed var(--line);cursor:pointer;display:grid;place-items:center;position:relative;transition:.16s}
+  .song-art:hover{border-color:var(--accent);background:#191316}
+  .song-art.filled{border-style:solid;border-color:var(--line-soft)}
+  .song-art img{width:100%;height:100%;object-fit:cover}
+  .song-art .sa-drop{display:flex;flex-direction:column;align-items:center;gap:5px;color:var(--txt-3);font-size:11px;font-weight:600}
+  .song-art .sa-drop svg{width:22px;height:22px}
+  .song-art .sa-replace{position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center;color:#fff;opacity:0;transition:.16s}
+  .song-art:hover .sa-replace{opacity:1}
+  .song-art .sa-replace svg{width:22px;height:22px}
+  .song-art-txt .sat-t{font-family:'Poppins';font-weight:600;font-size:14px}
+  .song-art-txt .sat-s{color:var(--txt-3);font-size:12px;margin-top:3px;line-height:1.5;max-width:60ch}
+  .exp-tile .song-badge{position:absolute;top:8px;left:8px;z-index:3;background:var(--blue);color:#04263b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:6px}
   .song-zones{display:flex;flex-direction:column;gap:16px;margin-top:14px}
   .song-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .song-cols.three{grid-template-columns:1fr 1fr 1fr}
@@ -869,7 +883,7 @@ function renderDashboard(){
 
   <!-- artwork -->
   <div class="section" style="margin-top:18px">
-    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div><div><h3 class="sec-t">Album artwork</h3><div class="cnt">${al.artwork.filter(x=>x.img).length}/${al.artwork.length} uploaded · print-ready</div></div></div>
+    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div><div><h3 class="sec-t">Album artwork</h3><div class="cnt">${al.artwork.filter(x=>!x.song&&x.img).length}/${al.artwork.filter(x=>!x.song).length} uploaded${al.artwork.some(x=>x.song)?' · +'+al.artwork.filter(x=>x.song).length+' single'+(al.artwork.filter(x=>x.song).length!==1?'s':''):''}</div></div></div>
     <button class="expand" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
     <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${al.artwork.slice(0,5).map((m,i)=>slotHTML(m,i,'artwork',i===0)).join('')}</div>
   </div>
@@ -1031,6 +1045,10 @@ function toggleSongRow(head){
 }
 function songBody(s,i){
   return `
+   <div class="song-art-row">
+     <div class="song-art ${s.art?'filled':''}" onclick="uploadImg('songart','${s.id}')">${s.art?`<img src="${s.art}"><div class="sa-replace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`:`<div class="sa-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><span>Artwork</span></div>`}</div>
+     <div class="song-art-txt"><div class="sat-t">Single / pre-release artwork</div><div class="sat-s">One cover for this song. It’s auto-added to <b>Album artwork</b> labeled “${esc(s.t)}” — handy for singles you drop before the album.</div></div>
+   </div>
    <div class="song-zones">
     <!-- ZONE 1: audio ideas, contained -->
     <div class="zone">
@@ -1399,9 +1417,12 @@ function genTimeline(){
 
 /* ===== ARTWORK / MERCH full ===== */
 function renderArtwork(){
-  const al=AL();
-  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Album artwork</div><div class="ws-sub">Front cover plus the inside, back, label and insert for physical media. Print-ready files live here.</div></div>
-  <div class="exp-gallery">${al.artwork.map((m,i)=>`<div class="exp-tile ${i===0?'is-cover':''}" data-slot="${i}" onclick="uploadImg('artwork',${i})">${i===0?'<div class="cover-badge">Cover</div>':''}${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">${i===0?'Front cover · click to upload':'Physical media · click to upload'}</div></div>`}</div>`).join('')}</div>`;
+  const a=A(),al=AL();
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Album artwork</div><div class="ws-sub">Front cover plus the inside, back, label and insert for physical media. Single covers uploaded on a song page show up here too.</div></div>
+  <div class="exp-gallery">${al.artwork.map((m,i)=>{
+    if(m.song)return `<div class="exp-tile is-single" title="Open ${esc(m.label)}" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${m.songId}'})"><div class="song-badge">Single</div><img src="${m.img}"><div class="cap">${esc(m.label)}</div></div>`;
+    return `<div class="exp-tile ${i===0?'is-cover':''}" data-slot="${i}" onclick="uploadImg('artwork',${i})">${i===0?'<div class="cover-badge">Cover</div>':''}${m.img?`<img src="${m.img}"><div class="cap">${esc(m.label)}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${esc(m.label)}</div><div class="sm">${i===0?'Front cover · click to upload':'Physical media · click to upload'}</div></div>`}</div>`;
+  }).join('')}</div>`;
   flashSlotScroll('artwork');
 }
 const MERCH_SIZES=["S","M","L","XL","2XL","3XL"];
@@ -1563,6 +1584,8 @@ fileInput.addEventListener('change',async e=>{
   const f=e.target.files[0];if(!f)return;
   const target=imgTarget||{};const type=target.type,idx=target.idx;
   e.target.value='';
+  // Per-song single artwork → songs.artwork_key; mirrors into album artwork.
+  if(type==='songart'){await uploadSongArt(f,idx);return;}
   // Band photo / logo → uploads to R2, keyed by artist slug.
   if(type==='artist'){
     const localUrl=URL.createObjectURL(f);const art=getArtist(idx);if(art)art.photo=localUrl;render();
@@ -1588,6 +1611,21 @@ fileInput.addEventListener('change',async e=>{
     await fetch('/api/album-asset',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,kind:type,slot:idx,key:up.key})});
   }catch(err){/* local preview stays this session; will not persist if upload failed */}
 });
+async function uploadSongArt(f,songId){
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;
+  const localUrl=URL.createObjectURL(f);s.art=localUrl;
+  // mirror into album artwork list (labeled with the song name)
+  let entry=al.artwork.find(x=>x.song&&x.songId===songId);
+  if(entry)entry.img=localUrl;else al.artwork.push({label:s.t,img:localUrl,song:true,songId});
+  const tile=document.querySelector(`.idea-song[data-song="${songId}"] .song-art`);
+  if(tile){tile.classList.add('filled');tile.innerHTML=`<img src="${localUrl}"><div class="sa-replace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`;}
+  try{
+    const up=await fetch('/api/song-art',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',songId,name:f.name})}).then(r=>r.json());
+    if(!up.ok)throw new Error('url');
+    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
+    await fetch('/api/song-art',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set',songId,key:up.key})});
+  }catch(e){/* local preview stays this session */}
+}
 function saveSongMeta(songId,field,value){
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(s)s[field]=value;
   const b={songId};b[field]=value;

@@ -101,11 +101,12 @@ export async function GET() {
     notes: string | null;
     refs: unknown;
     credits: unknown;
+    artwork_key: string | null;
   }> = [];
   if (albumIds.length) {
     const { data } = await supabase
       .from("songs")
-      .select("id, title, position, album_id, lyrics, notes, refs, credits")
+      .select("id, title, position, album_id, lyrics, notes, refs, credits, artwork_key")
       .in("album_id", albumIds)
       .order("position", { ascending: true });
     songs = data ?? [];
@@ -219,6 +220,26 @@ export async function GET() {
     /* not present yet */
   }
 
+  // Per-song artwork (signed) + collected per album to append to album artwork.
+  const songArtByAlbum: Record<string, unknown[]> = {};
+  const songArtUrl: Record<string, string | null> = {};
+  await Promise.all(
+    songs.map(async (s) => {
+      if (!s.artwork_key) return;
+      const url = await signGet(client, s.artwork_key);
+      songArtUrl[s.id] = url;
+      if (url) {
+        if (!songArtByAlbum[s.album_id]) songArtByAlbum[s.album_id] = [];
+        (songArtByAlbum[s.album_id] as unknown[]).push({
+          label: s.title,
+          img: url,
+          song: true,
+          songId: s.id,
+        });
+      }
+    }),
+  );
+
   // Songs shaped for the UI. cells is a map { instrumentName: state } so it
   // works with per-album dynamic instrument columns (v2).
   const songsByAlbum: Record<string, unknown[]> = {};
@@ -228,6 +249,7 @@ export async function GET() {
     songsByAlbum[s.album_id].push({
       id: s.id,
       t: s.title,
+      art: songArtUrl[s.id] ?? null,
       cells,
       dur: 210,
       files: filesBySong[s.id] ?? [],
@@ -397,10 +419,13 @@ export async function GET() {
       members: membersByAlbum[al.id] ?? [],
       songs: songsByAlbum[al.id] ?? [],
       schedule,
-      artwork: ARTWORK_LABELS.map((label, i) => ({
-        label,
-        img: assetMap[al.id]?.artwork?.[i] ?? null,
-      })),
+      artwork: [
+        ...ARTWORK_LABELS.map((label, i) => ({
+          label,
+          img: assetMap[al.id]?.artwork?.[i] ?? null,
+        })),
+        ...(songArtByAlbum[al.id] ?? []),
+      ],
       merch: MERCH_LABELS.map((label, i) => ({
         label,
         img: assetMap[al.id]?.merch?.[i] ?? null,

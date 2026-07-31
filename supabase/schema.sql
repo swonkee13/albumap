@@ -288,6 +288,10 @@ alter table public.albums add column if not exists schedule jsonb default '[]'::
 alter table public.songs add column if not exists refs jsonb default '[]'::jsonb;
 alter table public.songs add column if not exists credits jsonb default '[]'::jsonb;
 
+-- v2: single per-song artwork (pre-release single cover). Surfaces in the album
+-- artwork section labeled with the song name.
+alter table public.songs add column if not exists artwork_key text;
+
 -- ARTIST PHOTOS (band photo / logo, keyed per owner + artist slug)
 create table if not exists public.artist_photos (
   owner_id uuid not null references auth.users (id) on delete cascade,
