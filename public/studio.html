@@ -775,10 +775,11 @@ function render(){
   else if(v==='schedule')renderSchedule();
   else if(v==='artwork')renderArtwork();
   else if(v==='merch')renderMerch();
+  else if(v==='activity')renderActivity();
   document.getElementById('scroll').scrollTop=0;
   // call bar only makes sense inside an album
   const cb=document.getElementById('callbar');
-  const inAlbum=['dashboard','grid','songs','sequencer','schedule','artwork','merch'].includes(route.view);
+  const inAlbum=['dashboard','grid','songs','sequencer','schedule','artwork','merch','activity'].includes(route.view);
   cb.style.display=inAlbum?'':'none';
   if(inAlbum)renderCallBar();
   // Persistent "Recording grid" quick-link, always available inside an album.
@@ -801,7 +802,7 @@ function renderCrumbs(){
   let h=`<span class="c ${route.view==='roster'?'here':''}" onclick="nav({view:'roster'})">Roster</span>`;
   if(route.artistId){const a=A();h+=`<span class="sep">/</span><span class="c ${route.view==='albums'?'here':''}" onclick="nav({view:'albums',artistId:'${a.id}'})">${a.name}</span>`;}
   if(route.albumId){const al=AL();h+=`<span class="sep">/</span><span class="c ${route.view==='dashboard'?'here':''}" onclick="nav({view:'dashboard',artistId:'${route.artistId}',albumId:'${route.albumId}'})">${al.title}</span>`;}
-  const names={grid:"Recording grid",songs:"Songs",ideas:"Songs",sequencer:"Tracklist",schedule:"Schedule",artwork:"Artwork",merch:"Merch"};
+  const names={grid:"Recording grid",songs:"Songs",ideas:"Songs",sequencer:"Tracklist",schedule:"Schedule",artwork:"Artwork",merch:"Merch",activity:"Notifications"};
   if(names[route.view])h+=`<span class="sep">/</span><span class="c here">${names[route.view]}</span>`;
   document.getElementById('crumbs').innerHTML=h;
 }
@@ -900,7 +901,8 @@ function renderDashboard(){
       <!-- activity -->
       <div class="section">
         <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div><h3 class="sec-t">Activity</h3><div class="cnt">Latest across the band</div></div></div></div>
-        ${al.activity.map(ac=>`<div class="act-row"><div class="act-dot" style="background:${ac.color}">${ac.who[0]}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')}
+        ${al.activity.slice(0,6).map(ac=>`<div class="act-row"><div class="act-dot" style="background:${ac.color}">${ac.who[0]}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')||'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}
+        ${al.activity.length>6?`<div class="sec-foot"><button class="expand" onclick="nav({view:'activity',artistId:'${a.id}',albumId:'${al.id}'})">View all ${al.activity.length} →</button></div>`:''}
       </div>
     </div>
   </div>
@@ -1612,6 +1614,12 @@ async function uploadMerchImg(f){
   }catch(e){/* local preview stays this session */}
 }
 
+/* ===== NOTIFICATIONS (full activity) ===== */
+function renderActivity(){
+  const a=A(),al=AL();const acts=al.activity||[];
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Notifications</div><div class="ws-sub">Everything that’s happened on this album — newest first.</div></div>
+  <div class="section" style="margin-top:8px">${acts.length?acts.map(ac=>`<div class="act-row"><div class="act-dot" style="background:${ac.color}">${esc((ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:24px">No activity yet.</div>'}</div>`;
+}
 /* ===== SONG DETAIL ===== */
 /* ===== SHARE MODAL ===== */
 function openShare(){

@@ -361,7 +361,7 @@ export async function GET() {
         .limit(60);
       for (const a of acts ?? []) {
         if (!activityByAlbum[a.album_id]) activityByAlbum[a.album_id] = [];
-        if ((activityByAlbum[a.album_id] as unknown[]).length >= 12) continue;
+        if ((activityByAlbum[a.album_id] as unknown[]).length >= 50) continue;
         activityByAlbum[a.album_id].push({
           who: a.actor || "Someone",
           color: colorFor(a.actor || "?"),
