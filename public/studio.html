@@ -297,7 +297,7 @@
   .wave-mark .wm-pop{display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card-hi);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--txt);width:200px;line-height:1.4;box-shadow:0 10px 28px rgba(0,0,0,.55);z-index:12;white-space:normal;text-align:left;pointer-events:none}
   .wave-mark:hover .wm-pop{display:block}
   .wave-mark .wm-pop b{color:var(--accent-hi)}
-  .wave .bar{flex:1;background:var(--grey);border-radius:1px;min-width:1px;max-width:3px;transition:background .05s}
+  .wave .bar{flex:1 1 0;background:var(--grey);border-radius:1px;min-width:1px;transition:background .05s}
   .wave .bar.on{background:var(--accent)}
   .time{font-family:'JetBrains Mono';font-size:11.5px;color:var(--txt-2);flex:none;width:80px;text-align:right}
   .time .cur{color:var(--txt)}
@@ -1074,7 +1074,7 @@ function songBody(s,i){
 function parseStamp(s){if(!s)return null;const m=String(s).trim().match(/^(\d+):(\d{1,2})$/);if(!m)return null;return parseInt(m[1],10)*60+parseInt(m[2],10);}
 function trackRow(t,si){
   if(!t.id)t.id=++uidc;
-  if(!t.waveform)t.waveform=stableWave((t.name||'')+si,120);
+  if(!t.waveform)t.waveform=stableWave((t.name||'')+si,160);
   const dur=t.dur!=null?fmtT(t.dur):'—:—';
   const song=(AL()&&AL().songs)?AL().songs[si]:null;
   const cmts=(song&&song.comments)?song.comments:[];
@@ -1142,11 +1142,11 @@ function handleAudio(files,target){
   const song=isBank?null:al.songs[target];
   if(!isBank&&!song)return;
   audio.forEach(f=>{const fmt=/wav/i.test(f.name)?'wav':/mp3|mpeg/i.test(f.name)?'mp3':/m4a|aiff/i.test(f.name)?'m4a':'mp3';
-    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,labels:[],waveform:stableWave(f.name+f.size,120)};
+    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,labels:[],waveform:stableWave(f.name+f.size,160)};
     if(isBank){al.bank=al.bank||[];al.bank.push(t);}else{song.files.push(t);}
     renderSongsAudio();
     const probe=new Audio();probe.src=url;probe.addEventListener('loadedmetadata',()=>{t.dur=probe.duration;renderSongsAudio();});
-    decodeWaveform(url,120).then(w=>{t.waveform=w;renderSongsAudio();});
+    decodeWaveform(url,160).then(w=>{t.waveform=w;renderSongsAudio();});
     uploadToR2(f,isBank?{albumId:al.id,bank:true}:{songId:song.id},t);});
 }
 async function uploadToR2(f,dest,t){
