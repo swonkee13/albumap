@@ -1558,7 +1558,7 @@ function merchItemHTML(it,i){
         <div class="mf full">
           <label style="display:flex;align-items:center;justify-content:space-between">Quantities<span class="mini-toggle ${it.hasSizes?'on':''}" onclick="toggleMerchHasSizes('${it.id}')"><span class="tg"></span>Apparel — has sizes</span></label>
           ${it.hasSizes
-            ?`<div class="size-qty-grid">${MERCH_SIZES.map(sz=>{const on=(it.sizes||[]).includes(sz);const q=(it.sizeQty&&it.sizeQty[sz]!=null)?it.sizeQty[sz]:'';return `<div class="sq ${on?'on':''}"><button class="sq-tog" onclick="toggleMerchSize('${it.id}','${sz}')">${sz}</button>${on?`<input type="number" min="0" class="sq-in" value="${esc(q)}" placeholder="0" onblur="setMerchQty('${it.id}','${sz}',this.value)">`:''}</div>`;}).join('')}</div><div class="sq-total">Total: <b>${merchTotal(it)}</b> pcs</div>`
+            ?`<div class="size-qty-grid">${MERCH_SIZES.map(sz=>{const on=(it.sizes||[]).includes(sz);const q=(it.sizeQty&&it.sizeQty[sz]!=null)?it.sizeQty[sz]:'';return `<div class="sq ${on?'on':''}"><button class="sq-tog" onclick="toggleMerchSize('${it.id}','${sz}')">${sz}</button>${on?`<input type="number" min="0" class="sq-in" value="${esc(q)}" placeholder="0" oninput="setMerchQty('${it.id}','${sz}',this.value)">`:''}</div>`;}).join('')}</div><div class="sq-total">Total: <b>${merchTotal(it)}</b> pcs</div>`
             :`<input type="number" min="0" class="mf-total" value="${it.totalQty==null?'':esc(it.totalQty)}" placeholder="e.g. 100" onblur="saveMerch('${it.id}','total_qty',this.value)"><div class="sq-total">Total units for this item (non-apparel)</div>`}
         </div>
       </div>
@@ -1606,12 +1606,14 @@ function saveMerch(id,field,value){
   fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
   const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el){const h=el.querySelector('.idea-title');if(h&&field==='name')h.textContent=value||'Untitled item';renderMerchSubOnly(id);}
 }
+let merchQtyTimers={};
 function setMerchQty(id,size,value){
   const it=merchItem(id);if(!it)return;it.sizeQty=it.sizeQty||{};
   it.sizeQty[size]=(value===''?0:Math.max(0,parseInt(value,10)||0));
   const tot=document.querySelector(`.idea-song[data-mi="${id}"] .sq-total b`);if(tot)tot.textContent=merchTotal(it);
   renderMerchSubOnly(id);
-  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,size_qty:it.sizeQty})}).catch(()=>{});
+  clearTimeout(merchQtyTimers[id]);
+  merchQtyTimers[id]=setTimeout(()=>{fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,size_qty:it.sizeQty})}).catch(()=>{});},450);
 }
 function renderMerchSubOnly(id){const it=merchItem(id);const el=document.querySelector(`.idea-song[data-mi="${id}"] .merch-sub`);if(!el||!it)return;
   const groups=merchSubGroups(it);
