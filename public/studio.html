@@ -360,6 +360,8 @@
   .exp-tile .m-drop .lbl{font-weight:600;color:var(--txt-2);font-size:13px}
   .exp-tile .m-drop .sm{font-size:11px}
   .exp-tile .cap{position:absolute;left:0;right:0;bottom:0;padding:22px 14px 11px;font-weight:600;font-size:13px;background:linear-gradient(transparent,rgba(0,0,0,.82))}
+  .slot-flash{animation:slotFlash 1.6s ease-out}
+  @keyframes slotFlash{0%,100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}20%{box-shadow:0 0 0 3px var(--accent),0 0 22px rgba(255,77,28,.6)}}
 
   /* song detail */
   .song-zones{display:flex;flex-direction:column;gap:16px;margin-top:14px}
@@ -765,10 +767,24 @@ function renderDashboard(){
   </div>`;
 }
 function slotHTML(m,i,type,isCover){
-  return `<div class="slot ${m.img?'filled':''} ${isCover?'is-cover':''}" onclick="uploadImg('${type}',${i})">
+  return `<div class="slot ${m.img?'filled':''} ${isCover?'is-cover':''}" onclick="dashSlotClick('${type}',${i},${m.img?'true':'false'})">
     ${isCover?`<div class="cover-badge">Cover</div>`:''}
     ${m.img?`<img src="${m.img}"><div class="m-label">${m.label}</div><div class="replace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`
     :`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div>${isCover?'<div class="sm">Front cover</div>':`<div class="sm">${type==='artwork'?'Physical media':'Mockup'}</div>`}</div>`}</div>`;
+}
+// Dashboard slot click: empty → upload here; filled → open the full section
+// page (artwork/merch), scrolled + highlighted on that item. Re-upload/replace
+// only happens on the full page, never from the dashboard.
+let pendingSlotScroll=null;
+function dashSlotClick(type,i,filled){
+  if(filled){ pendingSlotScroll={type,i}; nav({view:type,artistId:route.artistId,albumId:route.albumId}); }
+  else{ uploadImg(type,i); }
+}
+function flashSlotScroll(type){
+  if(!pendingSlotScroll||pendingSlotScroll.type!==type)return;
+  const i=pendingSlotScroll.i; pendingSlotScroll=null;
+  const el=document.querySelector(`.exp-tile[data-slot="${i}"]`);
+  if(el){ setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'center'});el.classList.add('slot-flash');setTimeout(()=>el.classList.remove('slot-flash'),1600);},60); }
 }
 function computeWaiting(al){
   const inMembers=(al.members||[]).filter(m=>m.status==='in');
@@ -1020,12 +1036,14 @@ function genTimeline(){
 function renderArtwork(){
   const al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Album artwork</div><div class="ws-sub">Front cover plus the inside, back, label and insert for physical media. Print-ready files live here.</div></div>
-  <div class="exp-gallery">${al.artwork.map((m,i)=>`<div class="exp-tile ${i===0?'is-cover':''}" onclick="uploadImg('artwork',${i})">${i===0?'<div class="cover-badge">Cover</div>':''}${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">${i===0?'Front cover · click to upload':'Physical media · click to upload'}</div></div>`}</div>`).join('')}</div>`;
+  <div class="exp-gallery">${al.artwork.map((m,i)=>`<div class="exp-tile ${i===0?'is-cover':''}" data-slot="${i}" onclick="uploadImg('artwork',${i})">${i===0?'<div class="cover-badge">Cover</div>':''}${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">${i===0?'Front cover · click to upload':'Physical media · click to upload'}</div></div>`}</div>`).join('')}</div>`;
+  flashSlotScroll('artwork');
 }
 function renderMerch(){
   const al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Merch mockups</div><div class="ws-sub">Tees, vinyl, posters — drop the mockups and print-ready files so the whole band signs off before anything goes to production.</div></div>
-  <div class="exp-gallery">${al.merch.map((m,i)=>`<div class="exp-tile" onclick="uploadImg('merch',${i})">${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">Click to upload</div></div>`}</div>`).join('')}</div>`;
+  <div class="exp-gallery">${al.merch.map((m,i)=>`<div class="exp-tile" data-slot="${i}" onclick="uploadImg('merch',${i})">${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">Click to upload</div></div>`}</div>`).join('')}</div>`;
+  flashSlotScroll('merch');
 }
 
 /* ===== SONG DETAIL ===== */
