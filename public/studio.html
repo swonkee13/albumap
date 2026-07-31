@@ -361,8 +361,8 @@
   .block .b-num{font-family:'JetBrains Mono';font-weight:700;font-size:11px;color:rgba(255,255,255,.75)}
   .block .b-dur{font-family:'JetBrains Mono';font-size:10px;color:rgba(255,255,255,.7);white-space:nowrap}
   .block .b-name{font-weight:700;font-size:12.5px;color:#fff;line-height:1.15;z-index:2;text-shadow:0 1px 3px rgba(0,0,0,.4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .block .b-wave{position:absolute;left:0;right:0;bottom:0;height:44px;display:flex;align-items:flex-end;gap:1px;padding:0 6px 8px;opacity:.4;z-index:1}
-  .block .b-wave .wb{flex:1;background:#fff;border-radius:1px;min-width:1px}
+  .block .b-wave{position:absolute;left:0;right:0;top:0;bottom:0;display:flex;align-items:center;gap:1px;padding:0 8px;opacity:.32;z-index:1}
+  .block .b-wave .wb{flex:1 1 0;background:#fff;border-radius:1px;min-width:1px}
   .playhead{position:absolute;top:2px;bottom:2px;width:2px;background:#fff;box-shadow:0 0 8px rgba(255,255,255,.8);z-index:5;pointer-events:none;display:none;border-radius:2px}
   body.seqplaying .playhead{display:block}
   .seq-foot{display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:12px}
@@ -1278,7 +1278,7 @@ function renderSeq(){
   const tl=document.getElementById('seqTimeline'),ph=document.getElementById('seqPlayhead'),total=seqTotal();
   const ruler=document.getElementById('seqRuler');ruler.innerHTML='';for(let i=0;i<8;i++){const d=document.createElement('div');d.className='tick';d.textContent=fmtT(total*i/8);ruler.appendChild(d);}
   [...tl.querySelectorAll('.block')].forEach(b=>b.remove());
-  seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(idx===0?' is-first':'')+(idx===seqSongs.length-1?' is-last':'')+(s.url?'':' no-audio');b.style.flexGrow=s.dur;b.style.flexBasis='0';b.style.background=`linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;b.dataset.id=s.id;const wave=stableWave(s.name,Math.max(8,Math.round(s.dur/12)));b.innerHTML=`<div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="b-name">${esc(s.name)}</div>${s.url?'':'<span class="no-audio-tag">no audio</span>'}<div class="b-wave">${wave.map(h=>`<div class="wb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>`;b.addEventListener('pointerdown',e=>blockPointerDown(e,s.id));tl.insertBefore(b,ph);});
+  seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(idx===0?' is-first':'')+(idx===seqSongs.length-1?' is-last':'')+(s.url?'':' no-audio');b.style.flexGrow=s.dur;b.style.flexBasis='0';b.style.background=`linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;b.dataset.id=s.id;const wave=stableWave(s.name,Math.max(24,Math.round(s.dur/3)));b.innerHTML=`<div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="b-name">${esc(s.name)}</div>${s.url?'':'<span class="no-audio-tag">no audio</span>'}<div class="b-wave">${wave.map(h=>`<div class="wb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>`;b.addEventListener('pointerdown',e=>blockPointerDown(e,s.id));tl.insertBefore(b,ph);});
   document.getElementById('seqCount').textContent=seqSongs.length;
   document.getElementById('seqLen').textContent=fmtT(total);
   document.getElementById('seqTot').textContent=fmtT(total);
