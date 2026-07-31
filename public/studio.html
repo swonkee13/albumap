@@ -386,6 +386,7 @@
   .ol-row .ol-num{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-3);width:22px}
   .ol-row .ol-sw{width:10px;height:10px;border-radius:3px;flex:none}
   .ol-row .ol-name{flex:1;font-weight:600;font-size:13.5px}
+  .ol-row .ol-name:hover{color:var(--accent-hi)}
   .ol-row .ol-dur{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-2)}
 
   /* timeline (schedule full) */
@@ -745,7 +746,7 @@ function render(){
   // Persistent "Recording grid" quick-link, always available inside an album.
   const qn=document.getElementById('quickNav');
   if(qn){
-    qn.innerHTML=(inAlbum&&route.albumId&&route.view!=='grid')?`<button class="ghost-btn" style="padding:7px 13px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
+    qn.innerHTML=(inAlbum&&route.albumId&&route.view!=='grid')?`<button class="solid-btn" style="padding:8px 15px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
   }
 }
 function gotoGrid(songId){nav({view:'grid',artistId:route.artistId,albumId:route.albumId,gridSong:songId||null});}
@@ -1283,7 +1284,7 @@ function renderSeq(){
   document.getElementById('seqLen').textContent=fmtT(total);
   document.getElementById('seqTot').textContent=fmtT(total);
   document.getElementById('seqSides').textContent=seqSides();
-  document.getElementById('seqOrder').innerHTML=`<div class="ol-head">Album order · ${seqSongs.length} tracks · ${fmtT(total)} · drag ≡ to reorder</div>`+seqSongs.map((s,i)=>`<div class="ol-row${s.url?'':' no-audio'}" data-id="${s.id}" onpointerdown="rowPointerDown(event,'${s.id}')"><span class="ol-grip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></span><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span class="ol-sw" style="background:${s.color}"></span><span class="ol-name">${esc(s.name)}</span>${s.url?'':'<span class="ol-noaudio">no audio</span>'}<span class="ol-dur">${fmtT(s.dur)}</span></div>`).join('');
+  document.getElementById('seqOrder').innerHTML=`<div class="ol-head">Album order · ${seqSongs.length} tracks · ${fmtT(total)} · drag ≡ to reorder</div>`+seqSongs.map((s,i)=>`<div class="ol-row${s.url?'':' no-audio'}" data-id="${s.id}"><span class="ol-grip" onpointerdown="rowPointerDown(event,'${s.id}')" title="Drag to reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></span><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span class="ol-sw" style="background:${s.color}"></span><span class="ol-name" style="cursor:pointer" title="Open song" onclick="nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${s.id}'})">${esc(s.name)}</span>${s.url?'':'<span class="ol-noaudio">no audio</span>'}<span class="ol-dur">${fmtT(s.dur)}</span></div>`).join('');
 }
 function seqSides(){const total=seqTotal();let acc=0,split=0,best=1e9;for(let i=0;i<seqSongs.length;i++){acc+=seqSongs[i].dur;const d=Math.abs(acc-total/2);if(d<best){best=d;split=i+1;}}return`${split} / ${seqSongs.length-split}`;}
 /* ===== real-audio sequencer engine ===== */
