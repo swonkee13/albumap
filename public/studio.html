@@ -771,7 +771,7 @@ function renderRoster(){
   content.innerHTML=`<div style="padding-top:22px"><div class="eyebrow">Studio roster</div><div class="view-title" style="font-size:34px;margin-top:6px">Artists</div></div>
   <div class="gallery">${artists.map(a=>{const ini=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
     return `<div class="g-card" onclick="nav({view:'albums',artistId:'${a.id}'})">
-      <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}<div class="playfab"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div></div>
+      <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}</div>
       <div class="gt">${a.name}</div><div class="gs">${a.type} · ${a.sub}</div></div>`;}).join('')}
     <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow(null)"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
 }
