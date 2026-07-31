@@ -46,6 +46,17 @@
   .lib-row .meta{min-width:0}
   .lib-row .meta .l1{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .lib-row .meta .l2{color:var(--txt-3);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+  /* sidebar nav tree (artist → albums → sections) */
+  .lib-sub{margin:2px 0 6px 10px;border-left:1px solid var(--line-soft);padding-left:6px}
+  .lib-alb{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;color:var(--txt-2);font-size:12.5px;font-weight:600}
+  .lib-alb span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lib-alb:hover{background:var(--hover);color:var(--txt)}
+  .lib-alb.active{color:var(--accent-hi)}
+  .lib-alb svg{width:13px;height:13px;flex:none;opacity:.75}
+  .lib-sub2{margin:1px 0 5px 15px;display:flex;flex-direction:column;gap:1px}
+  .lib-sec{padding:5px 9px;border-radius:7px;cursor:pointer;color:var(--txt-3);font-size:12px;font-weight:500}
+  .lib-sec:hover{background:var(--hover);color:var(--txt)}
+  .lib-sec.active{background:var(--accent-dim);color:var(--accent-hi)}
 
   /* main */
   .main{background:linear-gradient(180deg,#161619 0%,var(--panel) 22%);border-radius:var(--r-lg);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--line-soft);position:relative}
@@ -790,14 +801,27 @@ function render(){
   }
 }
 function gotoGrid(songId){nav({view:'grid',artistId:route.artistId,albumId:route.albumId,gridSong:songId||null});}
+const LIB_SECTIONS=[{v:'dashboard',label:'Overview'},{v:'grid',label:'Recording grid'},{v:'songs',label:'Songs'},{v:'sequencer',label:'Tracklist'},{v:'schedule',label:'Schedule'},{v:'artwork',label:'Artwork'},{v:'merch',label:'Merch'},{v:'activity',label:'Notifications'}];
 function renderLib(){
   document.getElementById('libList').innerHTML=artists.map(a=>{
     const ini=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
-    const active=route.artistId===a.id?'active':'';
-    return `<div class="lib-row ${active}" onclick="nav({view:'albums',artistId:'${a.id}'})">
+    const artistActive=route.artistId===a.id;
+    let html=`<div class="lib-row ${artistActive?'active':''}" onclick="nav({view:'albums',artistId:'${a.id}'})">
       <div class="thumb">${a.photo?`<img src="${a.photo}">`:ini}</div>
-      <div class="meta"><div class="l1">${a.name}</div><div class="l2">${a.type} · ${a.albums.length} album${a.albums.length>1?'s':''}</div></div>
-    </div>`;}).join('');
+      <div class="meta"><div class="l1">${esc(a.name)}</div><div class="l2">${a.type} · ${a.albums.length} album${a.albums.length!==1?'s':''}</div></div>
+    </div>`;
+    if(artistActive){
+      html+=`<div class="lib-sub">`+a.albums.map(al=>{
+        const albActive=route.albumId===al.id;
+        let s=`<div class="lib-alb ${albActive?'active':''}" onclick="nav({view:'dashboard',artistId:'${a.id}',albumId:'${al.id}'})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/></svg><span>${esc(al.title)}</span></div>`;
+        if(albActive){
+          s+=`<div class="lib-sub2">`+LIB_SECTIONS.map(sec=>`<div class="lib-sec ${route.view===sec.v?'active':''}" onclick="nav({view:'${sec.v}',artistId:'${a.id}',albumId:'${al.id}'})">${sec.label}</div>`).join('')+`</div>`;
+        }
+        return s;
+      }).join('')+`</div>`;
+    }
+    return html;
+  }).join('');
 }
 function renderCrumbs(){
   let h=`<span class="c ${route.view==='roster'?'here':''}" onclick="nav({view:'roster'})">Roster</span>`;
