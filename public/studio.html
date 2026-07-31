@@ -269,8 +269,14 @@
   .fmt-tag.m4a{background:rgba(78,168,232,.15);color:var(--blue)}
   .track-note{color:var(--txt-3);font-size:11px;margin-left:auto;flex:none}
   .scrub{display:flex;align-items:center;gap:12px}
-  .wave{flex:1;height:34px;position:relative;cursor:pointer;display:flex;align-items:center;gap:1px;overflow:hidden;touch-action:none}
+  .wave{flex:1;height:34px;position:relative;cursor:pointer;display:flex;align-items:center;gap:1px;overflow:visible;touch-action:none}
   .wave .bar{pointer-events:none}
+  /* SoundCloud-style timestamped comment markers on the waveform */
+  .wave-mark{position:absolute;top:-5px;transform:translateX(-50%);width:17px;height:17px;border-radius:50%;display:grid;place-items:center;font-size:8.5px;font-weight:700;color:#fff;cursor:pointer;z-index:4;border:1.5px solid var(--panel-2);box-shadow:0 1px 4px rgba(0,0,0,.55);font-family:'Inter'}
+  .wave-mark:hover{transform:translateX(-50%) scale(1.18);z-index:8}
+  .wave-mark .wm-pop{display:none;position:absolute;bottom:24px;left:50%;transform:translateX(-50%);background:var(--card-hi);border:1px solid var(--line);border-radius:9px;padding:8px 11px;font-size:11.5px;color:var(--txt);width:200px;line-height:1.4;box-shadow:0 10px 28px rgba(0,0,0,.55);z-index:12;white-space:normal;text-align:left;pointer-events:none}
+  .wave-mark:hover .wm-pop{display:block}
+  .wave-mark .wm-pop b{color:var(--accent-hi)}
   .wave .bar{flex:1;background:var(--grey);border-radius:1px;min-width:1px;max-width:3px;transition:background .05s}
   .wave .bar.on{background:var(--accent)}
   .time{font-family:'JetBrains Mono';font-size:11.5px;color:var(--txt-2);flex:none;width:80px;text-align:right}
@@ -403,7 +409,7 @@
   .song-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .song-cols.three{grid-template-columns:1fr 1fr 1fr}
   @media(max-width:900px){.song-cols,.song-cols.three{grid-template-columns:1fr}}
-  .zone{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);overflow:hidden;display:flex;flex-direction:column}
+  .zone{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);overflow:visible;display:flex;flex-direction:column}
   .zone-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line-soft);background:rgba(255,255,255,.015)}
   .zh-ic{width:26px;height:26px;border-radius:7px;flex:none;background:var(--accent-dim);color:var(--accent-hi);display:grid;place-items:center}
   .zh-ic svg{width:15px;height:15px}
@@ -930,14 +936,20 @@ function songBody(s,i){
     </div>
    </div>`;
 }
+function parseStamp(s){if(!s)return null;const m=String(s).trim().match(/^(\d+):(\d{1,2})$/);if(!m)return null;return parseInt(m[1],10)*60+parseInt(m[2],10);}
 function trackRow(t,si){
   if(!t.id)t.id=++uidc;
   if(!t.waveform)t.waveform=stableWave((t.name||'')+si,120);
   const dur=t.dur!=null?fmtT(t.dur):'—:—';
+  const song=(AL()&&AL().songs)?AL().songs[si]:null;
+  const cmts=(song&&song.comments)?song.comments:[];
+  const cdur=t.dur||(song&&song.dur)||210;
+  const marks=cmts.map(c=>{const sec=parseStamp(c.stamp);if(sec==null)return '';const frac=Math.max(0,Math.min(1,sec/cdur));
+    return `<div class="wave-mark" style="left:${(frac*100).toFixed(2)}%;background:${c.color||'#FF4D1C'}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();seekAt(${t.id},${frac})" title="${esc(c.who)} @ ${esc(c.stamp)} — ${esc(c.text)}"><span>${esc((c.who||'?')[0])}</span><div class="wm-pop"><b>${esc(c.who)}</b> · ${esc(c.stamp)}<br>${esc(c.text)}</div></div>`;}).join('');
   return `<div class="track" data-tid="${t.id}">
     <button class="play-btn" onclick="togglePlay(${t.id})"><svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
     <div class="track-main"><div class="track-top"><span class="fmt-tag ${t.fmt}">${t.fmt}</span><span class="track-name">${t.name}</span><span class="track-note">${t.note||''}</span></div>
-      <div class="scrub"><div class="wave" onpointerdown="waveDown(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div></div>
+      <div class="scrub"><div class="wave" onpointerdown="waveDown(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}${marks}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div></div>
     <div class="track-actions"><button class="ico-btn" title="Timestamped comment" onclick="alert('Timestamped comments live on the song page — open the song to see them threaded to the audio.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></button>
     <button class="ico-btn" title="Download" onclick="dlTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></button>
     <button class="ico-btn" title="Remove" onclick="rmTrack(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></div></div>`;
