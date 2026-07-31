@@ -224,6 +224,43 @@ export async function GET() {
     /* not present yet */
   }
 
+  // Merch items (full records — v2), with signed mockup/print URLs
+  const merchByAlbum: Record<string, unknown[]> = {};
+  try {
+    if (albumIds.length) {
+      const { data: items } = await supabase
+        .from("merch_items")
+        .select(
+          "id, album_id, name, brand, color, sizes, has_sizes, budget, vendor, vendor_link, mockup_key, print_key, position, created_at",
+        )
+        .in("album_id", albumIds)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      await Promise.all(
+        (items ?? []).map(async (m) => {
+          const mockup = m.mockup_key ? await signGet(client, m.mockup_key) : null;
+          const print = m.print_key ? await signGet(client, m.print_key) : null;
+          if (!merchByAlbum[m.album_id]) merchByAlbum[m.album_id] = [];
+          (merchByAlbum[m.album_id] as unknown[]).push({
+            id: m.id,
+            name: m.name ?? "",
+            brand: m.brand ?? "",
+            color: m.color ?? "",
+            sizes: Array.isArray(m.sizes) ? m.sizes : [],
+            hasSizes: m.has_sizes !== false,
+            budget: m.budget ?? null,
+            vendor: m.vendor ?? "",
+            vendorLink: m.vendor_link ?? "",
+            mockup,
+            print,
+          });
+        }),
+      );
+    }
+  } catch {
+    /* table not present yet */
+  }
+
   // Members
   const membersByAlbum: Record<string, unknown[]> = {};
   try {
@@ -326,6 +363,7 @@ export async function GET() {
         label,
         img: assetMap[al.id]?.merch?.[i] ?? null,
       })),
+      merchItems: merchByAlbum[al.id] ?? [],
       activity: activityByAlbum[al.id] ?? [],
     });
   }

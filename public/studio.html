@@ -361,7 +361,41 @@
   .exp-tile .m-drop .sm{font-size:11px}
   .exp-tile .cap{position:absolute;left:0;right:0;bottom:0;padding:22px 14px 11px;font-weight:600;font-size:13px;background:linear-gradient(transparent,rgba(0,0,0,.82))}
   .slot-flash{animation:slotFlash 1.6s ease-out}
+  .merch-flash{animation:slotFlash 1.6s ease-out;border-radius:var(--r-lg)}
   @keyframes slotFlash{0%,100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}20%{box-shadow:0 0 0 3px var(--accent),0 0 22px rgba(255,77,28,.6)}}
+
+  /* merch items (full records — v2) */
+  .merch-thumb{width:42px;height:42px;border-radius:9px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3)}
+  .merch-thumb img{width:100%;height:100%;object-fit:cover}
+  .merch-thumb svg{width:18px;height:18px}
+  .merch-sub{color:var(--txt-3);font-size:11.5px;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .merch-sub .msep{width:3px;height:3px;border-radius:50%;background:var(--txt-3);flex:none}
+  .merch-sub .swatch{width:12px;height:12px;border-radius:3px;border:1px solid var(--line);flex:none;display:inline-block;vertical-align:-2px;margin-right:5px}
+  .merch-budget{font-family:'JetBrains Mono';color:var(--accent-hi)}
+  .merch-imgs{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .merch-slot{border-radius:var(--r-md);overflow:hidden;aspect-ratio:4/3;background:var(--panel-2);border:1.5px dashed var(--line);cursor:pointer;display:grid;place-items:center;position:relative;transition:.16s}
+  .merch-slot:hover{border-color:var(--accent);background:#191316}
+  .merch-slot img{width:100%;height:100%;object-fit:cover}
+  .merch-slot .ms-drop{display:flex;flex-direction:column;align-items:center;gap:7px;color:var(--txt-3);text-align:center;padding:14px}
+  .merch-slot .ms-drop svg{width:24px;height:24px}
+  .merch-slot .ms-lbl{font-size:12px;font-weight:600;color:var(--txt-2)}
+  .merch-slot .ms-cap{position:absolute;left:0;right:0;bottom:0;padding:16px 10px 8px;font-size:11px;font-weight:600;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+  .merch-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+  @media(max-width:700px){.merch-fields{grid-template-columns:1fr}}
+  .mf{display:flex;flex-direction:column;gap:5px}
+  .mf label{font-size:11px;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.06em}
+  .mf input{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:9px 11px;font-family:inherit;font-size:13px;outline:none}
+  .mf input:focus{border-color:var(--accent)}
+  .mf.full{grid-column:1/-1}
+  .size-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:6px}
+  .size-chip{padding:6px 12px;border-radius:20px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-weight:600;font-size:12px;cursor:pointer;transition:.12s;font-family:inherit}
+  .size-chip:hover{border-color:var(--txt-2)}
+  .size-chip.on{background:var(--accent-dim);border-color:rgba(255,77,28,.4);color:var(--accent-hi)}
+  .mini-toggle{display:inline-flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;color:var(--txt-2);user-select:none;text-transform:none;letter-spacing:0;font-weight:500}
+  .mini-toggle .tg{width:34px;height:19px;border-radius:20px;background:var(--grey);position:relative;transition:.15s;flex:none}
+  .mini-toggle .tg::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:.15s}
+  .mini-toggle.on .tg{background:var(--accent)}
+  .mini-toggle.on .tg::after{left:17px}
 
   /* song detail */
   .song-zones{display:flex;flex-direction:column;gap:16px;margin-top:14px}
@@ -531,6 +565,7 @@
 
 <input type="file" id="fileInput" class="hidden">
 <input type="file" id="audioInput" accept="audio/*,.wav,.mp3,.m4a,.aiff" multiple class="hidden">
+<input type="file" id="merchImgInput" accept="image/*" class="hidden">
 
 <script>
 /* ================= DATA ================= */
@@ -761,9 +796,9 @@ function renderDashboard(){
   </div>
   <!-- merch -->
   <div class="section" style="margin-top:18px">
-    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div><div><h3 class="sec-t">Merch</h3><div class="cnt">${al.merch.filter(x=>x.img).length}/${al.merch.length} mockups uploaded</div></div></div>
+    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div><div><h3 class="sec-t">Merch</h3><div class="cnt">${(al.merchItems||[]).length} item${(al.merchItems||[]).length!==1?'s':''}${(al.merchItems||[]).filter(x=>x.mockup).length?' · '+(al.merchItems||[]).filter(x=>x.mockup).length+' with mockups':''}</div></div></div>
     <button class="expand" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${al.merch.slice(0,5).map((m,i)=>slotHTML(m,i,'merch',false)).join('')}</div>
+    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.merchItems&&al.merchItems.length)?al.merchItems.slice(0,5).map((it,i)=>merchDashSlot(it,i)).join(''):`<div class="slot" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add merch item</div><div class="sm">Full records</div></div></div>`}</div>
   </div>`;
 }
 function slotHTML(m,i,type,isCover){
@@ -771,6 +806,12 @@ function slotHTML(m,i,type,isCover){
     ${isCover?`<div class="cover-badge">Cover</div>`:''}
     ${m.img?`<img src="${m.img}"><div class="m-label">${m.label}</div><div class="replace"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div>`
     :`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div>${isCover?'<div class="sm">Front cover</div>':`<div class="sm">${type==='artwork'?'Physical media':'Mockup'}</div>`}</div>`}</div>`;
+}
+// Dashboard preview of a merch record: always opens the merch page anchored to
+// this item (an existing record is never re-uploaded from the dashboard).
+function merchDashSlot(it,i){
+  const tshirt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 5 9 3a3 3 0 0 0 6 0l5 2-2 5-2-1v9H8v-9l-2 1z"/></svg>';
+  return `<div class="slot ${it.mockup?'filled':''}" onclick="dashSlotClick('merch',${i},true)">${it.mockup?`<img src="${it.mockup}"><div class="m-label">${esc(it.name)||'Untitled'}</div>`:`<div class="m-drop">${tshirt}<div class="lbl">${esc(it.name)||'Untitled'}</div><div class="sm">${esc(it.brand)||'No mockup yet'}</div></div>`}</div>`;
 }
 // Dashboard slot click: empty → upload here; filled → open the full section
 // page (artwork/merch), scrolled + highlighted on that item. Re-upload/replace
@@ -919,6 +960,7 @@ async function decodeWaveform(url,n){
 let browseTarget=null;
 function browseAudio(si){browseTarget=si;document.getElementById('audioInput').click();}
 document.getElementById('audioInput').addEventListener('change',e=>{handleAudio([...e.target.files],browseTarget);e.target.value='';});
+document.getElementById('merchImgInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadMerchImg(f);});
 function dzOver(e,el){e.preventDefault();el.classList.add('drag');}
 function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAudio([...e.dataTransfer.files],si);}
 function handleAudio(files,si){
@@ -1039,11 +1081,116 @@ function renderArtwork(){
   <div class="exp-gallery">${al.artwork.map((m,i)=>`<div class="exp-tile ${i===0?'is-cover':''}" data-slot="${i}" onclick="uploadImg('artwork',${i})">${i===0?'<div class="cover-badge">Cover</div>':''}${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">${i===0?'Front cover · click to upload':'Physical media · click to upload'}</div></div>`}</div>`).join('')}</div>`;
   flashSlotScroll('artwork');
 }
+const MERCH_SIZES=["S","M","L","XL","2XL","3XL"];
+let merchOpen={};
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function renderMerch(){
   const al=AL();
-  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Merch mockups</div><div class="ws-sub">Tees, vinyl, posters — drop the mockups and print-ready files so the whole band signs off before anything goes to production.</div></div>
-  <div class="exp-gallery">${al.merch.map((m,i)=>`<div class="exp-tile" data-slot="${i}" onclick="uploadImg('merch',${i})">${m.img?`<img src="${m.img}"><div class="cap">${m.label}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="lbl">${m.label}</div><div class="sm">Click to upload</div></div>`}</div>`).join('')}</div>`;
-  flashSlotScroll('merch');
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Merch</div><div class="ws-sub">Every item as a full record — mockup + print-ready art, budget, brand &amp; style, color, sizes and vendor. Click a row to open it.</div></div>
+  <div style="margin:0 0 14px"><button class="solid-btn" onclick="addMerchItem()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add merch item</button></div>
+  <div id="merchList"></div>`;
+  renderMerchList();
+}
+function renderMerchList(){
+  const al=AL();const items=al.merchItems||[];
+  const list=document.getElementById('merchList');if(!list)return;
+  list.innerHTML=items.length?items.map((it,i)=>merchItemHTML(it,i)).join(''):'<div class="empty-note" style="padding:24px 0">No merch yet — click “Add merch item” to create the first record.</div>';
+  flashMerchScroll();
+}
+function merchItemHTML(it,i){
+  const open=!!merchOpen[it.id];
+  const groups=[];
+  if(it.brand)groups.push(esc(it.brand));
+  if(it.color)groups.push(`<span class="swatch" style="background:${esc(it.color)}"></span>${esc(it.color)}`);
+  if(it.hasSizes&&(it.sizes||[]).length)groups.push(`${it.sizes.length} size${it.sizes.length!==1?'s':''}`);
+  if(it.budget!=null&&it.budget!=='')groups.push(`<span class="merch-budget">$${esc(it.budget)}</span>`);
+  const sub=groups.length?groups.map(g=>`<span>${g}</span>`).join('<span class="msep"></span>'):'<span>Click to add brand, color, sizes &amp; budget</span>';
+  const tshirt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5 9 3a3 3 0 0 0 6 0l5 2-2 5-2-1v9H8v-9l-2 1z"/></svg>';
+  return `<div class="idea-song ${open?'':'collapsed'}" data-mi="${it.id}" data-mi-index="${i}">
+    <div class="idea-head" onclick="toggleMerch('${it.id}')">
+      <div class="merch-thumb">${it.mockup?`<img src="${it.mockup}">`:tshirt}</div>
+      <div style="flex:1;min-width:0"><div class="idea-title">${esc(it.name)||'Untitled item'}</div><div class="merch-sub">${sub}</div></div>
+      <button class="ico-btn" title="Delete item" onclick="event.stopPropagation();deleteMerchItem('${it.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+    </div>
+    <div class="idea-body" ${open?'':'style="display:none"'}>
+      <div class="merch-imgs">${merchSlot(it,'mockup','Mockup')}${merchSlot(it,'print','Print-ready / full-res')}</div>
+      <div class="merch-fields">
+        <div class="mf"><label>Item name</label><input value="${esc(it.name)}" placeholder="Tour tee — front" onblur="saveMerch('${it.id}','name',this.value)"></div>
+        <div class="mf"><label>Budget ($)</label><input type="number" step="0.01" min="0" value="${it.budget==null?'':esc(it.budget)}" placeholder="0.00" onblur="saveMerch('${it.id}','budget',this.value)"></div>
+        <div class="mf"><label>Brand &amp; style</label><input value="${esc(it.brand)}" placeholder="Gildan 5000 / Bella+Canvas 3001" onblur="saveMerch('${it.id}','brand',this.value)"></div>
+        <div class="mf"><label>Item color</label><input value="${esc(it.color)}" placeholder="Black" onblur="saveMerch('${it.id}','color',this.value)"></div>
+        <div class="mf"><label>Vendor</label><input value="${esc(it.vendor)}" placeholder="Printer / supplier name" onblur="saveMerch('${it.id}','vendor',this.value)"></div>
+        <div class="mf"><label>Vendor link / contact</label><input value="${esc(it.vendorLink)}" placeholder="https://… or email" onblur="saveMerch('${it.id}','vendor_link',this.value)"></div>
+        <div class="mf full">
+          <label style="display:flex;align-items:center;justify-content:space-between">Sizes<span class="mini-toggle ${it.hasSizes?'on':''}" onclick="toggleMerchHasSizes('${it.id}')"><span class="tg"></span>Apparel — has sizes</span></label>
+          ${it.hasSizes?`<div class="size-chips">${MERCH_SIZES.map(s=>`<span class="size-chip ${(it.sizes||[]).includes(s)?'on':''}" onclick="toggleMerchSize('${it.id}','${s}')">${s}</span>`).join('')}</div>`:`<div style="color:var(--txt-3);font-size:12.5px;padding:4px 0">Not apparel — no sizes for this item.</div>`}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function merchSlot(it,which,label){
+  const url=which==='print'?it.print:it.mockup;
+  return `<div class="merch-slot ${url?'filled':''}" onclick="browseMerchImg('${it.id}','${which}')">${url?`<img src="${url}"><div class="ms-cap">${label}</div>`:`<div class="ms-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="ms-lbl">${label}</div><div style="font-size:10.5px;color:var(--txt-3)">click to upload</div></div>`}</div>`;
+}
+function toggleMerch(id){merchOpen[id]=!merchOpen[id];renderMerchList();}
+function flashMerchScroll(){
+  if(!pendingSlotScroll||pendingSlotScroll.type!=='merch')return;
+  const i=pendingSlotScroll.i;pendingSlotScroll=null;
+  const el=document.querySelector(`.idea-song[data-mi-index="${i}"]`);
+  if(el){const id=el.getAttribute('data-mi');if(id)merchOpen[id]=true;el.classList.remove('collapsed');const b=el.querySelector('.idea-body');if(b)b.style.display='';setTimeout(()=>{el.scrollIntoView({behavior:'smooth',block:'start'});el.classList.add('merch-flash');setTimeout(()=>el.classList.remove('merch-flash'),1600);},60);}
+}
+function merchItem(id){const al=AL();return (al&&al.merchItems?al.merchItems:[]).find(x=>x.id===id);}
+async function addMerchItem(){
+  const al=AL();if(!al)return;
+  const res=await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',albumId:al.id})});
+  if(!res.ok){alert('Could not add the merch item — has the merch_items table been created in Supabase?');return;}
+  const {id}=await res.json();
+  al.merchItems=al.merchItems||[];
+  al.merchItems.push({id,name:'',brand:'',color:'',sizes:[],hasSizes:true,budget:null,vendor:'',vendorLink:'',mockup:null,print:null});
+  merchOpen[id]=true;renderMerchList();
+  const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),60);
+}
+function deleteMerchItem(id){
+  if(!confirm('Delete this merch item? Its images will be removed too.'))return;
+  const al=AL();al.merchItems=(al.merchItems||[]).filter(x=>x.id!==id);delete merchOpen[id];renderMerchList();
+  fetch('/api/merch-item?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});
+}
+function saveMerch(id,field,value){
+  const it=merchItem(id);
+  const budget=(field==='budget')?(value===''?null:parseFloat(value)):null;
+  if(it){
+    if(field==='name')it.name=value;else if(field==='brand')it.brand=value;else if(field==='color')it.color=value;
+    else if(field==='vendor')it.vendor=value;else if(field==='vendor_link')it.vendorLink=value;else if(field==='budget')it.budget=budget;
+  }
+  const b={action:'update',id};b[field]=(field==='budget')?budget:value;
+  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
+  if(field==='name'||field==='brand'||field==='color'||field==='budget'){const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el){const h=el.querySelector('.idea-title');if(h&&field==='name')h.textContent=value||'Untitled item';renderMerchSubOnly(id);}}
+}
+function renderMerchSubOnly(id){const it=merchItem(id);const el=document.querySelector(`.idea-song[data-mi="${id}"] .merch-sub`);if(!el||!it)return;
+  const groups=[];if(it.brand)groups.push(esc(it.brand));if(it.color)groups.push(`<span class="swatch" style="background:${esc(it.color)}"></span>${esc(it.color)}`);if(it.hasSizes&&(it.sizes||[]).length)groups.push(`${it.sizes.length} size${it.sizes.length!==1?'s':''}`);if(it.budget!=null&&it.budget!=='')groups.push(`<span class="merch-budget">$${esc(it.budget)}</span>`);
+  el.innerHTML=groups.length?groups.map(g=>`<span>${g}</span>`).join('<span class="msep"></span>'):'<span>Click to add brand, color, sizes &amp; budget</span>';
+}
+function toggleMerchHasSizes(id){const it=merchItem(id);if(!it)return;it.hasSizes=!it.hasSizes;renderMerchList();
+  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,has_sizes:it.hasSizes})}).catch(()=>{});}
+function toggleMerchSize(id,size){const it=merchItem(id);if(!it)return;it.sizes=it.sizes||[];
+  it.sizes=it.sizes.includes(size)?it.sizes.filter(s=>s!==size):[...it.sizes,size].sort((a,b)=>MERCH_SIZES.indexOf(a)-MERCH_SIZES.indexOf(b));
+  const el=document.querySelector(`.idea-song[data-mi="${id}"] .size-chips`);if(el)el.querySelectorAll('.size-chip').forEach(c=>c.classList.toggle('on',it.sizes.includes(c.textContent)));
+  renderMerchSubOnly(id);
+  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,sizes:it.sizes})}).catch(()=>{});}
+let merchImgTarget=null;
+function browseMerchImg(id,which){merchImgTarget={id,which};document.getElementById('merchImgInput').click();}
+async function uploadMerchImg(f){
+  const t=merchImgTarget||{};const id=t.id,which=t.which;if(!id)return;
+  const it=merchItem(id);const localUrl=URL.createObjectURL(f);
+  if(it){if(which==='print')it.print=localUrl;else it.mockup=localUrl;}
+  renderMerchList();
+  try{
+    const up=await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',id,which,name:f.name})}).then(r=>r.json());
+    if(!up.ok)throw new Error('url');
+    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
+    await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-image',id,which,key:up.key})});
+  }catch(e){/* local preview stays this session */}
 }
 
 /* ===== SONG DETAIL ===== */

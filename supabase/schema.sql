@@ -199,6 +199,32 @@ create policy "album_assets: via owned album"
   );
 
 -- ---------------------------------------------------------------------------
+-- MERCH ITEMS  (full records — v2. Each item = a garment/product with its own
+-- mockup + print-ready files, budget, brand/style, color, sizes, vendor.)
+-- ---------------------------------------------------------------------------
+create table if not exists public.merch_items (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references public.albums (id) on delete cascade,
+  name text not null default 'New item',
+  brand text default '',           -- e.g. "Gildan 5000" / "Bella+Canvas 3001"
+  color text default '',
+  sizes text[] not null default '{}',   -- e.g. {S,M,L,XL}
+  has_sizes boolean not null default true,
+  budget numeric,                  -- dollars
+  vendor text default '',
+  vendor_link text default '',
+  mockup_key text,                 -- R2 key for the mockup image
+  print_key text,                  -- R2 key for print-ready / full-res artwork
+  position int not null default 0,
+  created_at timestamptz default now()
+);
+alter table public.merch_items enable row level security;
+drop policy if exists "merch_items: via owned album" on public.merch_items;
+create policy "merch_items: via owned album" on public.merch_items for all
+  using (exists (select 1 from public.albums a where a.id = merch_items.album_id and a.owner_id = auth.uid()))
+  with check (exists (select 1 from public.albums a where a.id = merch_items.album_id and a.owner_id = auth.uid()));
+
+-- ---------------------------------------------------------------------------
 -- ALBUM EXTRAS: public share link, release date, saved schedule
 -- ---------------------------------------------------------------------------
 alter table public.albums add column if not exists share_id uuid default gen_random_uuid();
@@ -286,5 +312,6 @@ grant usage on schema public to authenticated;
 grant select, insert, update, delete
   on public.profiles, public.albums, public.songs, public.song_tracks,
      public.song_files, public.album_assets, public.artist_photos,
-     public.album_members, public.song_comments, public.activity
+     public.album_members, public.song_comments, public.activity,
+     public.merch_items
   to authenticated;
