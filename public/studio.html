@@ -25,8 +25,8 @@
   /* sidebar */
   .sidebar{background:var(--panel);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--line-soft)}
   .brand{display:flex;align-items:center;gap:10px;padding:20px 20px 16px;cursor:pointer}
-  .brand .logo{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--accent),#FF8A4C);display:grid;place-items:center;flex:none}
-  .brand .logo svg{width:17px;height:17px}
+  .brand .logo{width:34px;height:34px;border-radius:9px;background:transparent;display:grid;place-items:center;flex:none}
+  .brand .logo svg{width:32px;height:32px}
   .brand .name{font-weight:800;font-size:16px;letter-spacing:-.02em;font-family:'Poppins'}
   .brand .name span{color:var(--txt-3);font-weight:600}
   .nav{padding:4px 12px}
@@ -607,7 +607,7 @@
 <div class="app">
   <aside class="sidebar">
     <div class="brand" onclick="nav({view:'roster'})">
-      <div class="logo"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="#fff" stroke-width="2"/><circle cx="12" cy="12" r="2.5" fill="#fff"/></svg></div>
+      <div class="logo"><svg viewBox="0 0 48 48" fill="none"><path d="M24 46s14-13.6 14-25a14 14 0 1 0-28 0c0 11.4 14 25 14 25Z" stroke="#FF4D1C" stroke-width="3.6"/><path d="M24 38.5s8.4-8.4 8.4-16.2a8.4 8.4 0 1 0-16.8 0C15.6 30.1 24 38.5 24 38.5Z" stroke="#FF4D1C" stroke-width="3.2"/><circle cx="24" cy="21" r="3.5" fill="#FF4D1C"/></svg></div>
       <div class="name">albumap<span>.io</span></div>
     </div>
     <nav class="nav">
