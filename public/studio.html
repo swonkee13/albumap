@@ -782,6 +782,7 @@ function render(){
   const inAlbum=['dashboard','grid','songs','sequencer','schedule','artwork','merch','activity'].includes(route.view);
   cb.style.display=inAlbum?'':'none';
   if(inAlbum)renderCallBar();
+  saveRoute();
   // Persistent "Recording grid" quick-link, always available inside an album.
   const qn=document.getElementById('quickNav');
   if(qn){
@@ -1727,9 +1728,17 @@ function defaultRoute(){
   const a0=artists[0],al0=a0.albums[0];
   return al0?{view:'dashboard',artistId:a0.id,albumId:al0.id}:{view:'albums',artistId:a0.id};
 }
+// Persist the current route so a page refresh returns to the same view/section.
+function saveRoute(){try{localStorage.setItem('albumap:route',JSON.stringify(route));}catch(e){}}
+function restoreRoute(){
+  try{const s=localStorage.getItem('albumap:route');if(!s)return null;const r=JSON.parse(s);if(!r||!r.view)return null;
+    if(r.artistId){const a=getArtist(r.artistId);if(!a)return null;if(r.albumId&&!getAlbum(a,r.albumId))return null;}
+    return r;
+  }catch(e){return null;}
+}
 async function reloadData(nextRoute){
   try{const res=await fetch('/api/studio-data',{cache:'no-store'});if(res.ok){const d=await res.json();artists=Array.isArray(d.artists)?d.artists:[];}}catch(e){}
-  route=nextRoute||defaultRoute();hist=[{...route}];hi=0;render();
+  route=nextRoute||restoreRoute()||defaultRoute();hist=[{...route}];hi=0;render();
 }
 function persistCell(songId,instrument,state){
   fetch('/api/cell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,instrument,state})}).catch(()=>{});
