@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const INSTRUMENTS = 6;
+// State 5 = N/A, excluded from every percentage/count.
+const NA = 5;
 
 function toState(v: string | null): number {
   if (v == null) return 0;
   const n = parseInt(v, 10);
-  if (!Number.isNaN(n) && String(n) === v) return Math.max(0, Math.min(4, n));
+  if (!Number.isNaN(n) && String(n) === v) return Math.max(0, Math.min(5, n));
   const map: Record<string, number> = {
     not_started: 0,
     scratch: 1,
@@ -14,6 +15,8 @@ function toState(v: string | null): number {
     tracked: 2,
     comped: 3,
     done: 4,
+    na: 5,
+    not_applicable: 5,
   };
   return map[v] ?? 0;
 }
@@ -23,10 +26,14 @@ async function load(shareId: string) {
     const admin = createAdminClient();
     const { data: album } = await admin
       .from("albums")
-      .select("id, title, artist")
+      .select("id, title, artist, instruments")
       .eq("share_id", shareId)
       .maybeSingle();
     if (!album) return null;
+
+    const instrumentCount = Array.isArray(album.instruments)
+      ? (album.instruments as string[]).length
+      : 0;
 
     const { data: songs } = await admin
       .from("songs")
@@ -43,25 +50,30 @@ async function load(shareId: string) {
       tracks = data ?? [];
     }
 
-    const doneByTotal: Record<string, number> = {};
+    // Per song: sum of non-N/A states, and how many parts are N/A (excluded).
+    const sumBySong: Record<string, number> = {};
+    const naBySong: Record<string, number> = {};
     let partsDone = 0;
     for (const t of tracks) {
       const st = toState(t.status);
-      doneByTotal[t.song_id] = (doneByTotal[t.song_id] ?? 0) + st;
+      if (st === NA) {
+        naBySong[t.song_id] = (naBySong[t.song_id] ?? 0) + 1;
+        continue;
+      }
+      sumBySong[t.song_id] = (sumBySong[t.song_id] ?? 0) + Math.min(st, 4);
       if (st === 4) partsDone++;
     }
 
     const songCount = (songs ?? []).length;
-    const totalParts = songCount * INSTRUMENTS;
-    // Overall = average per-song completion (each song scored out of 6 parts × 4).
-    let overall = 0;
-    if (songCount > 0) {
-      let acc = 0;
-      for (const s of songs ?? []) {
-        acc += (doneByTotal[s.id] ?? 0) / (INSTRUMENTS * 4);
-      }
-      overall = Math.round((acc / songCount) * 100);
+    // Each song's denominator = instrument columns minus its N/A parts.
+    let totalParts = 0;
+    let acc = 0;
+    for (const s of songs ?? []) {
+      const denom = Math.max(0, instrumentCount - (naBySong[s.id] ?? 0));
+      totalParts += denom;
+      if (denom > 0) acc += (sumBySong[s.id] ?? 0) / (denom * 4);
     }
+    const overall = songCount > 0 ? Math.round((acc / songCount) * 100) : 0;
 
     return {
       title: album.title as string,

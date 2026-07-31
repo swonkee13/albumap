@@ -230,6 +230,20 @@
   .cell-tracked .mark{background:rgba(255,77,28,.18);color:var(--accent-hi)}
   .cell-comped .mark{background:rgba(62,207,142,.16);color:var(--green)}
   .cell-done .mark{background:var(--green);color:#04371f}
+  .cell-na{opacity:.55}
+  .cell-na .mark{background:transparent;border:1.5px solid var(--line);color:var(--txt-3)}
+  .rec-grid thead th.instcol{position:relative;white-space:nowrap}
+  .rec-grid thead th.instcol .inst-name{display:inline-block;max-width:120px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}
+  .rec-grid thead th.instcol .inst-tools{display:none;align-items:center;gap:2px;margin-left:6px}
+  .rec-grid thead th.instcol:hover .inst-tools{display:inline-flex}
+  .rec-grid thead th.instcol .inst-tools button{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:2px;border-radius:5px;display:grid;place-items:center}
+  .rec-grid thead th.instcol .inst-tools button:hover{background:var(--hover);color:var(--txt)}
+  .rec-grid thead th.instcol .inst-tools button svg{width:13px;height:13px}
+  .rec-grid th.addcol,.rec-grid td.addcol{width:46px;background:var(--panel-2)}
+  .add-inst{width:28px;height:28px;border-radius:8px;border:1.5px dashed var(--line);background:transparent;color:var(--txt-3);cursor:pointer;display:grid;place-items:center;margin:0 auto}
+  .add-inst:hover{border-color:var(--accent);color:var(--accent-hi)}
+  .add-inst svg{width:15px;height:15px}
+  .legend .sw{width:16px;height:16px;border-radius:6px}
   .rec-grid tbody tr td{transition:background .3s}
   .rec-grid tbody tr.grid-row-flash td{background:rgba(255,77,28,.14)}
   .rec-grid tbody tr.grid-row-flash td.songcol{color:var(--accent-hi)}
@@ -613,8 +627,11 @@
 
 <script>
 /* ================= DATA ================= */
-const INSTRUMENTS=["Drums","Bass","Guitar","Synth","Lead Vox","BGV"];
-const STATE_NAMES=["Not started","Scratch","Tracked","Comped","Done"];
+const INSTRUMENTS=["Drums","Bass","Guitar","Synth","Lead Vox","BGV"]; // legacy default only
+// Cell states: 0 not started · 1 scratch · 2 tracked · 3 comped · 4 done · 5 N/A.
+// N/A (5) is excluded from every percentage/count. Cycle: 0→1→2→3→4→5→0.
+const STATE_NAMES=["Not started","Scratch","Tracked","Comped","Done","Not applicable"];
+const NA=5;
 const SONG_COLORS=["#FF4D1C","#F5A623","#3ECF8E","#4EA8E8","#B06BFF","#FF6B9D","#2ED3C6","#E8564E"];
 // Idea labels (item 7): song-section tags + instrument tags, multi-select.
 const SECTION_LABELS=["Intro","Verse","Chorus","Bridge","Hook","Outro"];
@@ -690,7 +707,14 @@ function getArtist(id){return artists.find(a=>a.id===id);}
 function getAlbum(a,id){return a.albums.find(x=>x.id===id);}
 function A(){return getArtist(route.artistId);}
 function AL(){return getAlbum(A(),route.albumId);}
-function songProg(c){return Math.round(c.reduce((a,b)=>a+b,0)/(c.length*4)*100);}
+// Per-album instrument columns (dynamic; new albums start empty).
+function albumInstruments(al){return (al&&Array.isArray(al.instruments))?al.instruments:[];}
+function cellState(s,inst){return (s&&s.cells&&s.cells[inst]!=null)?s.cells[inst]:0;}
+// Song stats with N/A (5) fully excluded from the denominator.
+function songStats(s,instruments){let denom=0,sum=0,done=0;for(const inst of(instruments||[])){const c=cellState(s,inst);if(c===NA)continue;denom++;sum+=Math.min(c,4);if(c===4)done++;}return{denom,sum,done};}
+function songProg(s,instruments){const st=songStats(s,instruments);return st.denom?Math.round(st.sum/(st.denom*4)*100):0;}
+function albumProg(al){const insts=albumInstruments(al);if(!al.songs.length)return 0;return Math.round(al.songs.reduce((a,s)=>a+songProg(s,insts),0)/al.songs.length);}
+function albumParts(al){const insts=albumInstruments(al);let done=0,total=0;al.songs.forEach(s=>{const st=songStats(s,insts);done+=st.done;total+=st.denom;});return{done,total};}
 function fmtT(s){s=Math.max(0,Math.round(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function statusColor(s){return s==="in-progress"?"var(--amber)":s==="released"?"var(--green)":"var(--txt-3)";}
 function statusLabel(s){return s==="in-progress"?"In progress":s==="released"?"Released":"Draft";}
@@ -767,9 +791,9 @@ function renderAlbums(){
 /* ===== DASHBOARD (HUB) ===== */
 function renderDashboard(){
   const a=A(),al=AL();
-  const overall=Math.round(al.songs.reduce((s,x)=>s+songProg(x.cells),0)/al.songs.length);
-  const doneParts=al.songs.reduce((s,x)=>s+x.cells.filter(c=>c===4).length,0);
-  const totalParts=al.songs.length*INSTRUMENTS.length;
+  const insts=albumInstruments(al);
+  const overall=albumProg(al);
+  const partsAgg=albumParts(al);const doneParts=partsAgg.done,totalParts=partsAgg.total;
   const nextDate=al.schedule.find(s=>s.tag!=="done");
   const circ=2*Math.PI*32;
   // waiting-on: compute per member the # of not-done parts they "own" (fake: distribute)
@@ -799,10 +823,10 @@ function renderDashboard(){
     <div class="dash-main">
       <!-- recording -->
       <div class="section">
-        <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Recording progress</h3><div class="cnt">${al.songs.length} songs · ${INSTRUMENTS.length} parts each</div></div></div>
+        <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Recording progress</h3><div class="cnt">${al.songs.length} songs · ${insts.length} part${insts.length!==1?'s':''} each</div></div></div>
         <button class="expand" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})">Open grid <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-        ${al.songs.slice(0,5).map((s,i)=>{const p=songProg(s.cells),done=s.cells.filter(c=>c===4).length,col=p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)';
-          return `<div class="song-row" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})"><div class="idx">${String(i+1).padStart(2,'0')}</div><div class="sname"><div class="st">${s.t}</div><div class="parts">${done}/${INSTRUMENTS.length} parts tracked · ${s.files.length} idea${s.files.length!==1?'s':''}</div></div><div class="song-prog"><div class="pbar"><div class="fill" style="width:${p}%;background:${col}"></div></div><div class="pct-sm">${p}%</div></div></div>`;}).join('')}
+        ${al.songs.slice(0,5).map((s,i)=>{const st=songStats(s,insts),p=songProg(s,insts),col=p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)';
+          return `<div class="song-row" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})"><div class="idx">${String(i+1).padStart(2,'0')}</div><div class="sname"><div class="st">${s.t}</div><div class="parts">${st.done}/${st.denom} parts done · ${s.files.length} idea${s.files.length!==1?'s':''}</div></div><div class="song-prog"><div class="pbar"><div class="fill" style="width:${p}%;background:${col}"></div></div><div class="pct-sm">${p}%</div></div></div>`;}).join('')}
         <div class="sec-foot"><button class="expand" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})">See all ${al.songs.length} songs &amp; full checkerboard →</button></div>
       </div>
 
@@ -814,7 +838,7 @@ function renderDashboard(){
         </div>
         <div class="section" style="cursor:pointer" onclick="nav({view:'sequencer',artistId:'${a.id}',albumId:'${al.id}'})">
           <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9h14M5 15h14M9 5v14M15 5v14"/></svg></div><div><h3 class="sec-t">Tracklist</h3><div class="cnt">${fmtT(al.songs.reduce((n,s)=>n+s.dur,0))} runtime</div></div></div><div class="expand">Sequence <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></div></div>
-          <div style="display:flex;height:44px;padding:0 20px 18px;gap:2px;align-items:flex-end">${al.songs.map((s,i)=>`<div style="flex-grow:${s.dur};flex-basis:0;height:${30+songProg(s.cells)*0.14}%;background:${SONG_COLORS[i%SONG_COLORS.length]};border-radius:3px;min-width:3px"></div>`).join('')}</div>
+          <div style="display:flex;height:44px;padding:0 20px 18px;gap:2px;align-items:flex-end">${al.songs.map((s,i)=>`<div style="flex-grow:${s.dur};flex-basis:0;height:${30+songProg(s,insts)*0.14}%;background:${SONG_COLORS[i%SONG_COLORS.length]};border-radius:3px;min-width:3px"></div>`).join('')}</div>
         </div>
       </div>
 
@@ -885,24 +909,67 @@ function computeWaiting(al){
   if(!inMembers.length)return[];
   // assign undone parts round-robin to members for a plausible "waiting on" count
   let counts={}; inMembers.forEach(m=>counts[m.initials]=0);
-  let k=0;
-  al.songs.forEach(s=>s.cells.forEach(c=>{if(c<4){const m=inMembers[k%inMembers.length];counts[m.initials]++;k++;}}));
+  let k=0;const insts=albumInstruments(al);
+  al.songs.forEach(s=>insts.forEach(inst=>{const c=cellState(s,inst);if(c===NA)return;if(c<4){const m=inMembers[k%inMembers.length];counts[m.initials]++;k++;}}));
   const details={SC:"Guitar & vox parts across 4 songs",JT:"Bass & drums on 3 songs",MR:"Synth & BGV on 5 songs"};
   return inMembers.map(m=>({initials:m.initials,name:m.name,color:m.color,count:counts[m.initials],detail:details[m.initials]||"open parts"})).sort((a,b)=>b.count-a.count);
 }
 
 /* ===== RECORDING GRID ===== */
+function cellMark(c){
+  if(c===4)return'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg>';
+  if(c===3)return'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>';
+  if(c===2)return'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 6v12"/></svg>';
+  if(c===1)return'<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>';
+  if(c===NA)return'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 12h12"/></svg>';
+  return'';
+}
 function renderGrid(){
-  const a=A(),al=AL();
-  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Recording grid</div><div class="ws-sub">The checkerboard — every song against every part. Click a cell to cycle its state as you track. Click a song name to open its page.</div></div>
-  <div style="margin:0 0 14px"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button></div>
-  <div class="grid-wrap"><table class="rec-grid"><thead><tr><th class="songcol">Song</th>${INSTRUMENTS.map(i=>`<th>${i}</th>`).join('')}</tr></thead><tbody>
-  ${al.songs.map((s,si)=>`<tr data-song="${s.id}"><td class="songcol" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${s.t}</td>${s.cells.map((c,ci)=>{const cls=["cell-empty","cell-scratch","cell-tracked","cell-comped","cell-done"][c];let mk="";if(c===4)mk='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg>';else if(c===3)mk='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="5"/></svg>';else if(c===2)mk='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M12 6v12"/></svg>';else if(c===1)mk='<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="3"/></svg>';return `<td><div class="cell ${cls}" onclick="cycleCell(${si},${ci})" title="${s.t} · ${INSTRUMENTS[ci]} — ${STATE_NAMES[c]}"><div class="mark">${mk}</div></div></td>`;}).join('')}</tr>`).join('')}
+  const a=A(),al=AL();const insts=albumInstruments(al);
+  const clsFor=c=>["cell-empty","cell-scratch","cell-tracked","cell-comped","cell-done","cell-na"][c]||"cell-empty";
+  const head=`<tr><th class="songcol">Song</th>${insts.map((inst,ci)=>`<th class="instcol"><span class="inst-name" title="${esc(inst)}">${esc(inst)}</span><span class="inst-tools"><button title="Rename" onclick="renameInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete column" onclick="deleteInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></th>`).join('')}<th class="addcol"><button class="add-inst" onclick="addInstrument()" title="Add instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></th></tr>`;
+  const body=al.songs.map((s,si)=>`<tr data-song="${s.id}"><td class="songcol" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${esc(s.t)}</td>${insts.map((inst,ci)=>{const c=cellState(s,inst);return `<td><div class="cell ${clsFor(c)}" oncontextmenu="event.preventDefault();setCellNA(${si},${ci})" onclick="cycleCell(${si},${ci})" title="${esc(s.t)} · ${esc(inst)} — ${STATE_NAMES[c]} (right-click for N/A)"><div class="mark">${cellMark(c)}</div></div></td>`;}).join('')}<td class="addcol"></td></tr>`).join('');
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Recording grid</div><div class="ws-sub">The checkerboard — every song against every part. Add your own instrument columns, click a cell to cycle its state (right-click for N/A). N/A cells are ignored in every percentage.</div></div>
+  <div style="margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button><button class="ghost-btn" onclick="addInstrument()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add instrument</button></div>
+  ${insts.length?'':'<div class="empty-note" style="padding:6px 0 16px;text-align:left">No instruments yet — add your first column (e.g. “Pedal steel”) to start the grid.</div>'}
+  <div class="grid-wrap"><table class="rec-grid"><thead>${head}</thead><tbody>
+  ${al.songs.length?body:`<tr><td class="songcol" style="color:var(--txt-3)">No songs yet</td>${insts.map(()=>'<td></td>').join('')}<td class="addcol"></td></tr>`}
   </tbody></table></div>
-  <div class="legend"><div class="li"><span class="sw" style="background:transparent;border:1.5px dashed #38383f"></span>Not started</div><div class="li"><span class="sw" style="background:rgba(245,166,35,.5)"></span>Scratch</div><div class="li"><span class="sw" style="background:rgba(255,77,28,.6)"></span>Tracked</div><div class="li"><span class="sw" style="background:rgba(62,207,142,.5)"></span>Comped</div><div class="li"><span class="sw" style="background:var(--green)"></span>Done</div><div class="li" style="margin-left:auto;color:var(--txt-3)">Click any cell to cycle</div></div>`;
+  <div class="legend"><div class="li"><span class="sw" style="background:transparent;border:1.5px dashed #38383f"></span>Not started</div><div class="li"><span class="sw" style="background:rgba(245,166,35,.5)"></span>Scratch</div><div class="li"><span class="sw" style="background:rgba(255,77,28,.6)"></span>Tracked</div><div class="li"><span class="sw" style="background:rgba(62,207,142,.5)"></span>Comped</div><div class="li"><span class="sw" style="background:var(--green)"></span>Done</div><div class="li"><span class="sw" style="background:transparent;border:1.5px solid var(--line);color:var(--txt-3);display:grid;place-items:center;font-size:11px">–</span>N/A (excluded)</div><div class="li" style="margin-left:auto;color:var(--txt-3)">Click to cycle · right-click for N/A</div></div>`;
   if(route.gridSong){const tr=document.querySelector(`.rec-grid tr[data-song="${route.gridSong}"]`);if(tr)setTimeout(()=>{tr.scrollIntoView({behavior:'smooth',block:'center'});tr.classList.add('grid-row-flash');setTimeout(()=>tr.classList.remove('grid-row-flash'),1800);},60);}
 }
-function cycleCell(si,ci){const al=AL();const s=al.songs[si];s.cells[ci]=(s.cells[ci]+1)%5;renderGrid();persistCell(s.id,INSTRUMENTS[ci],s.cells[ci]);}
+function cycleCell(si,ci){const al=AL();const s=al.songs[si];const inst=albumInstruments(al)[ci];if(!inst)return;const c=((cellState(s,inst))+1)%6;if(!s.cells)s.cells={};s.cells[inst]=c;renderGrid();persistCell(s.id,inst,c);}
+function setCellNA(si,ci){const al=AL();const s=al.songs[si];const inst=albumInstruments(al)[ci];if(!inst)return;if(!s.cells)s.cells={};const c=s.cells[inst]===NA?0:NA;s.cells[inst]=c;renderGrid();persistCell(s.id,inst,c);}
+/* ---- custom instrument columns ---- */
+async function saveInstruments(al,instruments){
+  al.instruments=instruments;
+  const r=await fetch('/api/instruments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,instruments})}).then(r=>r.json()).catch(()=>({ok:false}));
+  return r&&r.ok;
+}
+async function addInstrument(){
+  const al=AL();if(!al)return;const name=(prompt('New instrument / part name (e.g. Pedal steel)')||'').trim();if(!name)return;
+  const insts=albumInstruments(al).slice();
+  if(insts.some(x=>x.toLowerCase()===name.toLowerCase())){alert('That instrument already exists.');return;}
+  insts.push(name);await saveInstruments(al,insts);renderGrid();
+}
+async function renameInstrument(ci){
+  const al=AL();const insts=albumInstruments(al).slice();const old=insts[ci];if(old==null)return;
+  const name=(prompt('Rename instrument',old)||'').trim();if(!name||name===old)return;
+  if(insts.some((x,i)=>i!==ci&&x.toLowerCase()===name.toLowerCase())){alert('That instrument already exists.');return;}
+  insts[ci]=name;
+  // move each song's cell data from the old key to the new one
+  al.songs.forEach(s=>{if(s.cells&&s.cells[old]!=null){s.cells[name]=s.cells[old];delete s.cells[old];}});
+  await fetch('/api/instruments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,instruments:insts,rename:{from:old,to:name}})}).catch(()=>{});
+  al.instruments=insts;renderGrid();
+}
+async function deleteInstrument(ci){
+  const al=AL();const insts=albumInstruments(al).slice();const name=insts[ci];if(name==null)return;
+  if(!confirm(`Delete the “${name}” column? This clears its cell data for every song.`))return;
+  insts.splice(ci,1);
+  al.songs.forEach(s=>{if(s.cells&&s.cells[name]!=null)delete s.cells[name];});
+  await fetch('/api/instruments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,instruments:insts,remove:name})}).catch(()=>{});
+  al.instruments=insts;renderGrid();
+}
 
 /* ===== SONG IDEAS (audio player) ===== */
 let uidc=1000;
@@ -938,14 +1005,14 @@ function renderBank(){
   </div>`;
 }
 function renderSongList(){
-  const al=AL();
+  const al=AL();const insts=albumInstruments(al);
   document.getElementById('songList').innerHTML=al.songs.map((s,i)=>{
-    const p=songProg(s.cells);
+    const st=songStats(s,insts),p=songProg(s,insts);
     const collapsed = (route.songId===s.id) ? '' : 'collapsed';
     return `<div class="idea-song ${collapsed}" data-si="${i}" data-song="${s.id}">
       <div class="idea-head" onclick="toggleSongRow(this)">
         <div class="idea-num">${String(i+1).padStart(2,'0')}</div>
-        <div style="flex:1;min-width:0"><div class="idea-title">${s.t}</div><div style="color:var(--txt-3);font-size:11.5px;margin-top:2px">${p}% complete · ${s.cells.filter(c=>c===4).length}/${INSTRUMENTS.length} parts done</div></div>
+        <div style="flex:1;min-width:0"><div class="idea-title">${s.t}</div><div style="color:var(--txt-3);font-size:11.5px;margin-top:2px">${p}% complete · ${st.done}/${st.denom} parts done</div></div>
         <div style="display:flex;align-items:center;gap:10px">
           <div class="pbar" style="width:90px"><div class="fill" style="width:${p}%;background:${p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)'}"></div></div>
           <div class="cnt-pill ${s.files.length?'has':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${s.files.length}</div>
@@ -1441,7 +1508,7 @@ async function uploadMerchImg(f){
 /* ===== SONG DETAIL ===== */
 /* ===== SHARE MODAL ===== */
 function openShare(){
-  const a=A(),al=AL();const overall=Math.round(al.songs.reduce((s,x)=>s+songProg(x.cells),0)/al.songs.length);const circ=2*Math.PI*40;
+  const a=A(),al=AL();const overall=albumProg(al);const circ=2*Math.PI*40;
   document.getElementById('modalInner').innerHTML=`
     <div class="modal-head"><h3>Share progress</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="modal-body">

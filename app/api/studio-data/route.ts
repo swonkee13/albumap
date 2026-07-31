@@ -5,8 +5,6 @@ import { createClient } from "@/lib/supabase/server";
 import { r2Client, R2_BUCKET } from "@/lib/r2";
 import { colorFor } from "@/lib/activity";
 
-const INSTRUMENTS = ["Drums", "Bass", "Guitar", "Synth", "Lead Vox", "BGV"];
-
 const NAME_TO_STATE: Record<string, number> = {
   not_started: 0,
   scratch: 1,
@@ -14,12 +12,15 @@ const NAME_TO_STATE: Record<string, number> = {
   tracked: 2,
   comped: 3,
   done: 4,
+  na: 5,
+  not_applicable: 5,
 };
 
+// States 0–5 (5 = N/A). N/A is excluded from percentages by the client/share page.
 function toState(v: string | null): number {
   if (v == null) return 0;
   const n = parseInt(v, 10);
-  if (!Number.isNaN(n) && String(n) === v) return Math.max(0, Math.min(4, n));
+  if (!Number.isNaN(n) && String(n) === v) return Math.max(0, Math.min(5, n));
   return NAME_TO_STATE[v] ?? 0;
 }
 
@@ -86,7 +87,7 @@ export async function GET() {
 
   const { data: albumsData } = await supabase
     .from("albums")
-    .select("id, title, artist, created_at, share_id, schedule")
+    .select("id, title, artist, created_at, share_id, schedule, instruments")
     .order("created_at", { ascending: true });
   const albums = albumsData ?? [];
   const albumIds = albums.map((a) => a.id);
@@ -217,10 +218,11 @@ export async function GET() {
     /* not present yet */
   }
 
-  // Songs shaped for the UI
+  // Songs shaped for the UI. cells is a map { instrumentName: state } so it
+  // works with per-album dynamic instrument columns (v2).
   const songsByAlbum: Record<string, unknown[]> = {};
   for (const s of songs) {
-    const cells = INSTRUMENTS.map((inst) => cellMap[s.id]?.[inst] ?? 0);
+    const cells = cellMap[s.id] ?? {};
     if (!songsByAlbum[s.album_id]) songsByAlbum[s.album_id] = [];
     songsByAlbum[s.album_id].push({
       id: s.id,
@@ -385,6 +387,7 @@ export async function GET() {
     artistsMap[aid].albums.push({
       id: al.id,
       shareId: al.share_id ?? null,
+      instruments: Array.isArray(al.instruments) ? al.instruments : [],
       title: al.title,
       year: String(new Date(al.created_at as string).getFullYear()),
       status: "in-progress",

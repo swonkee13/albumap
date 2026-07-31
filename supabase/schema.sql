@@ -238,6 +238,20 @@ create policy "album_assets: via owned album"
   );
 
 -- ---------------------------------------------------------------------------
+-- RECORDING GRID v2: albums.instruments is now the per-album set of grid
+-- columns (dynamic — add/rename/delete). New albums start blank (the API
+-- inserts an empty array). Backfill existing albums that already have grid
+-- data with the legacy fixed columns so their cells keep their columns.
+-- ---------------------------------------------------------------------------
+update public.albums a
+set instruments = array['Drums','Bass','Guitar','Synth','Lead Vox','BGV']
+where exists (
+  select 1 from public.songs s
+  join public.song_tracks t on t.song_id = s.id
+  where s.album_id = a.id
+);
+
+-- ---------------------------------------------------------------------------
 -- MERCH ITEMS  (full records — v2. Each item = a garment/product with its own
 -- mockup + print-ready files, budget, brand/style, color, sizes, vendor.)
 -- ---------------------------------------------------------------------------

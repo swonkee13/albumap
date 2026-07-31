@@ -16,9 +16,11 @@ export async function POST(req: Request) {
   const artist = ((body?.artist as string | undefined) ?? "").trim();
   if (!title) return NextResponse.json({ ok: false }, { status: 400 });
 
+  // New albums start with a blank recording grid (no instrument columns) —
+  // the user adds their own via "+ Add instrument" (v2).
   const { data, error } = await supabase
     .from("albums")
-    .insert({ title, artist, owner_id: user.id })
+    .insert({ title, artist, owner_id: user.id, instruments: [] })
     .select("id")
     .single();
   if (error) {
