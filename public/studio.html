@@ -317,6 +317,8 @@
   .track-actions{display:flex;align-items:center;gap:2px;flex:none}
   .ico-btn{width:32px;height:32px;border-radius:8px;border:none;background:transparent;color:var(--txt-3);cursor:pointer;display:grid;place-items:center;transition:.13s}
   .ico-btn:hover{background:var(--hover);color:var(--txt)}
+  .ico-btn.grid-ico{color:#fff;background:var(--accent)}
+  .ico-btn.grid-ico:hover{background:var(--accent-hi);color:#fff}
   .ico-btn svg{width:16px;height:16px}
   .empty-note{color:var(--txt-3);font-size:12.5px;text-align:center;padding:8px 0 2px;font-style:italic}
   /* idea labels (section + instrument tags) */
@@ -899,7 +901,7 @@ function renderDashboard(){
       <!-- quick surfaces -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
         <div class="section" style="cursor:pointer" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}'})">
-          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Song ideas</h3><div class="cnt">${al.songs.reduce((n,s)=>n+s.files.length,0)} demos &amp; snippets</div></div></div><div class="expand">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></div></div>
+          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Songs</h3><div class="cnt">${al.songs.reduce((n,s)=>n+s.files.length,0)} demos &amp; snippets</div></div></div><div class="expand">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></div></div>
           <div style="padding:2px 20px 18px;color:var(--txt-3);font-size:12.5px;line-height:1.5">Drop WAVs & MP3s under each song. Plays in place — no more emailing files.</div>
         </div>
         <div class="section" style="cursor:pointer" onclick="nav({view:'sequencer',artistId:'${a.id}',albumId:'${al.id}'})">
@@ -1084,7 +1086,7 @@ function renderSongList(){
         <div style="display:flex;align-items:center;gap:10px">
           <div class="pbar" style="width:90px"><div class="fill" style="width:${p}%;background:${p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)'}"></div></div>
           <div class="cnt-pill ${s.files.length?'has':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${s.files.length}</div>
-          <button class="ico-btn" title="Open in recording grid" onclick="event.stopPropagation();gotoGrid('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+          <button class="ico-btn grid-ico" title="Open in recording grid" onclick="event.stopPropagation();gotoGrid('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
         </div>
       </div>
       <div class="idea-body" ${collapsed?'style="display:none"':''}>
