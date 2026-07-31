@@ -841,7 +841,7 @@ function renderRoster(){
     return `<div class="g-card" onclick="nav({view:'albums',artistId:'${a.id}'})">
       <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}</div>
       <div class="gt">${a.name}</div><div class="gs">${a.type} · ${a.sub}</div></div>`;}).join('')}
-    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow(null)"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
+    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow(null)"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h1M17 15v6M14 18h6"/></svg><div style="margin-top:12px;font-weight:600">New artist</div></div></div>`;
 }
 /* ===== ALBUMS ===== */
 function renderAlbums(){
@@ -1770,9 +1770,14 @@ function persistCell(songId,instrument,state){
   fetch('/api/cell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,instrument,state})}).catch(()=>{});
 }
 async function createAlbumFlow(artistName){
-  const title=prompt('Album title');if(!title||!title.trim())return;
-  const artist=((artistName!=null?artistName:(prompt('Artist / band name')||''))||'').trim();
-  const res=await fetch('/api/album',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title.trim(),artist})});
+  let artist,title;
+  if(artistName!=null){ // adding an album under an existing artist
+    title=(prompt('Album title')||'').trim();if(!title)return;artist=artistName;
+  }else{ // "New artist" from the roster — ask the artist first
+    artist=(prompt('Artist / band name')||'').trim();if(!artist)return;
+    title=(prompt('First album title')||'').trim();if(!title)return;
+  }
+  const res=await fetch('/api/album',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,artist})});
   if(!res.ok){alert('Could not create the album.');return;}
   const {id}=await res.json();
   await reloadData();
