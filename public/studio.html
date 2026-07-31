@@ -256,6 +256,13 @@
   .add-inst:hover{border-color:var(--accent);color:var(--accent-hi)}
   .add-inst svg{width:15px;height:15px}
   .legend .sw{width:16px;height:16px;border-radius:6px}
+  .rec-grid tbody td.songcol{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:default}
+  .rec-grid td.songcol .sc-name{cursor:pointer}
+  .rec-grid td.songcol .sc-name:hover{color:var(--accent-hi)}
+  .song-del{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:4px;border-radius:6px;opacity:0;transition:.12s;display:grid;place-items:center;flex:none}
+  .song-del svg{width:14px;height:14px}
+  .song-del:hover{color:#e0322a;background:var(--hover)}
+  tr:hover .song-del,.idea-head:hover .song-del{opacity:1}
   .rec-grid tbody tr td{transition:background .3s}
   .rec-grid tbody tr.grid-row-flash td{background:rgba(255,77,28,.14)}
   .rec-grid tbody tr.grid-row-flash td.songcol{color:var(--accent-hi)}
@@ -1000,7 +1007,7 @@ function renderGrid(){
   const a=A(),al=AL();const insts=albumInstruments(al);
   const clsFor=c=>["cell-empty","cell-scratch","cell-tracked","cell-comped","cell-done","cell-na"][c]||"cell-empty";
   const head=`<tr><th class="songcol">Song</th>${insts.map((inst,ci)=>`<th class="instcol"><span class="inst-name" title="${esc(inst)}">${esc(inst)}</span><span class="inst-tools"><button title="Rename" onclick="renameInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete column" onclick="deleteInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></th>`).join('')}<th class="addcol"><button class="add-inst" onclick="addInstrument()" title="Add instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></th></tr>`;
-  const body=al.songs.map((s,si)=>`<tr data-song="${s.id}"><td class="songcol" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${esc(s.t)}</td>${insts.map((inst,ci)=>{const c=cellState(s,inst);return `<td><div class="cell ${clsFor(c)}" oncontextmenu="event.preventDefault();setCellNA(${si},${ci})" onclick="cycleCell(${si},${ci})" title="${esc(s.t)} · ${esc(inst)} — ${STATE_NAMES[c]} (right-click for N/A)"><div class="mark">${cellMark(c)}</div></div></td>`;}).join('')}<td class="addcol"></td></tr>`).join('');
+  const body=al.songs.map((s,si)=>`<tr data-song="${s.id}"><td class="songcol"><span class="sc-name" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${esc(s.t)}</span><button class="song-del" title="Delete song" onclick="event.stopPropagation();deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></td>${insts.map((inst,ci)=>{const c=cellState(s,inst);return `<td><div class="cell ${clsFor(c)}" oncontextmenu="event.preventDefault();setCellNA(${si},${ci})" onclick="cycleCell(${si},${ci})" title="${esc(s.t)} · ${esc(inst)} — ${STATE_NAMES[c]} (right-click for N/A)"><div class="mark">${cellMark(c)}</div></div></td>`;}).join('')}<td class="addcol"></td></tr>`).join('');
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Recording grid</div><div class="ws-sub">The checkerboard — every song against every part. Add your own instrument columns, click a cell to cycle its state (right-click for N/A). N/A cells are ignored in every percentage.</div></div>
   <div style="margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button><button class="ghost-btn" onclick="addInstrument()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add instrument</button></div>
   ${insts.length?'':'<div class="empty-note" style="padding:6px 0 16px;text-align:left">No instruments yet — add your first column (e.g. “Pedal steel”) to start the grid.</div>'}
@@ -1048,7 +1055,7 @@ let uidc=1000;
 function renderSongs(){
   const al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Songs</div><div class="ws-sub">Every song, everything in one place — drop demos, write lyrics, leave timestamped notes, set references and splits. Click a song to open it.</div></div>
-  <div style="display:flex;gap:10px;margin:0 0 10px"><button class="ghost-btn" onclick="openTagManager()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Manage tags</button></div>
+  <div style="display:flex;gap:10px;margin:0 0 10px"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button><button class="ghost-btn" onclick="openTagManager()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Manage tags</button></div>
   <div id="songList"></div>
   <div id="ideaBank"></div>`;
   renderSongList();
@@ -1091,6 +1098,7 @@ function renderSongList(){
           <div class="pbar" style="width:90px"><div class="fill" style="width:${p}%;background:${p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)'}"></div></div>
           <div class="cnt-pill ${s.files.length?'has':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${s.files.length}</div>
           <button class="ico-btn grid-ico" title="Open in recording grid" onclick="event.stopPropagation();gotoGrid('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+          <button class="ico-btn" title="Delete song" onclick="event.stopPropagation();deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
         </div>
       </div>
       <div class="idea-body" ${collapsed?'style="display:none"':''}>
@@ -1790,7 +1798,15 @@ async function addSongFlow(){
   const title=prompt('Song title');if(!title||!title.trim())return;
   const res=await fetch('/api/song',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,title:title.trim()})});
   if(!res.ok){alert('Could not add the song.');return;}
-  await reloadData({...route});
+  await reloadData({...route}); // reload syncs both the grid and songs views
+}
+async function deleteSong(id){
+  const al=AL();const s=al&&al.songs.find(x=>x.id===id);if(!s)return;
+  if(!confirm(`Delete “${s.t}”? This removes its grid cells, files and comments.`))return;
+  al.songs=al.songs.filter(x=>x.id!==id);
+  if(route.songId===id)route.songId=null;
+  render();
+  fetch('/api/song?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});
 }
 async function inviteMember(){
   const al=AL();if(!al)return;const name=prompt('Invite who? (name)');if(!name||!name.trim())return;

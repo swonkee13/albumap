@@ -32,3 +32,29 @@ export async function POST(req: Request) {
   await logActivity(supabase, user, albumId, `added the song <b>${title}</b>`);
   return NextResponse.json({ ok: true, id: data.id });
 }
+
+// Delete a song (RLS-guarded). Cascades to its tracks/files/comments in the DB.
+export async function DELETE(req: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ ok: false }, { status: 400 });
+
+  const { data: song } = await supabase
+    .from("songs")
+    .select("id, title, album_id")
+    .eq("id", id)
+    .maybeSingle();
+  if (!song) return NextResponse.json({ ok: false }, { status: 404 });
+
+  const { error } = await supabase.from("songs").delete().eq("id", id);
+  if (error)
+    return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+
+  await logActivity(supabase, user, song.album_id, `deleted the song <b>${song.title}</b>`);
+  return NextResponse.json({ ok: true });
+}
