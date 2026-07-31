@@ -294,7 +294,7 @@ export async function GET() {
       const { data: items } = await supabase
         .from("merch_items")
         .select(
-          "id, album_id, name, brand, color, sizes, has_sizes, budget, vendor, vendor_link, mockup_key, print_key, position, created_at",
+          "id, album_id, name, brand, color, sizes, has_sizes, budget, vendor, vendor_link, mockup_key, print_key, size_qty, total_qty, position, created_at",
         )
         .in("album_id", albumIds)
         .order("position", { ascending: true })
@@ -314,6 +314,8 @@ export async function GET() {
             budget: m.budget ?? null,
             vendor: m.vendor ?? "",
             vendorLink: m.vendor_link ?? "",
+            sizeQty: m.size_qty && typeof m.size_qty === "object" ? m.size_qty : {},
+            totalQty: m.total_qty ?? null,
             mockup,
             print,
           });

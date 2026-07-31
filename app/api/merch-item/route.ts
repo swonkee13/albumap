@@ -24,6 +24,8 @@ const EDITABLE = [
   "budget",
   "vendor",
   "vendor_link",
+  "size_qty",
+  "total_qty",
 ] as const;
 
 async function ownsAlbum(

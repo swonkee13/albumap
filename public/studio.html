@@ -424,9 +424,19 @@
   @keyframes slotFlash{0%,100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}20%{box-shadow:0 0 0 3px var(--accent),0 0 22px rgba(255,77,28,.6)}}
 
   /* merch items (full records — v2) */
-  .merch-thumb{width:42px;height:42px;border-radius:9px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3)}
+  .merch-thumb{width:74px;height:74px;border-radius:12px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3);border:1px solid var(--line-soft)}
   .merch-thumb img{width:100%;height:100%;object-fit:cover}
-  .merch-thumb svg{width:18px;height:18px}
+  .merch-thumb svg{width:26px;height:26px}
+  .size-qty-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .sq{display:flex;flex-direction:column;gap:4px;width:58px}
+  .sq-tog{padding:6px 0;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-weight:600;font-size:12px;cursor:pointer;font-family:inherit}
+  .sq.on .sq-tog{background:var(--accent-dim);border-color:rgba(255,77,28,.4);color:var(--accent-hi)}
+  .sq-in{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px;font-size:12px;text-align:center;outline:none;font-family:'JetBrains Mono'}
+  .sq-in:focus{border-color:var(--accent)}
+  .sq-total{font-size:12.5px;color:var(--txt-3);margin-top:10px}
+  .sq-total b{color:var(--txt);font-family:'JetBrains Mono'}
+  .mf-total{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:9px 11px;font-size:13px;outline:none;margin-top:6px;max-width:200px;font-family:inherit}
+  .mf-total:focus{border-color:var(--accent)}
   .merch-sub{color:var(--txt-3);font-size:11.5px;margin-top:3px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .merch-sub .msep{width:3px;height:3px;border-radius:50%;background:var(--txt-3);flex:none}
   .merch-sub .swatch{width:12px;height:12px;border-radius:3px;border:1px solid var(--line);flex:none;display:inline-block;vertical-align:-2px;margin-right:5px}
@@ -1441,14 +1451,22 @@ function renderMerchList(){
   list.innerHTML=items.length?items.map((it,i)=>merchItemHTML(it,i)).join(''):'<div class="empty-note" style="padding:24px 0">No merch yet — click “Add merch item” to create the first record.</div>';
   flashMerchScroll();
 }
+function merchTotal(it){
+  if(it.hasSizes){const q=it.sizeQty||{};return (it.sizes||[]).reduce((a,s)=>a+(parseInt(q[s],10)||0),0);}
+  return parseInt(it.totalQty,10)||0;
+}
+function merchSubGroups(it){
+  const total=merchTotal(it);const groups=[];
+  if(it.brand)groups.push(esc(it.brand));
+  if(total>0)groups.push(`<b style="color:var(--txt)">${total}</b> ${it.hasSizes?'pcs':'units'}`);
+  if(it.budget!=null&&it.budget!=='')groups.push(`<span class="merch-budget">$${esc(it.budget)}</span>`);
+  if(it.color)groups.push(`<span class="swatch" style="background:${esc(it.color)}"></span>${esc(it.color)}`);
+  return groups;
+}
 function merchItemHTML(it,i){
   const open=!!merchOpen[it.id];
-  const groups=[];
-  if(it.brand)groups.push(esc(it.brand));
-  if(it.color)groups.push(`<span class="swatch" style="background:${esc(it.color)}"></span>${esc(it.color)}`);
-  if(it.hasSizes&&(it.sizes||[]).length)groups.push(`${it.sizes.length} size${it.sizes.length!==1?'s':''}`);
-  if(it.budget!=null&&it.budget!=='')groups.push(`<span class="merch-budget">$${esc(it.budget)}</span>`);
-  const sub=groups.length?groups.map(g=>`<span>${g}</span>`).join('<span class="msep"></span>'):'<span>Click to add brand, color, sizes &amp; budget</span>';
+  const groups=merchSubGroups(it);
+  const sub=groups.length?groups.map(g=>`<span>${g}</span>`).join('<span class="msep"></span>'):'<span>Click to add brand, quantities &amp; budget</span>';
   const tshirt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5 9 3a3 3 0 0 0 6 0l5 2-2 5-2-1v9H8v-9l-2 1z"/></svg>';
   return `<div class="idea-song ${open?'':'collapsed'}" data-mi="${it.id}" data-mi-index="${i}">
     <div class="idea-head" onclick="toggleMerch('${it.id}')">
@@ -1466,8 +1484,10 @@ function merchItemHTML(it,i){
         <div class="mf"><label>Vendor</label><input value="${esc(it.vendor)}" placeholder="Printer / supplier name" onblur="saveMerch('${it.id}','vendor',this.value)"></div>
         <div class="mf"><label>Vendor link / contact</label><input value="${esc(it.vendorLink)}" placeholder="https://… or email" onblur="saveMerch('${it.id}','vendor_link',this.value)"></div>
         <div class="mf full">
-          <label style="display:flex;align-items:center;justify-content:space-between">Sizes<span class="mini-toggle ${it.hasSizes?'on':''}" onclick="toggleMerchHasSizes('${it.id}')"><span class="tg"></span>Apparel — has sizes</span></label>
-          ${it.hasSizes?`<div class="size-chips">${MERCH_SIZES.map(s=>`<span class="size-chip ${(it.sizes||[]).includes(s)?'on':''}" onclick="toggleMerchSize('${it.id}','${s}')">${s}</span>`).join('')}</div>`:`<div style="color:var(--txt-3);font-size:12.5px;padding:4px 0">Not apparel — no sizes for this item.</div>`}
+          <label style="display:flex;align-items:center;justify-content:space-between">Quantities<span class="mini-toggle ${it.hasSizes?'on':''}" onclick="toggleMerchHasSizes('${it.id}')"><span class="tg"></span>Apparel — has sizes</span></label>
+          ${it.hasSizes
+            ?`<div class="size-qty-grid">${MERCH_SIZES.map(sz=>{const on=(it.sizes||[]).includes(sz);const q=(it.sizeQty&&it.sizeQty[sz]!=null)?it.sizeQty[sz]:'';return `<div class="sq ${on?'on':''}"><button class="sq-tog" onclick="toggleMerchSize('${it.id}','${sz}')">${sz}</button>${on?`<input type="number" min="0" class="sq-in" value="${esc(q)}" placeholder="0" onblur="setMerchQty('${it.id}','${sz}',this.value)">`:''}</div>`;}).join('')}</div><div class="sq-total">Total: <b>${merchTotal(it)}</b> pcs</div>`
+            :`<input type="number" min="0" class="mf-total" value="${it.totalQty==null?'':esc(it.totalQty)}" placeholder="e.g. 100" onblur="saveMerch('${it.id}','total_qty',this.value)"><div class="sq-total">Total units for this item (non-apparel)</div>`}
         </div>
       </div>
     </div>
@@ -1491,7 +1511,7 @@ async function addMerchItem(){
   if(!res.ok){alert('Could not add the merch item — has the merch_items table been created in Supabase?');return;}
   const {id}=await res.json();
   al.merchItems=al.merchItems||[];
-  al.merchItems.push({id,name:'',brand:'',color:'',sizes:[],hasSizes:true,budget:null,vendor:'',vendorLink:'',mockup:null,print:null});
+  al.merchItems.push({id,name:'',brand:'',color:'',sizes:[],hasSizes:true,budget:null,vendor:'',vendorLink:'',sizeQty:{},totalQty:null,mockup:null,print:null});
   merchOpen[id]=true;renderMerchList();
   const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),60);
 }
@@ -1502,26 +1522,38 @@ function deleteMerchItem(id){
 }
 function saveMerch(id,field,value){
   const it=merchItem(id);
-  const budget=(field==='budget')?(value===''?null:parseFloat(value)):null;
+  let out=value;
+  if(field==='budget')out=(value===''?null:parseFloat(value));
+  else if(field==='total_qty')out=(value===''?null:Math.max(0,parseInt(value,10)||0));
   if(it){
     if(field==='name')it.name=value;else if(field==='brand')it.brand=value;else if(field==='color')it.color=value;
-    else if(field==='vendor')it.vendor=value;else if(field==='vendor_link')it.vendorLink=value;else if(field==='budget')it.budget=budget;
+    else if(field==='vendor')it.vendor=value;else if(field==='vendor_link')it.vendorLink=value;
+    else if(field==='budget')it.budget=out;else if(field==='total_qty')it.totalQty=out;
   }
-  const b={action:'update',id};b[field]=(field==='budget')?budget:value;
+  const b={action:'update',id};b[field]=out;
   fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
-  if(field==='name'||field==='brand'||field==='color'||field==='budget'){const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el){const h=el.querySelector('.idea-title');if(h&&field==='name')h.textContent=value||'Untitled item';renderMerchSubOnly(id);}}
+  const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el){const h=el.querySelector('.idea-title');if(h&&field==='name')h.textContent=value||'Untitled item';renderMerchSubOnly(id);}
+}
+function setMerchQty(id,size,value){
+  const it=merchItem(id);if(!it)return;it.sizeQty=it.sizeQty||{};
+  it.sizeQty[size]=(value===''?0:Math.max(0,parseInt(value,10)||0));
+  const tot=document.querySelector(`.idea-song[data-mi="${id}"] .sq-total b`);if(tot)tot.textContent=merchTotal(it);
+  renderMerchSubOnly(id);
+  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,size_qty:it.sizeQty})}).catch(()=>{});
 }
 function renderMerchSubOnly(id){const it=merchItem(id);const el=document.querySelector(`.idea-song[data-mi="${id}"] .merch-sub`);if(!el||!it)return;
-  const groups=[];if(it.brand)groups.push(esc(it.brand));if(it.color)groups.push(`<span class="swatch" style="background:${esc(it.color)}"></span>${esc(it.color)}`);if(it.hasSizes&&(it.sizes||[]).length)groups.push(`${it.sizes.length} size${it.sizes.length!==1?'s':''}`);if(it.budget!=null&&it.budget!=='')groups.push(`<span class="merch-budget">$${esc(it.budget)}</span>`);
-  el.innerHTML=groups.length?groups.map(g=>`<span>${g}</span>`).join('<span class="msep"></span>'):'<span>Click to add brand, color, sizes &amp; budget</span>';
+  const groups=merchSubGroups(it);
+  el.innerHTML=groups.length?groups.map(g=>`<span>${g}</span>`).join('<span class="msep"></span>'):'<span>Click to add brand, quantities &amp; budget</span>';
 }
 function toggleMerchHasSizes(id){const it=merchItem(id);if(!it)return;it.hasSizes=!it.hasSizes;renderMerchList();
   fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,has_sizes:it.hasSizes})}).catch(()=>{});}
 function toggleMerchSize(id,size){const it=merchItem(id);if(!it)return;it.sizes=it.sizes||[];
-  it.sizes=it.sizes.includes(size)?it.sizes.filter(s=>s!==size):[...it.sizes,size].sort((a,b)=>MERCH_SIZES.indexOf(a)-MERCH_SIZES.indexOf(b));
-  const el=document.querySelector(`.idea-song[data-mi="${id}"] .size-chips`);if(el)el.querySelectorAll('.size-chip').forEach(c=>c.classList.toggle('on',it.sizes.includes(c.textContent)));
-  renderMerchSubOnly(id);
-  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,sizes:it.sizes})}).catch(()=>{});}
+  const removing=it.sizes.includes(size);
+  it.sizes=removing?it.sizes.filter(s=>s!==size):[...it.sizes,size].sort((a,b)=>MERCH_SIZES.indexOf(a)-MERCH_SIZES.indexOf(b));
+  if(removing&&it.sizeQty)delete it.sizeQty[size];
+  renderMerchList();
+  const persist={action:'update',id,sizes:it.sizes};if(removing)persist.size_qty=it.sizeQty||{};
+  fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(persist)}).catch(()=>{});}
 let merchImgTarget=null;
 function browseMerchImg(id,which){merchImgTarget={id,which};document.getElementById('merchImgInput').click();}
 async function uploadMerchImg(f){

@@ -268,9 +268,14 @@ create table if not exists public.merch_items (
   vendor_link text default '',
   mockup_key text,                 -- R2 key for the mockup image
   print_key text,                  -- R2 key for print-ready / full-res artwork
+  size_qty jsonb not null default '{}'::jsonb,  -- { S: 10, M: 20, ... } (apparel)
+  total_qty int,                   -- total units for non-apparel (e.g. 100 posters)
   position int not null default 0,
   created_at timestamptz default now()
 );
+-- (if merch_items already existed, add the v2 quantity columns)
+alter table public.merch_items add column if not exists size_qty jsonb not null default '{}'::jsonb;
+alter table public.merch_items add column if not exists total_qty int;
 alter table public.merch_items enable row level security;
 drop policy if exists "merch_items: via owned album" on public.merch_items;
 create policy "merch_items: via owned album" on public.merch_items for all
