@@ -395,6 +395,15 @@
   .block.drag-over-right{box-shadow:inset -4px 0 0 #fff}
   .block.no-audio{opacity:.5;background:repeating-linear-gradient(135deg,#2a2a30,#2a2a30 8px,#232329 8px,#232329 16px)!important}
   .block .no-audio-tag{position:absolute;top:26px;left:11px;font-family:'JetBrains Mono';font-size:9px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.05em;z-index:2}
+  .block.placeholder{display:flex;flex-direction:column;justify-content:space-between}
+  .block.placeholder .ph-label{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);display:flex;align-items:center;justify-content:center;gap:5px;font-family:'JetBrains Mono';font-size:9.5px;font-weight:700;letter-spacing:.08em;color:rgba(255,255,255,.85);text-shadow:0 1px 3px rgba(0,0,0,.5)}
+  .block .ph-x{position:absolute;top:5px;right:5px;z-index:4;width:18px;height:18px;border-radius:5px;border:none;background:rgba(0,0,0,.35);color:#fff;cursor:pointer;display:none;place-items:center;padding:0}
+  .block .ph-x svg{width:11px;height:11px}
+  .block.placeholder:hover .ph-x{display:grid}
+  .ol-row.placeholder .ol-name{font-style:italic}
+  .ph-x.sm{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:4px;border-radius:6px;display:grid;place-items:center;flex:none}
+  .ph-x.sm svg{width:14px;height:14px}
+  .ph-x.sm:hover{color:#e0322a;background:var(--hover)}
   .seq-hint{display:flex;align-items:center;gap:8px;color:var(--txt-3);font-size:12px;font-weight:500;margin:2px 2px 12px}
   .seq-hint svg{width:14px;height:14px;color:var(--accent-hi)}
   .block.current{box-shadow:0 0 0 2px #fff,0 6px 20px rgba(0,0,0,.5);z-index:3}
@@ -702,6 +711,10 @@ const INSTRUMENTS=["Drums","Bass","Guitar","Synth","Lead Vox","BGV"]; // legacy 
 const STATE_NAMES=["Not started","Scratch","Tracked","Comped","Done","Not applicable"];
 const NA=5;
 const SONG_COLORS=["#FF4D1C","#F5A623","#3ECF8E","#4EA8E8","#B06BFF","#FF6B9D","#2ED3C6","#E8564E"];
+// Sequencer "Placeholder" blocks: reserve a slot (e.g. an unplaced track or
+// interlude). Default 2:30; each added gets a different (muted) color.
+const PH_DUR=150;
+const PH_COLORS=["#6B7280","#8B7A55","#5B6E8B","#7A5B8B","#8B5B67","#4F8B7A","#8B7B4F","#6E5B8B"];
 // Idea labels (item 7): song-section tags + instrument tags, multi-select.
 // These are the DEFAULTS; each album has its own editable sets (item B7).
 const SECTION_LABELS=["Intro","Verse","Chorus","Bridge","Hook","Outro"];
@@ -1387,15 +1400,38 @@ function rmTrack(id,si){const al=AL();const t=al.songs[si].files.find(x=>x.id===
 /* ===== SEQUENCER ===== */
 let seqSongs=[];
 function pickPlayFile(s){const files=s.files||[];const m=files.find(x=>x.master&&x.url);if(m)return m;const withUrl=files.filter(x=>x.url);return withUrl.length?withUrl[withUrl.length-1]:null;}
+function seqLayoutKey(albumId){return 'albumap:seq:'+albumId;}
+function loadSeqLayout(albumId){try{const s=localStorage.getItem(seqLayoutKey(albumId));return s?JSON.parse(s):null;}catch(e){return null;}}
+function saveSeqLayout(){const al=AL();if(!al)return;try{localStorage.setItem(seqLayoutKey(al.id),JSON.stringify(seqSongs.map(s=>s.placeholder?{ph:true,id:s.id,name:s.name,color:s.color,dur:s.dur}:{id:s.id})));}catch(e){}}
+function seqPersist(){persistSeqOrder();saveSeqLayout();}
+function buildSeqSongs(al){
+  const base=al.songs.map((s,i)=>{const f=pickPlayFile(s);return {id:s.id,name:s.t,dur:(f&&f.dur)||s.dur||210,color:SONG_COLORS[i%SONG_COLORS.length],url:f?f.url:null};});
+  const layout=loadSeqLayout(al.id);
+  if(!layout||!layout.length)return base;
+  const byId={};base.forEach(b=>byId[b.id]=b);const out=[],used=new Set();
+  layout.forEach(tok=>{
+    if(tok&&tok.ph)out.push({id:tok.id,name:tok.name||'Placeholder',dur:tok.dur||PH_DUR,color:tok.color||PH_COLORS[0],url:null,placeholder:true});
+    else if(tok&&byId[tok.id]&&!used.has(tok.id)){out.push(byId[tok.id]);used.add(tok.id);}
+  });
+  base.forEach(b=>{if(!used.has(b.id)){out.push(b);used.add(b.id);}});
+  return out;
+}
+function addPlaceholder(){
+  const n=seqSongs.filter(s=>s.placeholder).length;
+  seqSongs.push({id:'ph-'+Date.now()+'-'+n,name:'Placeholder',dur:PH_DUR,color:PH_COLORS[n%PH_COLORS.length],url:null,placeholder:true});
+  seqStop();seqPos=0;renderSeq();seqPersist();
+}
+function removePlaceholder(id){seqSongs=seqSongs.filter(s=>s.id!==id);seqStop();seqPos=0;renderSeq();seqPersist();}
 function renderSequencer(){
   const al=AL();
-  seqSongs=al.songs.map((s,i)=>{const f=pickPlayFile(s);return {id:s.id,name:s.t,dur:(f&&f.dur)||s.dur||210,color:SONG_COLORS[i%SONG_COLORS.length],url:f?f.url:null};});
-  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Tracklist sequencer</div><div class="ws-sub">Each song is a block sized to its real length. Press play to hear the album in sequence — each song plays its <b>master</b> (or most recent) file. Click the timeline to scrub.</div></div>
+  seqSongs=buildSeqSongs(al);
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Tracklist sequencer</div><div class="ws-sub">Each song is a block sized to its real length. Press play to hear the album in sequence — each song plays its <b>master</b> (or most recent) file. Add <b>Placeholder</b> blocks to reserve a slot for an unplaced track or interlude.</div></div>
   <div class="transport"><button class="big-play" id="bigPlay" onclick="toggleSeq()"><svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
     <div class="transport-info"><div class="now" id="seqNow"><span class="swatch" style="background:var(--accent)"></span>Ready to play — track 1</div><div class="sub2" id="seqSub">Full album · continuous playback in sequence order</div></div>
     <div class="transport-times"><span class="cur" id="seqCur">0:00</span><span>/</span><span class="tot" id="seqTot">0:00</span></div>
+    <button class="ghost-btn" onclick="addPlaceholder()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12l10 9 10-9z"/></svg>Placeholder</button>
     <button class="ghost-btn" onclick="shuffleSeq()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Shuffle</button></div>
-  <div class="seq-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>Drag any block — or any row below — to reorder the album.</div>
+  <div class="seq-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M2 12h20M12 2v20"/></svg>Drag any block — or any row below — to reorder. A <b>Placeholder</b> reserves a 2:30 slot you can position anywhere.</div>
   <div class="seq-wrap"><div class="ruler" id="seqRuler"></div><div class="timeline" id="seqTimeline"><div class="playhead" id="seqPlayhead"></div></div>
     <div class="seq-foot"><div class="stat-run"><div class="s"><div class="n" id="seqCount">0</div><div class="l">Tracks</div></div><div class="s"><div class="n mono" id="seqLen">0:00</div><div class="l">Runtime</div></div><div class="s"><div class="n" id="seqSides">A/B</div><div class="l">Vinyl sides</div></div></div></div></div>
   <div class="order-list" id="seqOrder"></div>`;
@@ -1407,12 +1443,20 @@ function renderSeq(){
   const tl=document.getElementById('seqTimeline'),ph=document.getElementById('seqPlayhead'),total=seqTotal();
   const ruler=document.getElementById('seqRuler');ruler.innerHTML='';for(let i=0;i<8;i++){const d=document.createElement('div');d.className='tick';d.textContent=fmtT(total*i/8);ruler.appendChild(d);}
   [...tl.querySelectorAll('.block')].forEach(b=>b.remove());
-  seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(idx===0?' is-first':'')+(idx===seqSongs.length-1?' is-last':'')+(s.url?'':' no-audio');b.style.flexGrow=s.dur;b.style.flexBasis='0';b.style.background=`linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;b.dataset.id=s.id;const wave=stableWave(s.name,Math.max(24,Math.round(s.dur/3)));b.innerHTML=`<div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="b-name">${esc(s.name)}</div>${s.url?'':'<span class="no-audio-tag">no audio</span>'}<div class="b-wave">${wave.map(h=>`<div class="wb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>`;b.addEventListener('pointerdown',e=>blockPointerDown(e,s.id));tl.insertBefore(b,ph);});
+  seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(idx===0?' is-first':'')+(idx===seqSongs.length-1?' is-last':'')+(s.placeholder?' placeholder':(s.url?'':' no-audio'));b.style.flexGrow=s.dur;b.style.flexBasis='0';b.dataset.id=s.id;
+    if(s.placeholder){b.style.background=s.color+'26';b.style.boxShadow='inset 0 0 0 1.5px '+s.color+'aa';
+      b.innerHTML=`<button class="ph-x" title="Remove placeholder" onpointerdown="event.stopPropagation()" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg></button><div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="ph-label"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M12 3 2 12l10 9 10-9z"/></svg>PLACEHOLDER</div>`;
+    }else{b.style.background=`linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;const wave=stableWave(s.name,Math.max(24,Math.round(s.dur/3)));
+      b.innerHTML=`<div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="b-name">${esc(s.name)}</div>${s.url?'':'<span class="no-audio-tag">no audio</span>'}<div class="b-wave">${wave.map(h=>`<div class="wb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>`;}
+    b.addEventListener('pointerdown',e=>blockPointerDown(e,s.id));tl.insertBefore(b,ph);});
   document.getElementById('seqCount').textContent=seqSongs.length;
   document.getElementById('seqLen').textContent=fmtT(total);
   document.getElementById('seqTot').textContent=fmtT(total);
   document.getElementById('seqSides').textContent=seqSides();
-  document.getElementById('seqOrder').innerHTML=`<div class="ol-head">Album order · ${seqSongs.length} tracks · ${fmtT(total)} · drag ≡ to reorder</div>`+seqSongs.map((s,i)=>`<div class="ol-row${s.url?'':' no-audio'}" data-id="${s.id}"><span class="ol-grip" onpointerdown="rowPointerDown(event,'${s.id}')" title="Drag to reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></span><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span class="ol-sw" style="background:${s.color}"></span><span class="ol-name" style="cursor:pointer" title="Open song" onclick="nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${s.id}'})">${esc(s.name)}</span>${s.url?'':'<span class="ol-noaudio">no audio</span>'}<span class="ol-dur">${fmtT(s.dur)}</span></div>`).join('');
+  document.getElementById('seqOrder').innerHTML=`<div class="ol-head">Album order · ${seqSongs.length} tracks · ${fmtT(total)} · drag ≡ to reorder</div>`+seqSongs.map((s,i)=>{const grip=`<span class="ol-grip" onpointerdown="rowPointerDown(event,'${s.id}')" title="Drag to reorder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h16M4 16h16"/></svg></span><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span class="ol-sw" style="background:${s.color}"></span>`;
+    if(s.placeholder)return `<div class="ol-row placeholder" data-id="${s.id}">${grip}<span class="ol-name" style="color:var(--txt-3)">◇ Placeholder</span><span class="ol-dur">${fmtT(s.dur)}</span><button class="ph-x sm" title="Remove" onpointerdown="event.stopPropagation()" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`;
+    return `<div class="ol-row${s.url?'':' no-audio'}" data-id="${s.id}">${grip}<span class="ol-name" style="cursor:pointer" title="Open song" onclick="nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${s.id}'})">${esc(s.name)}</span>${s.url?'':'<span class="ol-noaudio">no audio</span>'}<span class="ol-dur">${fmtT(s.dur)}</span></div>`;
+  }).join('');
 }
 function seqSides(){const total=seqTotal();let acc=0,split=0,best=1e9;for(let i=0;i<seqSongs.length;i++){acc+=seqSongs[i].dur;const d=Math.abs(acc-total/2);if(d<best){best=d;split=i+1;}}return`${split} / ${seqSongs.length-split}`;}
 /* ===== real-audio sequencer engine ===== */
@@ -1459,8 +1503,8 @@ function seqSeekClient(x){
   const now=document.getElementById('seqNow');if(now&&s)now.innerHTML=`<span class="swatch" style="background:${s.color}"></span>${String(idx+1).padStart(2,'0')} · ${esc(s.name)}`;
   const sub=document.getElementById('seqSub');if(sub&&s)sub.textContent=seqPlaying?`playing ${esc(s.name)}`:`Scrubbed to ${esc(s.name)} · press play`;
 }
-function shuffleSeq(){seqStop();for(let i=seqSongs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seqSongs[i],seqSongs[j]]=[seqSongs[j],seqSongs[i]];}seqPos=0;renderSeq();persistSeqOrder();}
-function persistSeqOrder(){const al=AL();if(!al)return;const order=seqSongs.map(s=>s.id);al.songs.sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));fetch('/api/song-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,order})}).catch(()=>{});}
+function shuffleSeq(){seqStop();for(let i=seqSongs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[seqSongs[i],seqSongs[j]]=[seqSongs[j],seqSongs[i]];}seqPos=0;renderSeq();seqPersist();}
+function persistSeqOrder(){const al=AL();if(!al)return;const order=seqSongs.filter(s=>!s.placeholder).map(s=>s.id);al.songs.sort((a,b)=>order.indexOf(a.id)-order.indexOf(b.id));fetch('/api/song-order',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,order})}).catch(()=>{});}
 /* ---- pointer drag: timeline blocks ---- */
 function blockEl(id){return document.querySelector(`#seqTimeline .block[data-id="${id}"]`);}
 let blockDrag=null;
@@ -1480,7 +1524,7 @@ document.addEventListener('pointerup',e=>{
   document.querySelectorAll('#seqTimeline .block').forEach(x=>x.classList.remove('drag-over-left','drag-over-right'));
   if(!bd.moved){seqSeekClient(e.clientX);return;}
   const moved=seqSongs[bd.idx];let target=bd.overIdx+(bd.before?0:1);seqSongs.splice(bd.idx,1);if(bd.idx<target)target--;target=Math.max(0,Math.min(seqSongs.length,target));seqSongs.splice(target,0,moved);
-  seqStop();seqPos=0;renderSeq();persistSeqOrder();
+  seqStop();seqPos=0;renderSeq();seqPersist();
 });
 /* ---- pointer drag: order-list rows ---- */
 let rowDrag=null;
@@ -1501,7 +1545,7 @@ document.addEventListener('pointerup',()=>{
   document.querySelectorAll('#seqOrder .ol-row').forEach(x=>x.classList.remove('ol-over-top','ol-over-bot'));
   if(!rd.moved)return;
   const moved=seqSongs[rd.idx];let target=rd.overIdx+(rd.before?0:1);seqSongs.splice(rd.idx,1);if(rd.idx<target)target--;target=Math.max(0,Math.min(seqSongs.length,target));seqSongs.splice(target,0,moved);
-  seqStop();seqPos=0;renderSeq();persistSeqOrder();
+  seqStop();seqPos=0;renderSeq();seqPersist();
 });
 
 /* ===== SCHEDULE ===== */
