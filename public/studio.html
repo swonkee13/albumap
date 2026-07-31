@@ -319,6 +319,17 @@
   .lp-group{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap}
   .lp-h{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-3);width:74px;flex:none;padding-top:4px}
   .lp-chips{display:flex;gap:6px;flex-wrap:wrap;flex:1}
+  .lp-manage{margin-top:2px;border-top:1px solid var(--line-soft);padding-top:8px}
+  .lp-manage button{background:transparent;border:none;color:var(--txt-3);font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;padding:2px}
+  .lp-manage button:hover{color:var(--accent-hi)}
+  .tag-edit-wrap{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .tag-edit{display:inline-flex;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:20px;overflow:hidden}
+  .tag-edit .te-name{background:transparent;border:none;color:var(--txt-2);font-weight:600;font-size:12px;padding:6px 4px 6px 12px;cursor:pointer;font-family:inherit}
+  .tag-edit .te-name:hover{color:var(--accent-hi)}
+  .tag-edit .te-x{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:6px 10px 6px 4px;font-size:15px;line-height:1}
+  .tag-edit .te-x:hover{color:#e0322a}
+  .te-add{background:var(--panel-2);border:1px dashed var(--line);border-radius:20px;color:var(--txt);padding:6px 13px;font-size:12px;outline:none;font-family:inherit;width:96px}
+  .te-add:focus{border-color:var(--accent)}
   .assign-list{display:flex;flex-direction:column;gap:6px;max-height:60vh;overflow-y:auto}
   .assign-row{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);color:var(--txt);font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;transition:.12s;text-align:left}
   .assign-row:hover{background:var(--hover);border-color:var(--accent)}
@@ -660,8 +671,11 @@ const STATE_NAMES=["Not started","Scratch","Tracked","Comped","Done","Not applic
 const NA=5;
 const SONG_COLORS=["#FF4D1C","#F5A623","#3ECF8E","#4EA8E8","#B06BFF","#FF6B9D","#2ED3C6","#E8564E"];
 // Idea labels (item 7): song-section tags + instrument tags, multi-select.
+// These are the DEFAULTS; each album has its own editable sets (item B7).
 const SECTION_LABELS=["Intro","Verse","Chorus","Bridge","Hook","Outro"];
 const INSTRUMENT_LABELS=["Guitar","Bass","Drums","Synth","Vox","Keys","Perc","FX"];
+function albumSectionTags(al){return (al&&al.sectionTags&&al.sectionTags.length)?al.sectionTags:SECTION_LABELS;}
+function albumInstrumentTags(al){return (al&&al.instrumentTags&&al.instrumentTags.length)?al.instrumentTags:INSTRUMENT_LABELS;}
 
 function mkSong(t,cells,extra={}){return {id:t.toLowerCase().replace(/[^a-z0-9]+/g,'-'),t,cells,dur:extra.dur||210,files:extra.files||[],comments:extra.comments||[],lyrics:extra.lyrics||"",notes:extra.notes||"",refs:extra.refs||[],credits:extra.credits||[]};}
 
@@ -1002,6 +1016,7 @@ let uidc=1000;
 function renderSongs(){
   const al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Songs</div><div class="ws-sub">Every song, everything in one place — drop demos, write lyrics, leave timestamped notes, set references and splits. Click a song to open it.</div></div>
+  <div style="display:flex;gap:10px;margin:0 0 10px"><button class="ghost-btn" onclick="openTagManager()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>Manage tags</button></div>
   <div id="songList"></div>
   <div id="ideaBank"></div>`;
   renderSongList();
@@ -1135,9 +1150,37 @@ function trackRow(t,si){
 function labelChipsAssigned(t){return (t.labels||[]).map(l=>`<span class="lchip on" data-label="${esc(l)}" onclick="toggleLabel(${t.id},'${esc(l)}')">${esc(l)}</span>`).join('');}
 function paletteChip(t,l){return `<span class="lchip ${(t.labels||[]).includes(l)?'on':''}" data-label="${l}" onclick="toggleLabel(${t.id},'${l}')">${l}</span>`;}
 function labelBarHTML(t){
-  return `<div class="label-bar"><span class="label-assigned" data-tid="${t.id}">${labelChipsAssigned(t)}</span><button class="ltag-btn" onclick="toggleLabelPalette(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>tag</button><div class="label-palette" id="lp-${t.id}" style="display:none"><div class="lp-group"><span class="lp-h">Section</span><span class="lp-chips">${SECTION_LABELS.map(l=>paletteChip(t,l)).join('')}</span></div><div class="lp-group"><span class="lp-h">Instrument</span><span class="lp-chips">${INSTRUMENT_LABELS.map(l=>paletteChip(t,l)).join('')}</span></div></div></div>`;
+  const al=AL();const secs=albumSectionTags(al),insts=albumInstrumentTags(al);
+  return `<div class="label-bar"><span class="label-assigned" data-tid="${t.id}">${labelChipsAssigned(t)}</span><button class="ltag-btn" onclick="toggleLabelPalette(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>tag</button><div class="label-palette" id="lp-${t.id}" style="display:none"><div class="lp-group"><span class="lp-h">Section</span><span class="lp-chips">${secs.map(l=>paletteChip(t,l)).join('')}</span></div><div class="lp-group"><span class="lp-h">Instrument</span><span class="lp-chips">${insts.map(l=>paletteChip(t,l)).join('')}</span></div><div class="lp-manage"><button onclick="openTagManager()">✎ Manage tags…</button></div></div></div>`;
 }
 function toggleLabelPalette(id){const lp=document.getElementById('lp-'+id);if(lp)lp.style.display=lp.style.display==='none'?'':'none';}
+/* ---- editable tag sets (song sections + instruments) ---- */
+function ensureTags(al){if(!al.sectionTags||!al.sectionTags.length)al.sectionTags=SECTION_LABELS.slice();if(!al.instrumentTags||!al.instrumentTags.length)al.instrumentTags=INSTRUMENT_LABELS.slice();}
+function tagArr(al,kind){return kind==='section'?al.sectionTags:al.instrumentTags;}
+function openTagManager(){
+  const al=AL();if(!al)return;ensureTags(al);
+  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Manage tags</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:16px;line-height:1.5">These tags fill the chip palette on every idea/file. Add, rename, or delete them for this album.</p><div id="tagMgr"></div></div>`;
+  renderTagManager();document.getElementById('modalBg').classList.add('show');
+}
+function renderTagManager(){
+  const al=AL();const host=document.getElementById('tagMgr');if(!host)return;
+  const grp=(kind,title,tags)=>`<div style="margin-bottom:18px"><div class="lp-h" style="width:auto;margin-bottom:9px">${title}</div><div class="tag-edit-wrap">${tags.map((t,idx)=>`<span class="tag-edit"><button class="te-name" title="Rename" onclick="renameTag('${kind}',${idx})">${esc(t)}</button><button class="te-x" title="Delete" onclick="deleteTag('${kind}',${idx})">×</button></span>`).join('')}<input class="te-add" placeholder="+ add" onkeydown="if(event.key==='Enter'){addTag('${kind}',this.value);this.value='';}"></div></div>`;
+  host.innerHTML=grp('section','Song sections',albumSectionTags(al))+grp('instrument','Instruments',albumInstrumentTags(al));
+}
+function persistTags(al,kind){const b={albumId:al.id};if(kind==='section')b.sectionTags=al.sectionTags;else b.instrumentTags=al.instrumentTags;fetch('/api/album-tags',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});}
+function refreshPalettes(){if(document.getElementById('songList'))renderSongList();if(document.getElementById('ideaBank'))renderBank();}
+function addTag(kind,val){const al=AL();ensureTags(al);val=(val||'').trim();if(!val)return;const arr=tagArr(al,kind);if(arr.some(x=>x.toLowerCase()===val.toLowerCase()))return;arr.push(val);persistTags(al,kind);renderTagManager();refreshPalettes();}
+function deleteTag(kind,idx){const al=AL();ensureTags(al);const arr=tagArr(al,kind);if(idx<0||idx>=arr.length)return;arr.splice(idx,1);persistTags(al,kind);renderTagManager();refreshPalettes();}
+function renameTag(kind,idx){
+  const al=AL();ensureTags(al);const arr=tagArr(al,kind);const old=arr[idx];if(old==null)return;
+  const name=(prompt('Rename tag',old)||'').trim();if(!name||name===old)return;
+  if(arr.some((x,i)=>i!==idx&&x.toLowerCase()===name.toLowerCase())){alert('That tag already exists.');return;}
+  arr[idx]=name;persistTags(al,kind);
+  // migrate existing file labels old → new (local + persist affected files)
+  const files=[];al.songs.forEach(s=>(s.files||[]).forEach(f=>files.push(f)));(al.bank||[]).forEach(f=>files.push(f));
+  files.forEach(f=>{if(f.labels&&f.labels.includes(old)){f.labels=f.labels.map(l=>l===old?name:l);if(f.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:f.sid,labels:f.labels})}).catch(()=>{});}});
+  renderTagManager();refreshPalettes();
+}
 function toggleLabel(id,label){
   const t=findFile(id);if(!t)return;t.labels=t.labels||[];
   t.labels=t.labels.includes(label)?t.labels.filter(x=>x!==label):[...t.labels,label];

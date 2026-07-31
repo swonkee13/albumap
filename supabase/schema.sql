@@ -297,6 +297,11 @@ alter table public.songs add column if not exists credits jsonb default '[]'::js
 -- artwork section labeled with the song name.
 alter table public.songs add column if not exists artwork_key text;
 
+-- v2: per-album editable label tag sets (song sections + instruments) used by
+-- the idea/file label chips. Defaults match the original hardcoded sets.
+alter table public.albums add column if not exists section_tags text[] not null default array['Intro','Verse','Chorus','Bridge','Hook','Outro'];
+alter table public.albums add column if not exists instrument_tags text[] not null default array['Guitar','Bass','Drums','Synth','Vox','Keys','Perc','FX'];
+
 -- ARTIST PHOTOS (band photo / logo, keyed per owner + artist slug)
 create table if not exists public.artist_photos (
   owner_id uuid not null references auth.users (id) on delete cascade,

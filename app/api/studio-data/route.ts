@@ -87,7 +87,7 @@ export async function GET() {
 
   const { data: albumsData } = await supabase
     .from("albums")
-    .select("id, title, artist, created_at, share_id, schedule, instruments")
+    .select("id, title, artist, created_at, share_id, schedule, instruments, section_tags, instrument_tags")
     .order("created_at", { ascending: true });
   const albums = albumsData ?? [];
   const albumIds = albums.map((a) => a.id);
@@ -413,6 +413,8 @@ export async function GET() {
       id: al.id,
       shareId: al.share_id ?? null,
       instruments: Array.isArray(al.instruments) ? al.instruments : [],
+      sectionTags: Array.isArray(al.section_tags) ? al.section_tags : [],
+      instrumentTags: Array.isArray(al.instrument_tags) ? al.instrument_tags : [],
       title: al.title,
       year: String(new Date(al.created_at as string).getFullYear()),
       status: "in-progress",
