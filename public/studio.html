@@ -503,7 +503,7 @@
   .ico-btn svg{width:16px;height:16px}
   .empty-note{color:var(--txt-3);font-size:12.5px;text-align:center;padding:8px 0 2px;font-style:italic}
   /* per-file comments, attached under each track */
-  .track-group{display:flex;flex-direction:column}
+  .track-group{display:flex;flex-direction:column;min-width:0}
   .bank-file{padding-bottom:20px;border-bottom:1px solid var(--line-soft);margin-bottom:14px}
   .bank-file:last-child{border-bottom:none;padding-bottom:2px;margin-bottom:0}
   .track-group .track{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none}
@@ -786,10 +786,12 @@
   .ico-btn.is-final-btn{background:var(--green);color:#04371f}
   .ghost-btn.is-final-btn{border-color:var(--green);color:var(--green)}
   .song-zones{display:flex;flex-direction:column;gap:16px;margin-top:14px}
-  .song-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .song-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;min-width:0}
   .song-cols.three{grid-template-columns:1fr 1fr 1fr}
+  .song-cols>*{min-width:0}
   @media(max-width:900px){.song-cols,.song-cols.three{grid-template-columns:1fr}}
-  .zone{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);overflow:visible;display:flex;flex-direction:column}
+  /* min-width:0 lets grid/flex tracks shrink so long unbroken URLs ellipsize instead of forcing overflow */
+  .zone{background:var(--panel-2);border:1px solid var(--line-soft);border-radius:var(--r-md);overflow:visible;display:flex;flex-direction:column;min-width:0}
   .zone-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line-soft);background:rgba(255,255,255,.015)}
   .zh-ic{width:26px;height:26px;border-radius:7px;flex:none;background:var(--accent-dim);color:var(--accent-hi);display:grid;place-items:center}
   .zh-ic svg{width:15px;height:15px}
