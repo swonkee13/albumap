@@ -866,9 +866,11 @@
   .drawer-scrim{display:none}
 
   @media(max-width:1024px){
-    /* shell → single column; sidebar becomes a slide-in drawer */
-    .app{display:block;height:auto;min-height:100vh;padding:0;gap:0}
-    .main{border-radius:0;border:none;min-height:100vh}
+    /* release the desktop fixed-height shell so the WINDOW scrolls naturally */
+    html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:visible}
+    .app{display:block;height:auto;min-height:100vh;padding:0;gap:0;overflow:visible}
+    .main{border-radius:0;border:none;min-height:100vh;display:block;overflow:visible}
+    .scroll{overflow:visible;flex:none;height:auto}
     .sidebar{position:fixed;top:0;left:0;bottom:0;width:290px;max-width:86vw;z-index:130;border-radius:0;border:none;border-right:1px solid var(--line);transform:translateX(-104%);transition:transform .26s cubic-bezier(.4,0,.2,1);box-shadow:0 0 60px rgba(0,0,0,.6)}
     body.drawer-open .sidebar{transform:translateX(0)}
     .drawer-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);z-index:125;opacity:0;pointer-events:none;transition:opacity .26s}
