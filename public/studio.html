@@ -483,11 +483,21 @@
   .idea-song[data-mi] .merch-sub{font-size:15px;gap:12px;margin-top:10px}
   .idea-song[data-mi] .merch-sub .swatch{width:16px;height:16px}
   .size-qty-grid{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
-  .sq{display:flex;flex-direction:column;gap:4px;width:58px}
+  .sq{display:flex;flex-direction:column;gap:4px;width:74px}
   .sq-tog{padding:6px 0;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-weight:600;font-size:12px;cursor:pointer;font-family:inherit}
   .sq.on .sq-tog{background:var(--accent-dim);border-color:rgba(255,77,28,.4);color:var(--accent-hi)}
   .sq-in{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;color:var(--txt);padding:6px;font-size:12px;text-align:center;outline:none;font-family:'JetBrains Mono'}
   .sq-in:focus{border-color:var(--accent)}
+  /* custom number steppers (hide native spinners) */
+  input.no-spin::-webkit-outer-spin-button,input.no-spin::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  input.no-spin{-moz-appearance:textfield}
+  .num-stepper{display:flex;align-items:stretch}
+  .num-stepper .sq-in,.num-stepper .mf-total{border-top-right-radius:0;border-bottom-right-radius:0;border-right:none;flex:1;min-width:0}
+  .ns-col{display:flex;flex-direction:column;border:1px solid var(--line);border-left:none;border-radius:0 8px 8px 0;overflow:hidden;flex:none;width:22px}
+  .ns-col button{flex:1;background:var(--card);border:none;color:var(--txt-2);cursor:pointer;display:grid;place-items:center;padding:0}
+  .ns-col button:hover{background:var(--hover);color:var(--txt)}
+  .ns-col .ns-up{border-bottom:1px solid var(--line)}
+  .ns-col button svg{width:11px;height:11px}
   .sq-total{font-size:12.5px;color:var(--txt-3);margin-top:10px}
   .sq-total b{color:var(--txt);font-family:'JetBrains Mono'}
   .mf-total{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:9px 11px;font-size:13px;outline:none;margin-top:6px;max-width:200px;font-family:inherit}
@@ -1645,7 +1655,7 @@ function merchItemHTML(it,i){
       <div class="merch-imgs">${merchSlot(it,'mockup','Mockup')}${merchSlot(it,'print','Print-ready / full-res')}</div>
       <div class="merch-fields">
         <div class="mf"><label>Item name</label><input value="${esc(it.name)}" placeholder="Tour tee — front" onblur="saveMerch('${it.id}','name',this.value)"></div>
-        <div class="mf"><label>Budget ($)</label><input type="number" step="0.01" min="0" value="${it.budget==null?'':esc(it.budget)}" placeholder="0.00" onblur="saveMerch('${it.id}','budget',this.value)"></div>
+        <div class="mf"><label>Budget ($)</label><input type="number" step="0.01" min="0" class="no-spin" value="${it.budget==null?'':esc(it.budget)}" placeholder="0.00" onblur="saveMerch('${it.id}','budget',this.value)"></div>
         <div class="mf"><label>Brand &amp; style</label><input value="${esc(it.brand)}" placeholder="Gildan 5000 / Bella+Canvas 3001" onblur="saveMerch('${it.id}','brand',this.value)"></div>
         <div class="mf"><label>Item color</label><input value="${esc(it.color)}" placeholder="Black" onblur="saveMerch('${it.id}','color',this.value)"></div>
         <div class="mf"><label>Vendor</label><input value="${esc(it.vendor)}" placeholder="Printer / supplier name" onblur="saveMerch('${it.id}','vendor',this.value)"></div>
@@ -1653,8 +1663,8 @@ function merchItemHTML(it,i){
         <div class="mf full">
           <label style="display:flex;align-items:center;justify-content:space-between">Quantities<span class="mini-toggle ${it.hasSizes?'on':''}" onclick="toggleMerchHasSizes('${it.id}')"><span class="tg"></span>Apparel — has sizes</span></label>
           ${it.hasSizes
-            ?`<div class="size-qty-grid">${MERCH_SIZES.map(sz=>{const on=(it.sizes||[]).includes(sz);const q=(it.sizeQty&&it.sizeQty[sz]!=null)?it.sizeQty[sz]:'';return `<div class="sq ${on?'on':''}"><button class="sq-tog" onclick="toggleMerchSize('${it.id}','${sz}')">${sz}</button>${on?`<input type="number" min="0" class="sq-in" value="${esc(q)}" placeholder="0" oninput="setMerchQty('${it.id}','${sz}',this.value)">`:''}</div>`;}).join('')}</div><div class="sq-total">Total: <b>${merchTotal(it)}</b> pcs</div>`
-            :`<input type="number" min="0" class="mf-total" value="${it.totalQty==null?'':esc(it.totalQty)}" placeholder="e.g. 100" onblur="saveMerch('${it.id}','total_qty',this.value)"><div class="sq-total">Total units for this item (non-apparel)</div>`}
+            ?`<div class="size-qty-grid">${MERCH_SIZES.map(sz=>{const on=(it.sizes||[]).includes(sz);const q=(it.sizeQty&&it.sizeQty[sz]!=null)?it.sizeQty[sz]:'';return `<div class="sq ${on?'on':''}"><button class="sq-tog" onclick="toggleMerchSize('${it.id}','${sz}')">${sz}</button>${on?`<div class="num-stepper"><input id="sq-${it.id}-${sz}" type="number" min="0" class="sq-in no-spin" value="${esc(q)}" placeholder="0" oninput="setMerchQty('${it.id}','${sz}',this.value)"><div class="ns-col"><button class="ns-up" title="+1" onclick="stepMerchQty('${it.id}','${sz}',1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 15 6-6 6 6"/></svg></button><button class="ns-dn" title="-1" onclick="stepMerchQty('${it.id}','${sz}',-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></button></div></div>`:''}</div>`;}).join('')}</div><div class="sq-total">Total: <b>${merchTotal(it)}</b> pcs</div>`
+            :`<div class="num-stepper" style="max-width:200px"><input id="mt-${it.id}" type="number" min="0" class="mf-total no-spin" value="${it.totalQty==null?'':esc(it.totalQty)}" placeholder="e.g. 100" oninput="saveMerch('${it.id}','total_qty',this.value)"><div class="ns-col"><button class="ns-up" title="+1" onclick="stepMerchTotal('${it.id}',1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 15 6-6 6 6"/></svg></button><button class="ns-dn" title="-1" onclick="stepMerchTotal('${it.id}',-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m6 9 6 6 6-6"/></svg></button></div></div><div class="sq-total">Total units for this item (non-apparel)</div>`}
         </div>
       </div>
     </div>
@@ -1700,6 +1710,14 @@ function saveMerch(id,field,value){
   const b={action:'update',id};b[field]=out;
   fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
   const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el){const h=el.querySelector('.idea-title');if(h&&field==='name')h.textContent=value||'Untitled item';renderMerchSubOnly(id);}
+}
+function stepMerchQty(id,size,d){
+  const it=merchItem(id);if(!it)return;const cur=(it.sizeQty&&parseInt(it.sizeQty[size],10))||0;const nv=Math.max(0,cur+d);
+  const inp=document.getElementById('sq-'+id+'-'+size);if(inp)inp.value=nv;setMerchQty(id,size,String(nv));
+}
+function stepMerchTotal(id,d){
+  const it=merchItem(id);if(!it)return;const cur=parseInt(it.totalQty,10)||0;const nv=Math.max(0,cur+d);
+  const inp=document.getElementById('mt-'+id);if(inp)inp.value=nv;saveMerch(id,'total_qty',String(nv));
 }
 let merchQtyTimers={};
 function setMerchQty(id,size,value){
