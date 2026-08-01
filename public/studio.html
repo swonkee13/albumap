@@ -174,7 +174,7 @@
   .hg-edit svg{width:15px;height:15px}
 
   /* dashboard grid */
-  .dash-grid{display:grid;gap:18px;margin-top:8px;grid-template-columns:1fr 340px;align-items:start}
+  .dash-grid{display:grid;gap:18px;margin-top:8px;grid-template-columns:1fr 340px;align-items:stretch}
   .dash-2x2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   @media(max-width:760px){.dash-2x2{grid-template-columns:1fr}}
   .dash-2x2 .section{height:360px;display:flex;flex-direction:column;overflow:hidden}
@@ -190,7 +190,12 @@
   .dseq-wave .dwb{flex:1 1 0;background:#fff;border-radius:1px;min-width:1px}
   .dseq-ph{position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.85);font-size:13px}
   .dash-main{display:flex;flex-direction:column;gap:18px;min-width:0}
-  .dash-rail{display:flex;flex-direction:column;gap:18px}
+  .dash-rail{display:flex;flex-direction:column;gap:18px;min-height:0}
+  /* Desktop only: Activity fills the full height of the left column's 3 rows and scrolls */
+  @media(min-width:1025px){
+    .dash-rail>.section{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+    .dash-rail>.section>.card-scroll{flex:1;overflow-y:auto;min-height:0}
+  }
   .section{background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line-soft);overflow:hidden}
   .sec-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px}
   .sec-head .lt{display:flex;align-items:center;gap:11px}
@@ -1617,26 +1622,25 @@ function renderDashboard(){
           <button class="expand" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})">Timeline <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
           <div class="card-scroll">${al.schedule.length?al.schedule.map(s=>{const st=schedTag(s);return `<div class="sched-row" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})"><div class="date-chip"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div></div><div class="info"><div class="tt">${esc(s.t)}</div><div class="meta"><span class="tag ${st.cls}">${st.label}</span>${esc(s.d||'')}</div></div></div>`;}).join(''):'<div class="empty-note" style="padding:16px 20px">No dates yet — add milestones in Schedule.</div>'}</div>
         </div>
+        <!-- my tasks (left column, row 3) -->
+        <div class="section">
+          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div><h3 class="sec-t">My tasks</h3><div class="cnt">${myOpen} open part${myOpen!==1?'s':''} assigned to you</div></div></div></div>
+          <div class="card-scroll">${tasks.length?tasks.map(t=>`<div class="task-song"><div class="ts-name" onclick="gotoMyTask('${t.song.id}')">${esc(t.song.t)}<span class="ts-count">${t.parts.length}</span></div><div class="ts-parts">${t.parts.map(p=>`<span class="ts-part" onclick="gotoMyTask('${t.song.id}')" title="${esc(p.status?p.status.name:'')}"><span class="ts-dot" style="background:${(p.status&&!p.status.na&&p.status.icon!=='empty')?p.status.color:'#3a3a42'}"></span>${esc(p.inst)}</span>`).join('')}</div></div>`).join(''):`<div class="empty-note" style="padding:16px 20px">${me?'Nothing assigned to you yet — assign parts to yourself in the recording grid.':'Your sign-in name is not matched to a band member yet.'}</div>`}</div>
+        </div>
+        <!-- waiting on (left column, row 3) -->
+        <div class="section">
+          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><h3 class="sec-t">Waiting on</h3><div class="cnt">Who's blocking the album</div></div></div></div>
+          <div class="card-scroll">${waiting.rows.length?waiting.rows.map(w=>`<div class="wait-row" onclick="gotoMember('${escq(w.name)}')"><div class="wait-av" style="background:${avColor(w.name,w.color)}" title="${esc(w.name)}">${avInner(w.name,w.initials)}</div><div class="wait-info"><div class="wn">${esc(w.name)}</div><div class="wt">${esc(w.detail)}</div></div><div class="wait-count">${w.count}</div></div>`).join(''):`<div class="empty-note" style="padding:14px 20px">No assigned parts are open. ${waiting.unassigned?'':'Nice.'}</div>`}${waiting.unassigned?`<div class="wait-row unassigned" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})"><div class="wait-av ua" title="Unassigned">?</div><div class="wait-info"><div class="wn">Unassigned</div><div class="wt">open parts with no owner</div></div><div class="wait-count">${waiting.unassigned}</div></div>`:''}</div>
+        </div>
       </div>
     </div>
 
     <div class="dash-rail">
-      <!-- my tasks -->
-      <div class="section">
-        <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></div><div><h3 class="sec-t">My tasks</h3><div class="cnt">${myOpen} open part${myOpen!==1?'s':''} assigned to you</div></div></div></div>
-        ${tasks.length?tasks.map(t=>`<div class="task-song"><div class="ts-name" onclick="gotoMyTask('${t.song.id}')">${esc(t.song.t)}<span class="ts-count">${t.parts.length}</span></div><div class="ts-parts">${t.parts.map(p=>`<span class="ts-part" onclick="gotoMyTask('${t.song.id}')" title="${esc(p.status?p.status.name:'')}"><span class="ts-dot" style="background:${(p.status&&!p.status.na&&p.status.icon!=='empty')?p.status.color:'#3a3a42'}"></span>${esc(p.inst)}</span>`).join('')}</div></div>`).join(''):`<div class="empty-note" style="padding:16px 20px">${me?'Nothing assigned to you yet — assign parts to yourself in the recording grid.':'Your sign-in name is not matched to a band member yet.'}</div>`}
-      </div>
-      <!-- waiting on -->
-      <div class="section">
-        <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><h3 class="sec-t">Waiting on</h3><div class="cnt">Who's blocking the album</div></div></div></div>
-        ${waiting.rows.length?waiting.rows.map(w=>`<div class="wait-row" onclick="gotoMember('${escq(w.name)}')"><div class="wait-av" style="background:${avColor(w.name,w.color)}" title="${esc(w.name)}">${avInner(w.name,w.initials)}</div><div class="wait-info"><div class="wn">${esc(w.name)}</div><div class="wt">${esc(w.detail)}</div></div><div class="wait-count">${w.count}</div></div>`).join(''):`<div class="empty-note" style="padding:14px 20px">No assigned parts are open. ${waiting.unassigned?'':'Nice.'}</div>`}
-        ${waiting.unassigned?`<div class="wait-row unassigned" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})"><div class="wait-av ua" title="Unassigned">?</div><div class="wait-info"><div class="wn">Unassigned</div><div class="wt">open parts with no owner</div></div><div class="wait-count">${waiting.unassigned}</div></div>`:''}
-      </div>
-      <!-- activity -->
+      <!-- activity (right column, full height — shows many more) -->
       <div class="section">
         <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div><h3 class="sec-t">Activity</h3><div class="cnt">Latest across the band</div></div></div></div>
-        ${al.activity.slice(0,6).map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" title="${esc(ac.who)}" style="background:${avColor(ac.who,ac.color)}">${avInner(ac.who,(ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')||'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}
-        ${al.activity.length>6?`<div class="sec-foot"><button class="expand" onclick="nav({view:'activity',artistId:'${a.id}',albumId:'${al.id}'})">View all ${al.activity.length} →</button></div>`:''}
+        <div class="card-scroll">${al.activity.length?al.activity.slice(0,24).map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" title="${esc(ac.who)}" style="background:${avColor(ac.who,ac.color)}">${avInner(ac.who,(ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join(''):'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}</div>
+        ${al.activity.length>24?`<div class="sec-foot"><button class="expand" onclick="nav({view:'activity',artistId:'${a.id}',albumId:'${al.id}'})">View all ${al.activity.length} →</button></div>`:''}
       </div>
     </div>
   </div>
