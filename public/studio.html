@@ -95,6 +95,10 @@
   .g-card{background:var(--card);border-radius:var(--r-md);padding:16px;cursor:pointer;transition:.18s;border:1px solid transparent;position:relative}
   .card-edit{position:absolute;top:24px;right:24px;z-index:4;width:30px;height:30px;border-radius:8px;border:none;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;display:grid;place-items:center;opacity:0;transition:.15s}
   .g-card:hover .card-edit{opacity:1}
+  .card-archive{position:absolute;top:24px;right:60px;z-index:4;width:30px;height:30px;border-radius:8px;border:none;background:rgba(0,0,0,.55);color:#fff;cursor:pointer;display:grid;place-items:center;opacity:0;transition:.15s}
+  .g-card:hover .card-archive{opacity:1}
+  .card-archive:hover,.card-edit:hover{background:rgba(0,0,0,.82)}
+  .card-archive svg{width:16px;height:16px}
   .card-edit:hover{background:var(--accent)}
   .card-edit svg{width:15px;height:15px}
   .name-edit{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:6px;border-radius:8px;display:inline-grid;place-items:center;vertical-align:middle}
@@ -765,6 +769,19 @@
   .panel-head .ic svg{width:16px;height:16px}
   .panel-head h4{font-family:'Poppins';font-weight:600;font-size:15px}
   .panel-body{padding:16px 20px}
+  .set-note{color:var(--txt-3);font-size:12.5px;line-height:1.55;margin-bottom:14px}
+  .dial-album{padding:12px 0;border-top:1px solid var(--line-soft)}
+  .dial-album:first-of-type{border-top:none;padding-top:2px}
+  .dial-album-name{font-weight:600;font-size:13.5px;margin-bottom:9px}
+  .dial-artist{color:var(--txt-3);font-weight:500;font-size:12px}
+  .arch-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line-soft)}
+  .arch-row:first-of-type{border-top:none}
+  .arch-info{flex:1;min-width:0}
+  .arch-title{font-weight:600;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .arch-artist{color:var(--txt-3);font-size:12px;margin-top:1px}
+  .arch-row .ghost-btn{padding:7px 12px;font-size:12.5px;flex:none}
+  .ghost-btn.danger-btn{color:#e0322a;border-color:rgba(224,50,42,.5)}
+  .ghost-btn.danger-btn:hover{background:rgba(224,50,42,.12)}
   .lyrics-area{width:100%;min-height:220px;background:transparent;border:none;color:var(--txt);font-family:'Inter';font-size:14px;line-height:1.7;resize:vertical;outline:none}
   .lyrics-area::placeholder{color:var(--txt-3)}
   .notes-area{width:100%;min-height:90px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;color:var(--txt);font-family:inherit;font-size:13px;line-height:1.5;padding:10px 12px;resize:vertical;outline:none}
@@ -870,6 +887,7 @@
      ===================================================================== */
   .hamburger{display:none;width:36px;height:36px;border-radius:10px;background:rgba(0,0,0,.4);border:none;color:var(--txt);place-items:center;cursor:pointer;flex:none}
   .hamburger svg{width:20px;height:20px}
+  .brand-mark{display:none;width:28px;height:28px;border-radius:7px;flex:none;cursor:pointer}
   .mobile-tabs{display:none}
   .drawer-scrim{display:none}
 
@@ -885,7 +903,8 @@
     body.drawer-open .drawer-scrim{opacity:1;pointer-events:auto}
     /* topbar */
     .hamburger{display:grid}
-    .topbar{padding:11px 14px;gap:10px}
+    .brand-mark{display:block}
+    .topbar{padding:11px 12px;gap:9px}
     .navbtns{display:none}
     .crumbs{font-size:12px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
     /* content: tighter, and clear the bottom tab bar */
@@ -904,6 +923,11 @@
     .gallery .g-card .art .ph{font-size:20px}
     .gallery .g-card .gt{grid-column:2;grid-row:1;align-self:end;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     .gallery .g-card .gs{grid-column:2;grid-row:2;align-self:start}
+    /* card actions are always visible on touch (no hover) + centered right */
+    .gallery .g-card:not(.g-add){padding-right:100px}
+    .gallery .g-card .card-edit,.gallery .g-card .card-archive{opacity:1;top:50%;transform:translateY(-50%);width:36px;height:36px}
+    .gallery .g-card .card-edit{right:12px}
+    .gallery .g-card .card-archive{right:56px}
     /* the "New artist/album" tile becomes a matching add-row */
     .gallery .g-add{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:14px;min-height:0!important;padding:18px 16px!important}
     .gallery .g-add svg{width:24px!important;height:24px!important;flex:none}
@@ -1112,6 +1136,7 @@
   <main class="main">
     <div class="topbar" id="topbar">
       <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
+      <img class="brand-mark" src="/albumap-mark.png?v=1" alt="albumap" onclick="nav({view:'roster'})">
       <div class="navbtns">
         <button class="circ" id="backBtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
         <button class="circ" id="fwdBtn" onclick="fwd()" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -1214,6 +1239,7 @@ function albumInstrumentTags(al){return (al&&al.instrumentTags&&al.instrumentTag
 function mkSong(t,cells,extra={}){return {id:t.toLowerCase().replace(/[^a-z0-9]+/g,'-'),t,cells,dur:extra.dur||210,files:extra.files||[],comments:extra.comments||[],lyrics:extra.lyrics||"",notes:extra.notes||"",refs:extra.refs||[],credits:extra.credits||[]};}
 
 let artists=[];
+let archivedAlbums=[]; // [{id,title,artist}] hidden from the working view
 let me=null; // signed-in user's avatar {name,initials,color,photo}
 function meMatch(name){return !!(me&&me.name&&name&&String(name).trim().toLowerCase()===me.name.trim().toLowerCase());}
 function avColor(name,fallback){return meMatch(name)?(me.color||fallback):fallback;}
@@ -1365,9 +1391,10 @@ const HERO_METRICS={
   overall:{label:'Overall',color:'#3ECF8E'}
 };
 const HERO_ORDER=['recording','artwork','photos','logos','merch','overall'];
-let heroPanel={};try{heroPanel=JSON.parse(localStorage.getItem('albumap:hero')||'{}');}catch(e){}
-function heroKeys(al){const k=heroPanel&&heroPanel[al.id];return (Array.isArray(k)&&k.length)?k.filter(x=>HERO_METRICS[x]):['recording'];}
-function saveHeroKeys(al,keys){heroPanel[al.id]=keys.length?keys:['recording'];try{localStorage.setItem('albumap:hero',JSON.stringify(heroPanel));}catch(e){}}
+// Hero dials are owner-controlled and persisted on the album (consistent across
+// browsers/users). Configured from Profile & Settings.
+function heroKeys(al){const k=(al&&Array.isArray(al.heroKeys))?al.heroKeys.filter(x=>HERO_METRICS[x]):null;return (k&&k.length)?k:['recording'];}
+function saveHeroKeys(al,keys){if(!al)return;al.heroKeys=keys.length?keys:['recording'];fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:al.id,heroKeys:al.heroKeys})}).catch(()=>{});}
 function mediaFinalStats(al,kind){const main=mediaMain(al,kind).filter(x=>!x.song);const done=main.filter(x=>x.finalized).length;return {total:main.length,done,pct:main.length?Math.round(done/main.length*100):0};}
 function merchFinalStats(al){const items=al.merchItems||[];const done=items.filter(x=>x.finalized).length;return {total:items.length,done,pct:items.length?Math.round(done/items.length*100):0};}
 function metricRaw(al,key){
@@ -1388,19 +1415,17 @@ function gaugeHTML(al,key,keys){const m=metricValue(al,key,keys);const cfg=HERO_
   return `<div class="gauge"><div class="gauge-ring"><svg width="64" height="64"><circle cx="32" cy="32" r="27" stroke="var(--grey)" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="27" stroke="${cfg.color}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-m.pct/100)}"/></svg><div class="gauge-pct">${m.pct}%</div></div><div class="gauge-label" style="color:${cfg.color}">${cfg.label}</div><div class="gauge-sub">${m.sub}</div></div>`;
 }
 function heroGaugesHTML(a,al){const keys=heroKeys(al);
-  return `<div class="hero-gauges"><div class="hg-grid">${keys.map(k=>gaugeHTML(al,k,keys)).join('')}</div><button class="hg-edit" title="Choose gauges" onclick="openHeroPanelEditor()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>`;
+  return `<div class="hero-gauges"><div class="hg-grid">${keys.map(k=>gaugeHTML(al,k,keys)).join('')}</div></div>`;
 }
 function refreshHeroGauges(){const al=AL();const host=content.querySelector('.hero-gauges');if(host&&al){const tmp=document.createElement('div');tmp.innerHTML=heroGaugesHTML(A(),al);host.replaceWith(tmp.firstElementChild);}}
-function openHeroPanelEditor(){
-  const al=AL();if(!al)return;const keys=heroKeys(al);
-  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Header gauges</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
-  <div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:14px;line-height:1.5">Pick which completion dials show in the album header. <b>Artwork / Photos / Logos / Merch</b> are based on items you mark <b>finalized</b>; <b>Overall</b> averages the others.</p>
-    <div class="art-pills">${HERO_ORDER.map(k=>`<span class="lchip ${keys.includes(k)?'on':''}" data-k="${k}" onclick="toggleHeroKey('${k}')" style="border-color:${keys.includes(k)?HERO_METRICS[k].color:''}">${HERO_METRICS[k].label}</span>`).join('')}</div></div>`;
-  document.getElementById('modalBg').classList.add('show');
-}
-function toggleHeroKey(k){const al=AL();let keys=heroKeys(al).slice();if(keys.includes(k))keys=keys.filter(x=>x!==k);else keys.push(k);if(!keys.length)keys=['recording'];saveHeroKeys(al,keys);
-  document.querySelectorAll('#modalInner .lchip[data-k]').forEach(p=>{const kk=p.getAttribute('data-k');const on=keys.includes(kk);p.classList.toggle('on',on);p.style.borderColor=on?HERO_METRICS[kk].color:'';});
-  refreshHeroGauges();
+// Toggle a hero dial for a specific album (configured from Settings).
+function toggleHeroKeyFor(albumId,k){
+  let al=null;for(const a of artists){const x=(a.albums||[]).find(z=>z.id===albumId);if(x){al=x;break;}}
+  if(!al||!HERO_METRICS[k])return;
+  let keys=heroKeys(al).slice();if(keys.includes(k))keys=keys.filter(x=>x!==k);else keys.push(k);if(!keys.length)keys=['recording'];
+  saveHeroKeys(al,keys);
+  renderSettingsBody();
+  if(route.view==='dashboard'&&route.albumId===albumId)refreshHeroGauges();
 }
 // Mini sequencer for the dashboard tracklist card: proportional-width, full-height
 // blocks with waveforms, including placeholders (matches the sequencer page).
@@ -1520,6 +1545,7 @@ async function renderSettings(){
 }
 function renderSettingsBody(){
   const d=settingsData||{};const host=document.getElementById('settingsBody');if(!host)return;
+  const allAlbums=[];artists.forEach(a=>(a.albums||[]).forEach(al=>allAlbums.push({artistName:a.name,al})));
   host.innerHTML=`<div class="set-grid">
     <div class="panel"><div class="panel-head"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></div><h4>Profile</h4></div>
       <div class="panel-body">
@@ -1536,6 +1562,18 @@ function renderSettingsBody(){
         <div class="plan-badge">Current plan · <b>${esc((d.plan||'free').charAt(0).toUpperCase()+(d.plan||'free').slice(1))}</b></div>
         <p style="color:var(--txt-3);font-size:12.5px;margin-top:12px;line-height:1.55">Paid plans (Band $19 / Studio $59 / Label) aren’t live yet. This is where you’ll manage your subscription, payment method, and invoices.</p>
         <button class="ghost-btn" style="margin-top:14px;opacity:.5;cursor:not-allowed" disabled>Manage billing — coming soon</button>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-head"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/><circle cx="12" cy="12" r="3.4"/></svg></div><h4>Dashboard dials</h4></div>
+      <div class="panel-body">
+        <p class="set-note">Choose which completion dials appear in each album's header. This is saved on the album, so it's the same for everyone viewing it.</p>
+        ${allAlbums.length?allAlbums.map(({artistName,al})=>{const keys=heroKeys(al);return `<div class="dial-album"><div class="dial-album-name">${esc(al.title)} <span class="dial-artist">${esc(artistName)}</span></div><div class="art-pills">${HERO_ORDER.map(k=>{const on=keys.includes(k);return `<span class="lchip ${on?'on':''}" onclick="toggleHeroKeyFor('${al.id}','${k}')" style="border-color:${on?HERO_METRICS[k].color:''}">${HERO_METRICS[k].label}</span>`;}).join('')}</div></div>`;}).join(''):'<div class="empty-note" style="padding:14px 0">No albums yet.</div>'}
+      </div>
+    </div>
+    <div class="panel"><div class="panel-head"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></div><h4>Archived</h4></div>
+      <div class="panel-body">
+        <p class="set-note">Archived albums are hidden from your Artists list but keep every bit of their data. Restore anytime — or permanently delete.</p>
+        ${archivedAlbums.length?archivedAlbums.map(x=>`<div class="arch-row"><div class="arch-info"><div class="arch-title">${esc(x.title)}</div><div class="arch-artist">${esc(x.artist)}</div></div><button class="ghost-btn" onclick="restoreAlbum('${x.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/></svg>Restore</button><button class="ghost-btn danger-btn" onclick="deleteAlbumForever('${x.id}','${escq(x.title)}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button></div>`).join(''):'<div class="empty-note" style="padding:14px 0">Nothing archived — your working view is clear.</div>'}
       </div>
     </div>
   </div>`;
@@ -1560,6 +1598,7 @@ function renderRoster(){
   content.innerHTML=`<div style="padding-top:22px"><div class="eyebrow">Your artists</div><div class="view-title" style="font-size:34px;margin-top:6px">Artists</div></div>
   <div class="gallery">${artists.map(a=>{const ini=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
     return `<div class="g-card" onclick="nav({view:'albums',artistId:'${a.id}'})">
+      <button class="card-archive" title="Archive artist" onclick="event.stopPropagation();archiveArtist('${a.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></button>
       <button class="card-edit" title="Rename band" onclick="event.stopPropagation();renameBand('${a.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
       <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}</div>
       <div class="gt">${a.name}</div><div class="gs">${a.type} · ${a.sub}</div></div>`;}).join('')}
@@ -1573,6 +1612,7 @@ function renderAlbums(){
     <div><div class="eyebrow">${a.type}</div><div class="view-title" style="font-size:38px;margin-top:6px">${a.name}<button class="name-edit" title="Rename band" onclick="renameBand('${a.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div></div></div>
   <div style="margin-top:32px" class="eyebrow">Albums &amp; releases</div>
   <div class="gallery">${a.albums.map(al=>{const cover=al.cover||(al.artwork&&al.artwork[0]&&al.artwork[0].img)||null;return `<div class="g-card" onclick="nav({view:'dashboard',artistId:'${a.id}',albumId:'${al.id}'})">
+    <button class="card-archive" title="Archive album" onclick="event.stopPropagation();archiveAlbum('${a.id}','${al.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg></button>
     <button class="card-edit" title="Rename album" onclick="event.stopPropagation();renameAlbum('${a.id}','${al.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     <div class="art">${cover?`<img src="${cover}">`:`<div class="ph">${al.title[0]}</div>`}</div>
     <div class="gt">${al.title}</div><div class="gs"><span class="status-dot" style="background:${statusColor(al.status)}"></span>${al.year} · ${statusLabel(al.status)}</div></div>`;}).join('')}
@@ -3044,7 +3084,7 @@ function restoreRoute(){
   }catch(e){return null;}
 }
 async function reloadData(nextRoute){
-  try{const res=await fetch('/api/studio-data',{cache:'no-store'});if(res.ok){const d=await res.json();artists=Array.isArray(d.artists)?d.artists:[];me=d.me||null;}}catch(e){}
+  try{const res=await fetch('/api/studio-data',{cache:'no-store'});if(res.ok){const d=await res.json();artists=Array.isArray(d.artists)?d.artists:[];me=d.me||null;archivedAlbums=Array.isArray(d.archived)?d.archived:[];}}catch(e){}
   route=nextRoute||restoreRoute()||defaultRoute();hist=[{...route}];hi=0;render();
 }
 function persistCell(songId,instrument,state){
@@ -3069,6 +3109,33 @@ async function createAlbumFlow(artistName){
   const {id}=await res.json();
   await reloadData();
   for(const a of artists){const al=a.albums.find(x=>x.id===id);if(al){nav({view:'dashboard',artistId:a.id,albumId:al.id});break;}}
+}
+/* ===== archive / restore / delete (items kept out of the working view) ===== */
+async function archiveAlbum(artistId,albumId){
+  const a=getArtist(artistId);const al=a&&getAlbum(a,albumId);if(!al)return;
+  if(!await uiConfirm('It moves to Settings → Archived — restore it anytime.',{title:`Archive “${al.title}”?`,okLabel:'Archive'}))return;
+  await fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:albumId,archived:true})});
+  await reloadData({view:'albums',artistId});
+}
+async function archiveArtist(artistId){
+  const a=getArtist(artistId);if(!a)return;const n=(a.albums||[]).length;
+  if(!await uiConfirm(`This archives ${a.name} and its ${n} album${n!==1?'s':''}. Restore anytime from Settings.`,{title:`Archive ${a.name}?`,okLabel:'Archive'}))return;
+  await fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({archiveArtist:a.name,archived:true})});
+  await reloadData({view:'roster'});
+}
+async function restoreAlbum(albumId){
+  await fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:albumId,archived:false})}).catch(()=>{});
+  await reloadData({view:'settings'});
+}
+async function restoreArtist(name){
+  await fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({archiveArtist:name,archived:false})}).catch(()=>{});
+  await reloadData({view:'settings'});
+}
+async function deleteAlbumForever(albumId,title){
+  if(!await uiConfirm(`This permanently deletes “${title}” and everything in it — songs, files, grid, artwork, merch, comments. It cannot be undone.`,{title:'Delete forever?',okLabel:'Delete forever',danger:true}))return;
+  if(!await uiConfirm(`Last chance — “${title}” and all of its data will be gone for good.`,{title:'Are you absolutely sure?',okLabel:'Yes, delete everything',danger:true}))return;
+  await fetch('/api/album?id='+encodeURIComponent(albumId),{method:'DELETE'}).catch(()=>{});
+  await reloadData({view:'settings'});
 }
 async function renameBand(artistId){
   const a=getArtist(artistId);if(!a)return;

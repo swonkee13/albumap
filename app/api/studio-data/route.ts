@@ -94,11 +94,16 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ artists: [] }, { status: 401 });
 
-  const { data: albumsData } = await supabase
+  const { data: albumsAll } = await supabase
     .from("albums")
-    .select("id, title, artist, created_at, share_id, schedule, instruments, section_tags, instrument_tags, statuses")
+    .select("id, title, artist, created_at, share_id, schedule, instruments, section_tags, instrument_tags, statuses, archived, hero_keys")
     .order("created_at", { ascending: true });
-  const albums = albumsData ?? [];
+  // Archived albums are kept out of the working view; surfaced separately for
+  // the Settings → Archived manager.
+  const archivedList = (albumsAll ?? [])
+    .filter((a) => a.archived === true)
+    .map((a) => ({ id: a.id, title: a.title, artist: (a.artist || "").trim() || "Untitled Artist" }));
+  const albums = (albumsAll ?? []).filter((a) => a.archived !== true);
   const albumIds = albums.map((a) => a.id);
 
   let songs: Array<{
@@ -507,6 +512,7 @@ export async function GET() {
       title: al.title,
       year: String(new Date(al.created_at as string).getFullYear()),
       status: "in-progress",
+      heroKeys: Array.isArray(al.hero_keys) ? al.hero_keys : ["recording"],
       // Album card thumbnail auto-pulls artwork slot 0 ("Front cover").
       cover: assetMap[al.id]?.artwork?.[0] ?? null,
       members: membersByAlbum[al.id] ?? [],
@@ -549,5 +555,5 @@ export async function GET() {
     photo: mePhoto,
   };
 
-  return NextResponse.json({ artists, me });
+  return NextResponse.json({ artists, me, archived: archivedList });
 }

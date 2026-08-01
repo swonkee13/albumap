@@ -179,6 +179,12 @@ alter table public.song_files alter column song_id drop not null;
 -- v2.9: a human title for a file, shown ahead of the raw filename (editable).
 alter table public.song_files add column if not exists title text;
 
+-- v2.10: archive an album (kept, hidden from the working view; restore/delete
+-- from Settings). Archiving an artist archives all of its albums.
+alter table public.albums add column if not exists archived boolean not null default false;
+-- v2.10: owner-controlled dashboard hero dials (was per-browser localStorage).
+alter table public.albums add column if not exists hero_keys jsonb default '["recording"]'::jsonb;
+
 -- Backfill album_id for existing song-linked files.
 update public.song_files f
   set album_id = s.album_id

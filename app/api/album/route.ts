@@ -72,6 +72,18 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  // Archive/restore every album of an artist at once.
+  const archiveArtist = body?.archiveArtist as string | undefined;
+  if (typeof archiveArtist === "string" && archiveArtist.trim()) {
+    const { error } = await supabase
+      .from("albums")
+      .update({ archived: body?.archived === true })
+      .eq("owner_id", user.id)
+      .eq("artist", archiveArtist.trim());
+    if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
+    return NextResponse.json({ ok: true });
+  }
+
   const id = body?.id as string | undefined;
   if (!id) return NextResponse.json({ ok: false }, { status: 400 });
   const patch: Record<string, unknown> = {};
@@ -79,9 +91,34 @@ export async function PATCH(req: Request) {
   const artist = body?.artist as string | undefined;
   if (title) patch.title = title;
   if (artist !== undefined) patch.artist = artist.trim();
+  if (typeof body?.archived === "boolean") patch.archived = body.archived;
+  if (Array.isArray(body?.heroKeys)) {
+    patch.hero_keys = (body.heroKeys as unknown[])
+      .filter((k) => typeof k === "string")
+      .slice(0, 12);
+  }
   if (!Object.keys(patch).length) return NextResponse.json({ ok: false }, { status: 400 });
   const { error } = await supabase.from("albums").update(patch).eq("id", id);
   if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   if (title) await logActivity(supabase, user, id, `renamed the album to “${title}”`);
+  return NextResponse.json({ ok: true });
+}
+
+// Permanently delete an album (from the archive, behind a strong client warning).
+// Cascades to songs/tracks/files/etc. via FK on delete cascade.
+export async function DELETE(req: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ ok: false }, { status: 401 });
+  const id = new URL(req.url).searchParams.get("id");
+  if (!id) return NextResponse.json({ ok: false }, { status: 400 });
+  const { error } = await supabase
+    .from("albums")
+    .delete()
+    .eq("id", id)
+    .eq("owner_id", user.id);
+  if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   return NextResponse.json({ ok: true });
 }
