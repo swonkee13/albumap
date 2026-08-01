@@ -343,6 +343,31 @@ export async function GET() {
     /* table not present yet */
   }
 
+  // Artwork pieces (v2.4): working set (in_pool=false) + alternates pool.
+  const artMainByAlbum: Record<string, unknown[]> = {};
+  const artPoolByAlbum: Record<string, unknown[]> = {};
+  try {
+    if (albumIds.length) {
+      const { data: pieces } = await supabase
+        .from("artwork_pieces")
+        .select("id, album_id, label, r2_key, in_pool, position, created_at")
+        .in("album_id", albumIds)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: true });
+      await Promise.all(
+        (pieces ?? []).map(async (p) => {
+          const url = p.r2_key ? await signGet(client, p.r2_key) : null;
+          const item = { id: p.id, label: p.label ?? "", img: url, pool: p.in_pool === true };
+          const bucket = p.in_pool ? artPoolByAlbum : artMainByAlbum;
+          if (!bucket[p.album_id]) bucket[p.album_id] = [];
+          (bucket[p.album_id] as unknown[]).push(item);
+        }),
+      );
+    }
+  } catch {
+    /* table not present yet */
+  }
+
   // Members
   const membersByAlbum: Record<string, unknown[]> = {};
   try {
@@ -440,13 +465,8 @@ export async function GET() {
       members: membersByAlbum[al.id] ?? [],
       songs: songsByAlbum[al.id] ?? [],
       schedule,
-      artwork: [
-        ...ARTWORK_LABELS.map((label, i) => ({
-          label,
-          img: assetMap[al.id]?.artwork?.[i] ?? null,
-        })),
-        ...(songArtByAlbum[al.id] ?? []),
-      ],
+      artwork: [...(artMainByAlbum[al.id] ?? []), ...(songArtByAlbum[al.id] ?? [])],
+      artworkPool: artPoolByAlbum[al.id] ?? [],
       merch: MERCH_LABELS.map((label, i) => ({
         label,
         img: assetMap[al.id]?.merch?.[i] ?? null,

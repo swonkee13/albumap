@@ -283,6 +283,40 @@ create policy "merch_items: via owned album" on public.merch_items for all
   with check (exists (select 1 from public.albums a where a.id = merch_items.album_id and a.owner_id = auth.uid()));
 
 -- ---------------------------------------------------------------------------
+-- ARTWORK PIECES (v2.4): arbitrary artwork items with custom/preset labels,
+-- split into a "working" set (in_pool=false) and an alternates "pool"
+-- (in_pool=true). Replaces the old fixed 5-slot album_assets artwork.
+-- ---------------------------------------------------------------------------
+create table if not exists public.artwork_pieces (
+  id uuid primary key default gen_random_uuid(),
+  album_id uuid not null references public.albums (id) on delete cascade,
+  label text default '',
+  r2_key text,
+  in_pool boolean not null default false,
+  position int not null default 0,
+  created_at timestamptz default now()
+);
+alter table public.artwork_pieces enable row level security;
+drop policy if exists "artwork_pieces: via owned album" on public.artwork_pieces;
+create policy "artwork_pieces: via owned album" on public.artwork_pieces for all
+  using (exists (select 1 from public.albums a where a.id = artwork_pieces.album_id and a.owner_id = auth.uid()))
+  with check (exists (select 1 from public.albums a where a.id = artwork_pieces.album_id and a.owner_id = auth.uid()));
+grant select, insert, update, delete on public.artwork_pieces to authenticated;
+
+-- One-time migration of legacy fixed-slot artwork into artwork_pieces (guarded
+-- so re-running does not duplicate).
+insert into public.artwork_pieces (album_id, label, r2_key, in_pool, position)
+select a.album_id,
+  case a.slot when 0 then 'Front cover' when 1 then 'Inside / gatefold'
+              when 2 then 'Back cover'  when 3 then 'Vinyl label'
+              when 4 then 'Insert / lyric sheet' else 'Artwork' end,
+  a.r2_key, false, a.slot
+from public.album_assets a
+where a.kind = 'artwork' and a.r2_key is not null
+  and not exists (select 1 from public.artwork_pieces p
+                  where p.album_id = a.album_id and p.r2_key = a.r2_key);
+
+-- ---------------------------------------------------------------------------
 -- ALBUM EXTRAS: public share link, release date, saved schedule
 -- ---------------------------------------------------------------------------
 alter table public.albums add column if not exists share_id uuid default gen_random_uuid();
