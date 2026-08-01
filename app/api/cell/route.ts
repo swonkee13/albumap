@@ -12,8 +12,9 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const songId = body?.songId as string | undefined;
   const instrument = body?.instrument as string | undefined;
-  const state = body?.state as number | undefined;
-  if (!songId || !instrument || typeof state !== "number") {
+  // v2.7: state is the status id (string). Numbers still accepted (legacy).
+  const state = body?.state;
+  if (!songId || !instrument || (typeof state !== "string" && typeof state !== "number")) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 

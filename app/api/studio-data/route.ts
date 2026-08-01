@@ -23,6 +23,15 @@ function toState(v: string | null): number {
   if (!Number.isNaN(n) && String(n) === v) return Math.max(0, Math.min(5, n));
   return NAME_TO_STATE[v] ?? 0;
 }
+// v2.7: normalize a stored cell value to its status id (legacy 0–5 → default ids).
+const STATUS_ID_MAP: Record<string, string> = {
+  "0": "not_started", "1": "scratch", "2": "tracked", "3": "comped", "4": "done", "5": "na",
+  tracking: "tracked",
+};
+function normStatus(v: string | null): string | null {
+  if (v == null) return null;
+  return STATUS_ID_MAP[v] ?? v;
+}
 
 function slug(s: string): string {
   const out = (s || "")
@@ -87,7 +96,7 @@ export async function GET() {
 
   const { data: albumsData } = await supabase
     .from("albums")
-    .select("id, title, artist, created_at, share_id, schedule, instruments, section_tags, instrument_tags")
+    .select("id, title, artist, created_at, share_id, schedule, instruments, section_tags, instrument_tags, statuses")
     .order("created_at", { ascending: true });
   const albums = albumsData ?? [];
   const albumIds = albums.map((a) => a.id);
@@ -124,10 +133,11 @@ export async function GET() {
       .in("song_id", songIds);
     tracks = data ?? [];
   }
-  const cellMap: Record<string, Record<string, number>> = {};
+  const cellMap: Record<string, Record<string, string>> = {};
   for (const t of tracks) {
     if (!cellMap[t.song_id]) cellMap[t.song_id] = {};
-    cellMap[t.song_id][t.instrument] = toState(t.status);
+    const id = normStatus(t.status);
+    if (id != null) cellMap[t.song_id][t.instrument] = id;
   }
 
   // Audio files (presigned playback URLs)
@@ -464,6 +474,7 @@ export async function GET() {
       id: al.id,
       shareId: al.share_id ?? null,
       instruments: Array.isArray(al.instruments) ? al.instruments : [],
+      statuses: Array.isArray(al.statuses) ? al.statuses : [],
       sectionTags: Array.isArray(al.section_tags) ? al.section_tags : [],
       instrumentTags: Array.isArray(al.instrument_tags) ? al.instrument_tags : [],
       title: al.title,

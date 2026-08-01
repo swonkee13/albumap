@@ -1,32 +1,22 @@
 import type { Metadata } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-// State 5 = N/A, excluded from every percentage/count.
-const NA = 5;
-
-function toState(v: string | null): number {
-  if (v == null) return 0;
-  const n = parseInt(v, 10);
-  if (!Number.isNaN(n) && String(n) === v) return Math.max(0, Math.min(5, n));
-  const map: Record<string, number> = {
-    not_started: 0,
-    scratch: 1,
-    tracking: 1,
-    tracked: 2,
-    comped: 3,
-    done: 4,
-    na: 5,
-    not_applicable: 5,
-  };
-  return map[v] ?? 0;
-}
+type Status = { id: string; na?: boolean };
+const DEFAULT_STATUSES: Status[] = [
+  { id: "not_started" }, { id: "scratch" }, { id: "tracked" },
+  { id: "comped" }, { id: "done" }, { id: "na", na: true },
+];
+const LEGACY: Record<string, string> = {
+  "0": "not_started", "1": "scratch", "2": "tracked", "3": "comped", "4": "done", "5": "na",
+  tracking: "tracked", not_applicable: "na",
+};
 
 async function load(shareId: string) {
   try {
     const admin = createAdminClient();
     const { data: album } = await admin
       .from("albums")
-      .select("id, title, artist, instruments")
+      .select("id, title, artist, instruments, statuses")
       .eq("share_id", shareId)
       .maybeSingle();
     if (!album) return null;
@@ -34,6 +24,23 @@ async function load(shareId: string) {
     const instrumentCount = Array.isArray(album.instruments)
       ? (album.instruments as string[]).length
       : 0;
+
+    // Progress model: order defines completion; na statuses excluded.
+    const statuses: Status[] =
+      Array.isArray(album.statuses) && album.statuses.length
+        ? (album.statuses as Status[])
+        : DEFAULT_STATUSES;
+    const nonNA = statuses.filter((s) => !s.na);
+    const lastId = nonNA.length ? nonNA[nonNA.length - 1].id : null;
+    const progressOf = (rawId: string | null): number | null => {
+      if (rawId == null) return 0;
+      const id = LEGACY[rawId] ?? rawId;
+      const st = statuses.find((s) => s.id === id);
+      if (st && st.na) return null;
+      let rank = st ? nonNA.findIndex((s) => s.id === id) : 0;
+      if (rank < 0) rank = 0;
+      return nonNA.length > 1 ? rank / (nonNA.length - 1) : rank === nonNA.length - 1 ? 1 : 0;
+    };
 
     const { data: songs } = await admin
       .from("songs")
@@ -50,28 +57,27 @@ async function load(shareId: string) {
       tracks = data ?? [];
     }
 
-    // Per song: sum of non-N/A states, and how many parts are N/A (excluded).
+    // Per song: sum of non-N/A progress, and how many parts are N/A (excluded).
     const sumBySong: Record<string, number> = {};
     const naBySong: Record<string, number> = {};
     let partsDone = 0;
     for (const t of tracks) {
-      const st = toState(t.status);
-      if (st === NA) {
+      const p = progressOf(t.status);
+      if (p === null) {
         naBySong[t.song_id] = (naBySong[t.song_id] ?? 0) + 1;
         continue;
       }
-      sumBySong[t.song_id] = (sumBySong[t.song_id] ?? 0) + Math.min(st, 4);
-      if (st === 4) partsDone++;
+      sumBySong[t.song_id] = (sumBySong[t.song_id] ?? 0) + p;
+      if ((LEGACY[t.status] ?? t.status) === lastId) partsDone++;
     }
 
     const songCount = (songs ?? []).length;
-    // Each song's denominator = instrument columns minus its N/A parts.
     let totalParts = 0;
     let acc = 0;
     for (const s of songs ?? []) {
       const denom = Math.max(0, instrumentCount - (naBySong[s.id] ?? 0));
       totalParts += denom;
-      if (denom > 0) acc += (sumBySong[s.id] ?? 0) / (denom * 4);
+      if (denom > 0) acc += (sumBySong[s.id] ?? 0) / denom;
     }
     const overall = songCount > 0 ? Math.round((acc / songCount) * 100) : 0;
 

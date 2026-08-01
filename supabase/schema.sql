@@ -331,6 +331,24 @@ alter table public.albums add column if not exists share_id uuid default gen_ran
 alter table public.albums add column if not exists release_date date;
 alter table public.albums add column if not exists schedule jsonb default '[]'::jsonb;
 
+-- v2.7: per-album customizable recording-grid statuses (name/color/icon, in
+-- cycle order; `na:true` = excluded from percentages). Cell values in
+-- song_tracks.status are the status `id`. Existing 0–5 values migrate to the
+-- default ids below.
+alter table public.albums add column if not exists statuses jsonb default
+  '[{"id":"not_started","name":"Not started","color":"#3a3a42","icon":"empty","na":false},
+    {"id":"scratch","name":"Scratch","color":"#F5A623","icon":"dot","na":false},
+    {"id":"tracked","name":"Tracked","color":"#FF4D1C","icon":"bar","na":false},
+    {"id":"comped","name":"Comped","color":"#3ECF8E","icon":"half","na":false},
+    {"id":"done","name":"Done","color":"#3ECF8E","icon":"check","na":false},
+    {"id":"na","name":"N/A","color":"#242429","icon":"dash","na":true}]'::jsonb;
+
+update public.song_tracks set status = case status
+    when '0' then 'not_started' when '1' then 'scratch' when '2' then 'tracked'
+    when '3' then 'comped' when '4' then 'done' when '5' then 'na'
+    when 'tracking' then 'tracked' else status end
+  where status in ('0','1','2','3','4','5','tracking');
+
 -- SONG EXTRAS: references + credits (JSON arrays)
 alter table public.songs add column if not exists refs jsonb default '[]'::jsonb;
 alter table public.songs add column if not exists credits jsonb default '[]'::jsonb;
