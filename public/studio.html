@@ -123,7 +123,7 @@
   .profile-empty{display:flex;flex-direction:column;align-items:center;gap:6px;color:var(--txt-3);font-size:11px;font-weight:600;text-align:center;padding:0 12px}
   .profile-empty svg{width:26px;height:26px}
   .hero-meta{padding-bottom:6px;min-width:0;flex:1}
-  .band-name{font-family:'Poppins';font-weight:700;font-size:clamp(28px,3vw,44px);letter-spacing:-.02em;line-height:1.05;margin:8px 0 12px;max-width:20ch}
+  .band-name{font-family:'Poppins';font-weight:700;font-size:clamp(24px,3vw,44px);letter-spacing:-.02em;line-height:1.1;margin:8px 0 12px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hero-sub{display:flex;align-items:center;gap:8px;color:var(--txt-2);font-size:13.5px;flex-wrap:wrap}
   .hero-sub b{color:var(--txt);font-weight:600}
   .hero-sub .pill{background:var(--card);border:1px solid var(--line);padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
@@ -870,6 +870,8 @@ function albumProg(al){const insts=albumInstruments(al);if(!al.songs.length)retu
 function albumParts(al){const insts=albumInstruments(al);let done=0,total=0;al.songs.forEach(s=>{const st=songStats(s,insts);done+=st.done;total+=st.denom;});return{done,total};}
 // Dot color per grid state (0 not started · 1 scratch · 2 tracked · 3 comped · 4 done · 5 N/A).
 function dotColor(st){return ['#3a3a42','#F5A623','#FF4D1C','rgba(62,207,142,.55)','#3ECF8E','#242429'][st]||'#3a3a42';}
+// Shrink the album title until it fits on one line (never wraps).
+function fitBandName(){const el=content.querySelector('.band-name');if(!el)return;el.style.fontSize='';let size=parseFloat(getComputedStyle(el).fontSize)||40;let guard=0;while(el.scrollWidth>el.clientWidth+1&&size>18&&guard<90){size-=1;el.style.fontSize=size+'px';guard++;}}
 function fmtT(s){s=Math.max(0,Math.round(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function statusColor(s){return s==="in-progress"?"var(--amber)":s==="released"?"var(--green)":"var(--txt-3)";}
 function statusLabel(s){return s==="in-progress"?"In progress":s==="released"?"Released":"Draft";}
@@ -1076,6 +1078,7 @@ function renderDashboard(){
     <button class="expand" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
     <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.merchItems&&al.merchItems.length)?al.merchItems.slice(0,5).map((it,i)=>merchDashSlot(it,i)).join(''):`<div class="slot" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add merch item</div><div class="sm">Full records</div></div></div>`}</div>
   </div>`;
+  fitBandName();
 }
 function slotHTML(m,i,type,isCover){
   return `<div class="slot ${m.img?'filled':''} ${isCover?'is-cover':''}" onclick="dashSlotClick('${type}',${i},${m.img?'true':'false'})">
@@ -2027,6 +2030,7 @@ function stopAllAudio(){if(curAudio){curAudio.pause();curAudio=null;curTid=null;
 document.getElementById('scroll').addEventListener('scroll',function(){document.getElementById('topbar').classList.toggle('scrolled',this.scrollTop>10);});
 window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
 document.addEventListener('click',e=>{const w=document.getElementById('quickNav');if(w&&!w.contains(e.target))closeNotif();});
+window.addEventListener('resize',()=>{if(route.view==='dashboard')fitBandName();});
 
 /* ===== REAL DATA (Supabase via /api) ===== */
 function defaultRoute(){
