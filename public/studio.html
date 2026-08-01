@@ -583,8 +583,12 @@
   .share-card{background:linear-gradient(150deg,#20140f,#141417);border:1px solid var(--line);border-radius:var(--r-md);padding:22px;text-align:center}
   .share-card .sc-band{font-family:'Poppins';font-weight:700;font-size:20px}
   .share-card .sc-album{color:var(--txt-2);font-size:13px;margin-top:2px}
-  .share-card .sc-ring{margin:16px auto}
-  .share-card .sc-pct{font-family:'Poppins';font-weight:800;font-size:40px;color:var(--accent-hi)}
+  .share-card .sc-cover{width:210px;height:210px;border-radius:18px;overflow:hidden;margin:18px auto 6px;background:var(--card-hi);box-shadow:0 14px 34px rgba(0,0,0,.55);display:grid;place-items:center}
+  .share-card .sc-cover img{width:100%;height:100%;object-fit:cover}
+  .share-card .sc-cover-ph{font-family:'Poppins';font-weight:800;font-size:70px;color:var(--txt-3)}
+  .share-card .sc-ringwrap{position:relative;width:110px;height:110px;margin:14px auto 8px}
+  .share-card .sc-ringwrap svg{position:absolute;inset:0}
+  .share-card .sc-ring-pct{position:absolute;inset:0;display:grid;place-items:center;font-family:'Poppins';font-weight:800;font-size:26px;color:var(--accent-hi)}
   .share-card .sc-l{color:var(--txt-3);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
   .share-link{display:flex;gap:8px;margin-top:18px}
   .share-link input{flex:1;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--txt-2);font-family:'JetBrains Mono';font-size:12px;outline:none}
@@ -1743,14 +1747,16 @@ function renderActivity(){
 /* ===== SONG DETAIL ===== */
 /* ===== SHARE MODAL ===== */
 function openShare(){
-  const a=A(),al=AL();const overall=albumProg(al);const circ=2*Math.PI*40;
+  const a=A(),al=AL();const overall=albumProg(al);const circ=2*Math.PI*46;
+  const cover=al.cover||(al.artwork&&al.artwork[0]&&al.artwork[0].img)||null;
   document.getElementById('modalInner').innerHTML=`
     <div class="modal-head"><h3>Share progress</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
     <div class="modal-body">
       <p style="color:var(--txt-2);font-size:13px;margin-bottom:16px;line-height:1.5">A public, read-only page anyone can open — no login. Post it to your socials and let fans watch the album come together. This is how a band spreads albumap without you paying for ads.</p>
-      <div class="share-card"><div class="sc-band">${a.name}</div><div class="sc-album">${al.title}</div>
-        <div class="sc-ring"><svg width="120" height="120" style="transform:rotate(-90deg)"><circle cx="60" cy="60" r="40" stroke="var(--grey)" stroke-width="8" fill="none"/><circle cx="60" cy="60" r="40" stroke="var(--accent)" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-overall/100)}"/></svg></div>
-        <div class="sc-pct">${overall}%</div><div class="sc-l">Album complete</div></div>
+      <div class="share-card"><div class="sc-band">${esc(a.name)}</div><div class="sc-album">${esc(al.title)}</div>
+        <div class="sc-cover">${cover?`<img src="${cover}">`:`<div class="sc-cover-ph">${esc((al.title[0]||'?'))}</div>`}</div>
+        <div class="sc-ringwrap"><svg width="110" height="110" style="transform:rotate(-90deg)"><circle cx="55" cy="55" r="46" stroke="var(--grey)" stroke-width="8" fill="none"/><circle cx="55" cy="55" r="46" stroke="var(--accent)" stroke-width="8" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-overall/100)}"/></svg><div class="sc-ring-pct">${overall}%</div></div>
+        <div class="sc-l">Album complete</div></div>
       <div class="share-link"><input value="${al.shareId?location.origin+'/share/'+al.shareId:location.origin}" readonly><button class="solid-btn" onclick="navigator.clipboard&&navigator.clipboard.writeText(this.previousElementSibling.value);this.textContent='Copied ✓'">Copy link</button></div>
     </div>`;
   document.getElementById('modalBg').classList.add('show');
