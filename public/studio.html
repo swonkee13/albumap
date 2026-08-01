@@ -988,6 +988,38 @@
     .dropzone.slim .big{font-size:13px}
     .zone{border-radius:14px}
     .zone-body{padding:14px}
+    /* ---- mobile player (vertical album playlist) ---- */
+    .mseq-now{display:flex;align-items:center;gap:14px;background:var(--card);border:1px solid var(--line-soft);border-radius:16px;padding:14px}
+    .mseq-play{width:58px;height:58px;flex:none;border-radius:50%}
+    .mseq-play svg{width:24px;height:24px}
+    .mseq-nowinfo{flex:1;min-width:0}
+    .mseq-nowinfo .now{font-weight:700;font-size:15px;display:flex;align-items:center;gap:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mseq-nowinfo .now .swatch{width:11px;height:11px;border-radius:50%;flex:none}
+    .mseq-nowinfo .sub2{font-size:11.5px;color:var(--txt-3);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mseq-times{display:flex;align-items:center;gap:10px;margin:12px 2px 4px;font-size:11px;color:var(--txt-3)}
+    .mseq-bar{flex:1;height:5px;border-radius:3px;background:var(--grey);overflow:hidden}
+    .mseq-fill{height:100%;width:0;background:var(--accent);border-radius:3px}
+    .mseq-tools{display:flex;gap:8px;margin:12px 0 14px}
+    .mseq-tools .ghost-btn{padding:8px 13px;font-size:12.5px}
+    .mseq-list{display:flex;flex-direction:column;gap:7px}
+    .mseq-row{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:13px;background:var(--card);border:1px solid var(--line-soft)}
+    .mseq-row.current{border-color:var(--accent);background:var(--accent-dim)}
+    .mseq-row.no-audio{opacity:.6}
+    .mseq-rowplay{width:40px;height:40px;flex:none;border-radius:50%;border:none;background:var(--panel-2);color:var(--accent-hi);display:grid;place-items:center;cursor:pointer}
+    .mseq-row.current .mseq-rowplay{background:var(--accent);color:#fff}
+    .mseq-rowplay svg{width:17px;height:17px;margin-left:1px}
+    .mseq-num{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-3);flex:none;width:22px}
+    .mseq-sw{width:10px;height:10px;border-radius:3px;flex:none}
+    .mseq-nm{flex:1;min-width:0;display:flex;flex-direction:column}
+    .mseq-name{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .mseq-na{font-size:10.5px;color:var(--txt-3);text-transform:uppercase;letter-spacing:.05em}
+    .mseq-dur{font-family:'JetBrains Mono';font-size:12px;color:var(--txt-2);flex:none}
+    .mseq-mv{display:inline-flex;flex-direction:column;gap:2px;flex:none}
+    .mseq-mv button{width:28px;height:20px;border:none;background:transparent;color:var(--txt-3);display:grid;place-items:center;cursor:pointer;border-radius:5px}
+    .mseq-mv button:active{background:var(--hover);color:var(--txt)}
+    .mseq-mv svg{width:15px;height:15px}
+    .mseq-x{width:30px;height:30px;flex:none;border:none;background:transparent;color:var(--txt-3);display:grid;place-items:center;cursor:pointer;border-radius:7px}
+    .mseq-x svg{width:15px;height:15px}
   }
   @media(max-width:640px){
     .slot-grid{grid-template-columns:repeat(2,1fr)!important}
@@ -1001,6 +1033,21 @@
     .idea-song[data-song] .idea-title{font-size:15.5px}
     .ws-sub{font-size:13px}
   }
+
+  /* full-screen image viewer (invoked on mobile; hidden until shown) */
+  .img-viewer{position:fixed;inset:0;z-index:200;background:rgba(8,8,10,.975);backdrop-filter:blur(6px);display:none;flex-direction:column}
+  .img-viewer.show{display:flex}
+  .img-viewer .iv-top{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 8px}
+  .img-viewer .iv-btn{width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.09);border:none;color:#fff;display:grid;place-items:center;cursor:pointer;flex:none}
+  .img-viewer .iv-btn svg{width:20px;height:20px}
+  .img-viewer .iv-label{flex:1;text-align:center;color:#fff;font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .img-viewer .iv-stage{flex:1;display:grid;place-items:center;padding:8px 10px 24px;min-height:0;touch-action:pan-y}
+  .img-viewer .iv-stage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+  .img-viewer .iv-nav{position:fixed;top:50%;transform:translateY(-50%);width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.11);border:none;color:#fff;display:grid;place-items:center;cursor:pointer}
+  .img-viewer .iv-nav.prev{left:10px}
+  .img-viewer .iv-nav.next{right:10px}
+  .img-viewer .iv-nav svg{width:22px;height:22px}
+  .img-viewer .iv-count{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:#fff;font-family:'JetBrains Mono';font-size:12px;background:rgba(0,0,0,.55);padding:5px 13px;border-radius:20px}
 </style>
 </head>
 <body>
@@ -1040,6 +1087,8 @@
 <!-- ===== MOBILE: drawer scrim + bottom tab bar (hidden on desktop) ===== -->
 <div class="drawer-scrim" id="drawerScrim" onclick="closeDrawer()"></div>
 <nav class="mobile-tabs" id="mobileTabs"></nav>
+<!-- full-screen image viewer (artwork / photos / logos / merch) -->
+<div class="img-viewer" id="imgViewer"></div>
 
 <div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modalInner"></div>
@@ -2269,6 +2318,7 @@ function openPlaceholderDur(id){
 function setPlaceholderDur(id,sec){const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,Math.round(sec));seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
 function setPlaceholderDurStr(id,str){const sec=parsePhStr(str);if(sec==null)return;const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,sec);seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
 function renderSequencer(){
+  if(isMobile())return renderSequencerMobile();
   const al=AL();
   seqSongs=buildSeqSongs(al);
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Tracklist sequencer</div><div class="ws-sub">Each song is a block sized to its real length. Press play to hear the album in sequence — each song plays its <b>master</b> (or most recent) file. Add <b>Placeholder</b> blocks to reserve a slot for an unplaced track or interlude.</div></div>
@@ -2286,6 +2336,7 @@ function renderSequencer(){
 function seqTotal(){return seqSongs.reduce((a,s)=>a+s.dur,0);}
 function shade(hex,pct){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;r=Math.max(0,Math.min(255,r+pct));g=Math.max(0,Math.min(255,g+pct));b=Math.max(0,Math.min(255,b+pct));return'#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
 function renderSeq(){
+  if(isMobile())return renderSeqMobileList();
   const tl=document.getElementById('seqTimeline'),ph=document.getElementById('seqPlayhead'),total=seqTotal();
   const ruler=document.getElementById('seqRuler');ruler.innerHTML='';for(let i=0;i<8;i++){const d=document.createElement('div');d.className='tick';d.textContent=fmtT(total*i/8);ruler.appendChild(d);}
   [...tl.querySelectorAll('.block')].forEach(b=>b.remove());
@@ -2315,6 +2366,38 @@ function renderSeqOrder(){const total=seqTotal();const host=document.getElementB
   }).join('');
 }
 function seqSides(){const total=seqTotal();let acc=0,split=0,best=1e9;for(let i=0;i<seqSongs.length;i++){acc+=seqSongs[i].dur;const d=Math.abs(acc-total/2);if(d<best){best=d;split=i+1;}}return`${split} / ${seqSongs.length-split}`;}
+/* ===== MOBILE PLAYER — vertical album playlist (desktop keeps the timeline) ===== */
+function renderSequencerMobile(){
+  const al=AL();seqSongs=buildSeqSongs(al);
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${esc(al.title)}</div><div class="view-title">Player</div><div class="ws-sub">The album in sequence — tap a track to play; it rolls into the next. Each plays its <b>master</b> (or most recent) file.</div></div>
+  <div class="mseq-now">
+    <button class="mseq-play big-play" id="bigPlay" onclick="toggleSeq()"><svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
+    <div class="mseq-nowinfo"><div class="now" id="seqNow"><span class="swatch" style="background:var(--accent)"></span>Ready to play — track 1</div><div class="sub2" id="seqSub">Full album · continuous playback</div></div>
+  </div>
+  <div class="mseq-times"><span class="cur mono" id="seqCur">0:00</span><div class="mseq-bar"><div class="mseq-fill" id="seqFill"></div></div><span class="tot mono" id="seqTot">0:00</span></div>
+  <div class="mseq-tools"><button class="ghost-btn" onclick="addPlaceholder()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 2 12l10 9 10-9z"/></svg>Placeholder</button><button class="ghost-btn" onclick="shuffleSeq()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>Shuffle</button></div>
+  <div class="mseq-list" id="mseqList"></div>
+  <div style="position:absolute;left:-9999px"><div id="seqPlayhead"></div></div>`;
+  renderSeqMobileList();
+}
+function mseqRow(s,i){
+  const cur=(seqPlaying&&seqSongs[seqIdx]&&seqSongs[seqIdx].id===s.id)?' current':'';
+  const mv=`<span class="mseq-mv"><button onclick="seqMoveTrack('${s.id}',-1)" title="Up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 15 6-6 6 6"/></svg></button><button onclick="seqMoveTrack('${s.id}',1)" title="Down"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg></button></span>`;
+  if(s.placeholder)return `<div class="mseq-row placeholder${cur}" data-id="${s.id}"><span class="mseq-num">${String(i+1).padStart(2,'0')}</span><span class="mseq-sw" style="background:${s.color}"></span><div class="mseq-nm"><span class="mseq-name" style="color:var(--txt-3)">◇ Placeholder</span></div><span class="mseq-dur">${fmtT(s.dur)}</span>${mv}<button class="mseq-x" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`;
+  return `<div class="mseq-row${s.url?'':' no-audio'}${cur}" data-id="${s.id}">
+    <button class="mseq-rowplay" title="${s.url?'Play from here':'No audio yet'}" onclick="seqPlayTrack('${s.id}')"><svg class="p" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+    <span class="mseq-num">${String(i+1).padStart(2,'0')}</span><span class="mseq-sw" style="background:${s.color}"></span>
+    <div class="mseq-nm"><span class="mseq-name" onclick="nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${s.id}'})">${esc(s.name)}</span>${s.url?'':'<span class="mseq-na">no audio</span>'}</div>
+    <span class="mseq-dur">${fmtT(s.dur)}</span>${mv}</div>`;
+}
+function renderSeqMobileList(){const host=document.getElementById('mseqList');if(!host)return;host.innerHTML=seqSongs.map((s,i)=>mseqRow(s,i)).join('');updateSeqStats();const tot=document.getElementById('seqTot');if(tot)tot.textContent=fmtT(seqTotal());}
+function seqPlayTrack(id){const idx=seqSongs.findIndex(s=>s.id===id);if(idx<0)return;const s=seqSongs[idx];
+  if(!s.url){const n=seqPlayableFrom(idx);if(n<0){alert('No playable audio yet — set a master (or upload a file) on a song first.');return;}}
+  seqPos=accBefore(idx);
+  if(seqPlaying){if(s.url){seqStartSong(idx,0);}else{const n=seqPlayableFrom(idx);seqPos=accBefore(n);seqStartSong(n,0);}}
+  else{seqPlay();}
+  seqUpdCurrent(seqCurGlobal());}
+function seqMoveTrack(id,dir){const i=seqSongs.findIndex(s=>s.id===id);const j=i+dir;if(i<0||j<0||j>=seqSongs.length)return;[seqSongs[i],seqSongs[j]]=[seqSongs[j],seqSongs[i]];if(!seqPlaying)seqPos=0;renderSeqMobileList();seqPersist();}
 /* ===== real-audio sequencer engine ===== */
 let seqPlaying=false,seqPos=0,seqIdx=0,seqAudio=null,seqRaf=null;
 function seqAt(off){let acc=0;for(let i=0;i<seqSongs.length;i++){if(off<acc+seqSongs[i].dur)return{idx:i,into:off-acc};acc+=seqSongs[i].dur;}const last=Math.max(0,seqSongs.length-1);return{idx:last,into:seqSongs.length?seqSongs[last].dur:0};}
@@ -2327,7 +2410,7 @@ function seqPlay(){
   let{idx,into}=seqAt(seqPos);
   if(!seqSongs[idx]||!seqSongs[idx].url){const n=seqPlayableFrom(idx+1);if(n<0){alert('No playable audio yet — set a master (or upload a file) on at least one song to hear the album here.');return;}idx=n;into=0;seqPos=accBefore(idx);}
   seqPlaying=true;document.body.classList.add('seqplaying');
-  document.getElementById('seqPlayhead').style.display='block';
+  const _ph=document.getElementById('seqPlayhead');if(_ph)_ph.style.display='block';
   seqStartSong(idx,into);
   seqRaf=requestAnimationFrame(seqTick);
 }
@@ -2342,8 +2425,8 @@ function seqSongEnded(){const n=seqPlayableFrom(seqIdx+1);if(n<0){seqPos=0;seqSt
 function seqPause(){if(!seqPlaying)return;seqPos=seqCurGlobal();seqPlaying=false;document.body.classList.remove('seqplaying');if(seqRaf)cancelAnimationFrame(seqRaf);if(seqAudio)seqAudio.pause();}
 function seqStop(){seqPlaying=false;document.body.classList.remove('seqplaying');if(seqRaf)cancelAnimationFrame(seqRaf);if(seqAudio)seqAudio.pause();const ph=document.getElementById('seqPlayhead');if(ph)ph.style.left='0px';const c=document.getElementById('seqCur');if(c)c.textContent=fmtT(seqPos);seqClearCurrent();}
 function positionPlayhead(off,total){const tl=document.getElementById('seqTimeline');if(!tl)return;const w=tl.clientWidth;const ph=document.getElementById('seqPlayhead');if(ph)ph.style.left=((total?off/total:0)*w)+'px';}
-function seqTick(){const total=seqTotal();const off=seqCurGlobal();positionPlayhead(off,total);const c=document.getElementById('seqCur');if(c)c.textContent=fmtT(off);seqUpdCurrent(off);if(seqPlaying)seqRaf=requestAnimationFrame(seqTick);}
-function seqUpdCurrent(off){const{idx,into}=seqAt(off);const s=seqSongs[idx];if(!s)return;document.querySelectorAll('#seqTimeline .block').forEach((b,i)=>b.classList.toggle('current',seqPlaying&&i===idx));document.querySelectorAll('#seqOrder .ol-row').forEach((r,i)=>r.classList.toggle('current',seqPlaying&&i===idx));if(seqPlaying){document.getElementById('seqNow').innerHTML=`<span class="swatch" style="background:${s.color}"></span>${String(idx+1).padStart(2,'0')} · ${esc(s.name)}`;document.getElementById('seqSub').textContent=`${fmtT(into)} / ${fmtT(s.dur)} — playing ${s.url?'master/most-recent':'(no audio)'}`;}}
+function seqTick(){const total=seqTotal();const off=seqCurGlobal();positionPlayhead(off,total);const fill=document.getElementById('seqFill');if(fill)fill.style.width=(total?off/total*100:0).toFixed(2)+'%';const c=document.getElementById('seqCur');if(c)c.textContent=fmtT(off);seqUpdCurrent(off);if(seqPlaying)seqRaf=requestAnimationFrame(seqTick);}
+function seqUpdCurrent(off){const{idx,into}=seqAt(off);const s=seqSongs[idx];if(!s)return;document.querySelectorAll('#seqTimeline .block').forEach((b,i)=>b.classList.toggle('current',seqPlaying&&i===idx));document.querySelectorAll('#seqOrder .ol-row').forEach((r,i)=>r.classList.toggle('current',seqPlaying&&i===idx));document.querySelectorAll('#mseqList .mseq-row').forEach((r,i)=>r.classList.toggle('current',seqPlaying&&i===idx));if(seqPlaying){document.getElementById('seqNow').innerHTML=`<span class="swatch" style="background:${s.color}"></span>${String(idx+1).padStart(2,'0')} · ${esc(s.name)}`;document.getElementById('seqSub').textContent=`${fmtT(into)} / ${fmtT(s.dur)} — playing ${s.url?'master/most-recent':'(no audio)'}`;}}
 function seqClearCurrent(){document.querySelectorAll('#seqTimeline .block').forEach(b=>b.classList.remove('current'));document.querySelectorAll('#seqOrder .ol-row').forEach(r=>r.classList.remove('current'));}
 function seqSeekClient(x){
   const total=seqTotal();const tl=document.getElementById('seqTimeline');if(!tl)return;const r=tl.getBoundingClientRect();
@@ -2479,7 +2562,7 @@ function setMediaPool(al,kind,arr){al[MEDIA_FIELDS[kind][1]]=arr;}
 function noImgDrop(){return `<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">No image</div></div>`;}
 function mediaTile(kind,m){
   const isSong=!!m.song;const cap=esc(m.label||(isSong?'Single':'Untitled'));
-  return `<div class="exp-tile ${isSong?'is-single':''}${m.finalized?' is-final':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMedia('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.finalized?'<div class="final-badge" title="Finalized"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg></div>':''}${m.img?`<img src="${m.img}">`:noImgDrop()}<div class="cap">${cap}</div></div>`;
+  return `<div class="exp-tile ${isSong?'is-single':''}${m.finalized?' is-final':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMediaTap('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.finalized?'<div class="final-badge" title="Finalized"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg></div>':''}${m.img?`<img src="${m.img}">`:noImgDrop()}<div class="cap">${cap}</div></div>`;
 }
 function renderMedia(kind){
   const cfg=MEDIA[kind];const al=AL();const main=mediaMain(al,kind);const pool=mediaPool(al,kind);
@@ -2565,6 +2648,44 @@ function openMedia(kind,id){
   </div>`;
   document.getElementById('modalBg').classList.add('show');
 }
+/* ===== full-screen swipeable image viewer (mobile media/merch) ===== */
+let _iv={list:[],i:0,opts:{}};
+function openImageViewer(list,index,opts){
+  list=(list||[]).filter(x=>x&&x.img);if(!list.length)return;
+  _iv={list,i:Math.max(0,Math.min(index||0,list.length-1)),opts:opts||{}};
+  document.getElementById('imgViewer').classList.add('show');
+  document.body.classList.add('viewer-open');
+  paintImageViewer();
+}
+function paintImageViewer(){
+  const v=document.getElementById('imgViewer');if(!v||!v.classList.contains('show'))return;
+  const it=_iv.list[_iv.i];if(!it){closeImageViewer();return;}
+  const multi=_iv.list.length>1;
+  const X='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg>';
+  const pen='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+  v.innerHTML=`<div class="iv-top"><button class="iv-btn" onclick="closeImageViewer()">${X}</button><div class="iv-label">${esc(it.label||'')}</div>${_iv.opts.onEdit?`<button class="iv-btn" title="Edit" onclick="ivEdit()">${pen}</button>`:'<span style="width:42px;flex:none"></span>'}</div>
+    <div class="iv-stage" id="ivStage"><img src="${it.img}" alt=""></div>
+    ${multi?`<button class="iv-nav prev" onclick="ivNav(-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button><button class="iv-nav next" onclick="ivNav(1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button><div class="iv-count">${_iv.i+1} / ${_iv.list.length}</div>`:''}`;
+  const stage=document.getElementById('ivStage');
+  if(stage){let sx=0,sy=0;stage.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;sy=e.touches[0].clientY;},{passive:true});stage.addEventListener('touchend',e=>{const dx=e.changedTouches[0].clientX-sx,dy=e.changedTouches[0].clientY-sy;if(Math.abs(dx)>50&&Math.abs(dx)>Math.abs(dy))ivNav(dx<0?1:-1);},{passive:true});}
+}
+function ivNav(d){if(!_iv.list.length)return;_iv.i=(_iv.i+d+_iv.list.length)%_iv.list.length;paintImageViewer();}
+function ivEdit(){const it=_iv.list[_iv.i];const cb=_iv.opts.onEdit;closeImageViewer();if(cb)cb(it);}
+function closeImageViewer(){const v=document.getElementById('imgViewer');if(v){v.classList.remove('show');v.innerHTML='';}document.body.classList.remove('viewer-open');}
+// media tile tap: mobile → full-screen viewer; desktop → editor modal (unchanged)
+function openMediaTap(kind,id){
+  if(!isMobile())return openMedia(kind,id);
+  const al=AL();const list=[...mediaMain(al,kind).filter(x=>!x.song&&x.img),...mediaPool(al,kind).filter(x=>x.img)].map(p=>({img:p.img,label:p.label||MEDIA[kind].word,id:p.id}));
+  const idx=list.findIndex(x=>x.id===id);
+  if(idx<0)return openMedia(kind,id); // no image yet → go straight to the editor
+  openImageViewer(list,idx,{onEdit:it=>openMedia(kind,it.id)});
+}
+function merchImgTap(id,which){
+  const it=merchItem(id);if(!it)return;const url=which==='print'?it.print:it.mockup;
+  if(isMobile()&&url){const list=[];if(it.mockup)list.push({img:it.mockup,label:(it.name||'Item')+' — Mockup'});if(it.print)list.push({img:it.print,label:(it.name||'Item')+' — Print-ready'});
+    openImageViewer(list,Math.max(0,list.findIndex(x=>x.img===url)),{});return;}
+  browseMerchImg(id,which);
+}
 const MERCH_SIZES=["S","M","L","XL","2XL","3XL"];
 let merchOpen={};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -2626,7 +2747,7 @@ function merchItemHTML(it,i){
 }
 function merchSlot(it,which,label){
   const url=which==='print'?it.print:it.mockup;
-  return `<div class="merch-slot ${url?'filled':''}" onclick="browseMerchImg('${it.id}','${which}')">${url?`<img src="${url}"><div class="ms-cap">${label}</div>`:`<div class="ms-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="ms-lbl">${label}</div><div style="font-size:10.5px;color:var(--txt-3)">click to upload</div></div>`}</div>`;
+  return `<div class="merch-slot ${url?'filled':''}" onclick="merchImgTap('${it.id}','${which}')">${url?`<img src="${url}"><div class="ms-cap">${label}</div>`:`<div class="ms-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="ms-lbl">${label}</div><div style="font-size:10.5px;color:var(--txt-3)">click to upload</div></div>`}</div>`;
 }
 function toggleMerch(id){merchOpen[id]=!merchOpen[id];renderMerchList();}
 function flashMerchScroll(){
