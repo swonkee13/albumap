@@ -517,6 +517,14 @@
   .art-custom{width:100%;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:9px 11px;font-size:13px;outline:none;margin-top:4px;font-family:inherit}
   .art-custom:focus{border-color:var(--accent)}
   .art-modal-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+  /* settings */
+  .set-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:8px;align-items:start}
+  @media(max-width:820px){.set-grid{grid-template-columns:1fr}}
+  .set-grid .mf{display:flex;flex-direction:column;gap:5px}
+  .set-grid .mf label{font-size:11px;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.06em}
+  .set-grid .mf input{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--txt);padding:9px 11px;font-family:inherit;font-size:13px;outline:none}
+  .set-grid .mf input:focus{border-color:var(--accent)}
+  .plan-badge{display:inline-block;background:var(--accent-dim);color:var(--accent-hi);border:1px solid rgba(255,77,28,.3);padding:6px 13px;border-radius:20px;font-size:13px;font-weight:600}
   .slot-flash{animation:slotFlash 1.6s ease-out}
   .merch-flash{animation:slotFlash 1.6s ease-out;border-radius:var(--r-lg)}
   @keyframes slotFlash{0%,100%{box-shadow:0 0 0 0 rgba(255,77,28,0)}20%{box-shadow:0 0 0 3px var(--accent),0 0 22px rgba(255,77,28,.6)}}
@@ -717,6 +725,9 @@
       <div class="nav-item" id="nav-roster" onclick="nav({view:'roster'})">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>Artists
       </div>
+      <div class="nav-item" id="nav-settings" onclick="nav({view:'settings'})">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-2.9 1.2V21a2 2 0 0 1-4 0v-.1A1.7 1.7 0 0 0 6 19.4l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0-1.2-2.9H2a2 2 0 0 1 0-4h.1A1.7 1.7 0 0 0 4.6 6l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9.4A1.7 1.7 0 0 0 10.6 2H11a2 2 0 0 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.2l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9.4a1.7 1.7 0 0 0 1.6 1.2H22a2 2 0 0 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1.4z"/></svg>Profile &amp; settings
+      </div>
     </nav>
     <div class="lib">
       <div class="lib-head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Your library</div>
@@ -774,6 +785,7 @@
 <input type="file" id="merchImgInput" accept="image/*" class="hidden">
 <input type="file" id="refFileInput" class="hidden">
 <input type="file" id="artFileInput" accept="image/*" class="hidden">
+<input type="file" id="profileInput" accept="image/*" class="hidden">
 
 <script>
 /* ================= DATA ================= */
@@ -893,9 +905,11 @@ function render(){
   document.getElementById('backBtn').disabled=hi<=0;
   document.getElementById('fwdBtn').disabled=hi>=hist.length-1;
   document.getElementById('nav-roster').classList.toggle('active',route.view==='roster');
+  document.getElementById('nav-settings').classList.toggle('active',route.view==='settings');
   renderLib();renderCrumbs();
   const v=route.view;
-  if(v==='roster')renderRoster();
+  if(v==='settings')renderSettings();
+  else if(v==='roster')renderRoster();
   else if(v==='albums')renderAlbums();
   else if(v==='dashboard')renderDashboard();
   else if(v==='grid')renderGrid();
@@ -968,6 +982,7 @@ function renderLib(){
   }).join('');
 }
 function renderCrumbs(){
+  if(route.view==='settings'){document.getElementById('crumbs').innerHTML='<span class="c here">Profile &amp; settings</span>';return;}
   let h=`<span class="c ${route.view==='roster'?'here':''}" onclick="nav({view:'roster'})">Artists</span>`;
   if(route.artistId){const a=A();h+=`<span class="sep">/</span><span class="c ${route.view==='albums'?'here':''}" onclick="nav({view:'albums',artistId:'${a.id}'})">${a.name}</span>`;}
   if(route.albumId){const al=AL();h+=`<span class="sep">/</span><span class="c ${route.view==='dashboard'?'here':''}" onclick="nav({view:'dashboard',artistId:'${route.artistId}',albumId:'${route.albumId}'})">${al.title}</span>`;}
@@ -976,6 +991,50 @@ function renderCrumbs(){
   document.getElementById('crumbs').innerHTML=h;
 }
 
+/* ===== PROFILE / SETTINGS ===== */
+let settingsData=null;
+async function renderSettings(){
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">Account</div><div class="view-title">Profile &amp; settings</div></div><div id="settingsBody" style="margin-top:6px"><div class="empty-note" style="padding:28px">Loading…</div></div>`;
+  try{const d=await fetch('/api/profile',{cache:'no-store'}).then(r=>r.json());if(d&&d.ok)settingsData=d;}catch(e){}
+  renderSettingsBody();
+}
+function renderSettingsBody(){
+  const d=settingsData||{};const host=document.getElementById('settingsBody');if(!host)return;
+  host.innerHTML=`<div class="set-grid">
+    <div class="panel"><div class="panel-head"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg></div><h4>Profile</h4></div>
+      <div class="panel-body">
+        <div style="display:flex;gap:18px;align-items:center;margin-bottom:16px">
+          <div class="profile-up" style="width:88px;height:88px;flex:none" onclick="uploadProfilePhoto()">${d.photo?`<img src="${d.photo}">`:`<div class="profile-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="9" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>Add photo</div>`}<div class="up-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
+          <div class="mf" style="flex:1"><label>Display name</label><input value="${esc(d.displayName||'')}" placeholder="Your name" onblur="saveProfile('displayName',this.value)"></div>
+        </div>
+        <div class="mf" style="margin-bottom:12px"><label>Email</label><input value="${esc(d.email||'')}" readonly style="opacity:.65;cursor:not-allowed"></div>
+        <div class="mf"><label>Role in the band</label><input value="${esc(d.role||'')}" placeholder="e.g. Guitar / vocals, Producer, Manager" onblur="saveProfile('role',this.value)"></div>
+      </div>
+    </div>
+    <div class="panel"><div class="panel-head"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div><h4>Membership &amp; billing</h4></div>
+      <div class="panel-body">
+        <div class="plan-badge">Current plan · <b>${esc((d.plan||'free').charAt(0).toUpperCase()+(d.plan||'free').slice(1))}</b></div>
+        <p style="color:var(--txt-3);font-size:12.5px;margin-top:12px;line-height:1.55">Paid plans (Band $19 / Studio $59 / Label) aren’t live yet. This is where you’ll manage your subscription, payment method, and invoices.</p>
+        <button class="ghost-btn" style="margin-top:14px;opacity:.5;cursor:not-allowed" disabled>Manage billing — coming soon</button>
+      </div>
+    </div>
+  </div>`;
+}
+function saveProfile(field,value){
+  if(settingsData)settingsData[field]=value;
+  const b={action:'update'};b[field]=value;
+  fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}).catch(()=>{});
+}
+function uploadProfilePhoto(){document.getElementById('profileInput').click();}
+async function doUploadProfilePhoto(f){
+  const localUrl=URL.createObjectURL(f);if(settingsData)settingsData.photo=localUrl;renderSettingsBody();
+  try{
+    const up=await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',name:f.name})}).then(r=>r.json());
+    if(!up.ok)throw new Error('url');
+    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
+    await fetch('/api/profile',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-photo',key:up.key})});
+  }catch(e){}
+}
 /* ===== ROSTER ===== */
 function renderRoster(){
   content.innerHTML=`<div style="padding-top:22px"><div class="eyebrow">Your artists</div><div class="view-title" style="font-size:34px;margin-top:6px">Artists</div></div>
@@ -1412,6 +1471,7 @@ document.getElementById('audioInput').addEventListener('change',e=>{handleAudio(
 document.getElementById('merchImgInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadMerchImg(f);});
 document.getElementById('refFileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadRefFile(f);});
 document.getElementById('artFileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f||!mediaFileCtx)return;const c=mediaFileCtx;mediaFileCtx=null;if(c.mode==='new')uploadMedia(c.kind,c.pool,f);else replaceMediaFile(c.kind,c.id,f);});
+document.getElementById('profileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)doUploadProfilePhoto(f);});
 function dzOver(e,el){e.preventDefault();el.classList.add('drag');}
 function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAudio([...e.dataTransfer.files],si);}
 function renderSongsAudio(){renderSongList();renderBank();}

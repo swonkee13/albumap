@@ -14,6 +14,11 @@ create table if not exists public.profiles (
   created_at timestamptz default now()
 );
 
+-- v2.5: profile extras for the settings page.
+alter table public.profiles add column if not exists role text;
+alter table public.profiles add column if not exists photo_key text;
+alter table public.profiles add column if not exists plan text default 'free';
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "profiles: owner can read" on public.profiles;
