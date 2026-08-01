@@ -963,6 +963,8 @@ function albumParts(al){let done=0,total=0;al.songs.forEach(s=>{const st=songSta
 function statusDot(al,s,inst){const st=resolveStatus(al,cellStatus(s,inst));return st?(st.na?'#242429':st.color):'#3a3a42';}
 // Shrink the album title until it fits on one line (never wraps).
 function fitBandName(){const el=content.querySelector('.band-name');if(!el)return;el.style.fontSize='';let size=parseFloat(getComputedStyle(el).fontSize)||40;let guard=0;while(el.scrollWidth>el.clientWidth+1&&size>18&&guard<90){size-=1;el.style.fontSize=size+'px';guard++;}}
+// Scale the hero cover square to match the text column height; badge scales with it.
+function fitHeroCover(){const meta=content.querySelector('.hero-meta');const cover=content.querySelector('.hero-cover');const badge=content.querySelector('.hero-logo-badge');if(!meta||!cover)return;const h=Math.max(134,Math.min(260,meta.offsetHeight));cover.style.width=h+'px';cover.style.height=h+'px';const ph=cover.querySelector('.hc-ph');if(ph)ph.style.fontSize=Math.round(h*0.4)+'px';if(badge){const b=Math.round(h*0.44);badge.style.width=b+'px';badge.style.height=b+'px';badge.style.left=Math.round(-b*0.17)+'px';badge.style.bottom=Math.round(-b*0.17)+'px';}}
 // Mini sequencer for the dashboard tracklist card: proportional-width, full-height
 // blocks with waveforms, including placeholders (matches the sequencer page).
 function dashSeq(al){
@@ -1237,7 +1239,7 @@ function renderDashboard(){
   </div>
   ${dashMediaSection(a,al,'photo')}
   ${dashMediaSection(a,al,'logo')}`;
-  fitBandName();
+  fitBandName();fitHeroCover();
 }
 function dashMediaSection(a,al,kind){
   const cfg=MEDIA[kind];const main=(al[MEDIA_FIELDS[kind][0]]||[]);const pool=(al[MEDIA_FIELDS[kind][1]]||[]);
@@ -2306,7 +2308,7 @@ function stopAllAudio(){if(curAudio){curAudio.pause();curAudio=null;curTid=null;
 document.getElementById('scroll').addEventListener('scroll',function(){document.getElementById('topbar').classList.toggle('scrolled',this.scrollTop>10);});
 window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
 document.addEventListener('click',e=>{const w=document.getElementById('quickNav');if(w&&!w.contains(e.target))closeNotif();});
-window.addEventListener('resize',()=>{if(route.view==='dashboard')fitBandName();});
+window.addEventListener('resize',()=>{if(route.view==='dashboard'){fitBandName();fitHeroCover();}});
 
 /* ===== REAL DATA (Supabase via /api) ===== */
 function defaultRoute(){
