@@ -183,6 +183,13 @@ alter table public.song_files add column if not exists title text;
 -- comments plus their own References + Notes modules.
 alter table public.song_files add column if not exists notes text;
 alter table public.song_files add column if not exists refs jsonb not null default '[]'::jsonb;
+
+-- v2.12: original filenames for merch images + media pieces, so non-previewable
+-- formats (PSD/AI/…) show a file card instead of a broken image, and downloads
+-- keep the real name.
+alter table public.merch_items add column if not exists mockup_name text;
+alter table public.merch_items add column if not exists print_name text;
+alter table public.artwork_pieces add column if not exists filename text;
 -- comments may now attach to a bank file instead of a song: song_id nullable,
 -- and RLS is satisfied via the song OR via the file's album.
 alter table public.song_comments alter column song_id drop not null;

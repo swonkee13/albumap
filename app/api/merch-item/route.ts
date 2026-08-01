@@ -119,12 +119,15 @@ export async function POST(req: Request) {
 
   // --- set-image ----------------------------------------------------------
   if (action === "set-image") {
-    const which = body?.which === "print" ? "print_key" : "mockup_key";
+    const isPrint = body?.which === "print";
+    const which = isPrint ? "print_key" : "mockup_key";
+    const nameCol = isPrint ? "print_name" : "mockup_name";
     const key = body?.key as string | undefined;
     if (!key) return NextResponse.json({ ok: false }, { status: 400 });
+    const fname = (body?.name as string | undefined)?.slice(0, 200) || null;
     const { error } = await supabase
       .from("merch_items")
-      .update({ [which]: key })
+      .update({ [which]: key, [nameCol]: fname })
       .eq("id", id);
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
     return NextResponse.json({ ok: true });

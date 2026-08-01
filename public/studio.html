@@ -714,6 +714,25 @@
   .merch-slot .ms-drop svg{width:24px;height:24px}
   .merch-slot .ms-lbl{font-size:12px;font-weight:600;color:var(--txt-2)}
   .merch-slot .ms-cap{position:absolute;left:0;right:0;bottom:0;padding:16px 10px 8px;font-size:11px;font-weight:600;background:linear-gradient(transparent,rgba(0,0,0,.8))}
+  .merch-slot.uploading{cursor:default;border-style:solid}
+  /* non-previewable file card (PSD/AI/…) — Google-Drive style */
+  .file-card{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;padding:14px;text-align:center;background:var(--panel-2)}
+  .file-card .fc-ic{position:relative;color:var(--txt-3)}
+  .file-card .fc-ic svg{width:40px;height:40px}
+  .file-card .fc-ext{position:absolute;left:50%;bottom:5px;transform:translateX(-50%);font-size:8.5px;font-weight:800;letter-spacing:.03em;color:#fff;background:var(--accent);padding:1px 4px;border-radius:3px;line-height:1.3}
+  .file-card .fc-name{font-size:11px;font-weight:600;color:var(--txt-2);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;word-break:break-all}
+  .art-large .file-card{aspect-ratio:1;min-height:220px}
+  /* upload progress overlay (merch slot + media tile) */
+  .ms-up{position:absolute;left:0;right:0;bottom:0;padding:10px 12px;background:linear-gradient(transparent,rgba(0,0,0,.85))}
+  .ms-upbar{height:5px;border-radius:99px;background:rgba(255,255,255,.22);overflow:hidden}
+  .ms-upbar i{display:block;height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .15s ease}
+  .ms-uppct{margin-top:5px;font-size:10.5px;font-weight:700;color:#fff;letter-spacing:.02em}
+  /* download button on a filled slot/tile */
+  .ms-dl{position:absolute;top:7px;right:7px;width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.16);color:#fff;cursor:pointer;opacity:0;transition:.15s;z-index:3}
+  .ms-dl svg{width:15px;height:15px}
+  .ms-dl:hover{background:var(--accent);border-color:var(--accent)}
+  .merch-slot:hover .ms-dl,.exp-tile:hover .ms-dl{opacity:1}
+  @media(max-width:1024px){.ms-dl{opacity:1;background:rgba(0,0,0,.62)}}
   .merch-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
   @media(max-width:700px){.merch-fields{grid-template-columns:1fr}}
   .mf{display:flex;flex-direction:column;gap:5px}
@@ -1195,7 +1214,7 @@
 
 <input type="file" id="fileInput" class="hidden">
 <input type="file" id="audioInput" accept="audio/*,.wav,.mp3,.m4a,.aiff" multiple class="hidden">
-<input type="file" id="merchImgInput" accept="image/*" class="hidden">
+<input type="file" id="merchImgInput" accept="image/*,.psd,.ai,.eps,.pdf,.tif,.tiff,.svg,.zip" class="hidden">
 <input type="file" id="refFileInput" class="hidden">
 <input type="file" id="artFileInput" accept="image/*" class="hidden">
 <input type="file" id="profileInput" accept="image/*" class="hidden">
@@ -2379,6 +2398,17 @@ function waveDown(e,id){e.preventDefault();waveDragId=id;seekAt(id,fracFromEvent
 document.addEventListener('pointermove',e=>{if(waveDragId!=null)seekAt(waveDragId,fracFromEvent(e,waveDragId));});
 document.addEventListener('pointerup',()=>{waveDragId=null;});
 function dlTrack(id){const t=findFile(id);if(!t.url){uiAlert('No real file behind this demo row.');return;}const a=document.createElement('a');a.href=t.url;a.download=t.name;a.click();}
+/* ===== file helpers: upload progress, non-previewable fallback, downloads ===== */
+function fileExt(name){const p=String(name||'').split('.');return p.length>1?p.pop().toLowerCase():'';}
+const VIEWABLE_IMG=['png','jpg','jpeg','gif','webp','avif','svg','bmp'];
+function isViewableImg(name){return VIEWABLE_IMG.includes(fileExt(name));}
+// A Google-Drive-style card for formats a browser can't preview (PSD, AI, …).
+function fileCardHTML(name){const ext=(fileExt(name)||'file').toUpperCase();return `<div class="file-card"><div class="fc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg><span class="fc-ext">${esc(ext)}</span></div><div class="fc-name">${esc(name||'file')}</div></div>`;}
+// XHR PUT to R2 with upload progress (fetch can't report upload progress).
+function xhrPut(url,file,contentType,onProgress){return new Promise((resolve,reject)=>{const x=new XMLHttpRequest();x.open('PUT',url);if(contentType)x.setRequestHeader('Content-Type',contentType);x.upload.onprogress=e=>{if(e.lengthComputable&&onProgress)onProgress(e.loaded/e.total);};x.onload=()=>{(x.status>=200&&x.status<300)?resolve():reject(new Error('put '+x.status));};x.onerror=()=>reject(new Error('put'));x.send(file);});}
+// Force-download a stored merch/media file with its real filename.
+async function downloadFile(key,name){if(!key){uiAlert('This file is still uploading — try again in a moment.');return;}try{const r=await fetch('/api/download-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key,name:name||'download'})}).then(r=>r.json());if(r&&r.ok&&r.url){const a=document.createElement('a');a.href=r.url;a.rel='noopener';document.body.appendChild(a);a.click();a.remove();}else uiAlert('Could not prepare the download.');}catch(e){uiAlert('Could not prepare the download.');}}
+const DL_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg>';
 // Flag exactly one file per song as the master (most-complete version).
 function setMaster(id,si){
   const al=AL();const song=al.songs[si];if(!song)return;const t=song.files.find(x=>x.id===id);if(!t)return;
@@ -2685,7 +2715,12 @@ function setMediaPool(al,kind,arr){al[MEDIA_FIELDS[kind][1]]=arr;}
 function noImgDrop(){return `<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">No image</div></div>`;}
 function mediaTile(kind,m){
   const isSong=!!m.song;const cap=esc(m.label||(isSong?'Single':'Untitled'));
-  return `<div class="exp-tile ${isSong?'is-single':''}${m.finalized?' is-final':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMediaTap('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.finalized?'<div class="final-badge" title="Finalized"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg></div>':''}${m.img?`<img src="${m.img}">`:noImgDrop()}<div class="cap">${cap}</div></div>`;
+  const notViewable=m.filename&&!isViewableImg(m.filename);
+  const base=notViewable?fileCardHTML(m.filename):(m.img?`<img src="${m.img}">`:noImgDrop());
+  let vis=base;
+  if(m._up!=null){const pct=Math.round(m._up*100);vis=`${base}<div class="ms-up"><div class="ms-upbar"><i id="mupbar-${m.id}" style="width:${pct}%"></i></div><div class="ms-uppct"><span id="muppct-${m.id}">${pct}</span>% · uploading…</div></div>`;}
+  const dl=(!isSong&&m.key&&m._up==null)?`<button class="ms-dl" title="Download original" onclick="event.stopPropagation();downloadFile('${esc(m.key)}','${esc(m.filename||m.label||MEDIA[kind].word)}')">${DL_SVG}</button>`:'';
+  return `<div class="exp-tile ${isSong?'is-single':''}${m.finalized?' is-final':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMediaTap('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.finalized?'<div class="final-badge" title="Finalized"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg></div>':''}${vis}<div class="cap">${cap}</div>${dl}</div>`;
 }
 function renderMedia(kind){
   const cfg=MEDIA[kind];const al=AL();const main=mediaMain(al,kind);const pool=mediaPool(al,kind);
@@ -2725,25 +2760,31 @@ function addMedia(kind,toPool){mediaFileCtx={kind,mode:'new',pool:!!toPool};docu
 function replaceMedia(kind,id){mediaFileCtx={kind,mode:'replace',id};document.getElementById('artFileInput').click();}
 async function uploadMedia(kind,toPool,f){
   const al=AL();if(!al)return;const localUrl=URL.createObjectURL(f);
-  const piece={id:'tmp'+(++uidc),label:'',img:localUrl,pool:!!toPool,key:null,finalized:false};
+  const piece={id:'tmp'+(++uidc),label:'',img:localUrl,pool:!!toPool,key:null,filename:f.name,finalized:false,_up:0};
+  const tmpId=piece.id;
   if(toPool){const p=mediaPool(al,kind);p.push(piece);setMediaPool(al,kind,p);}else{const m=mediaMain(al,kind);m.splice(m.filter(x=>!x.song).length,0,piece);setMediaMain(al,kind,m);}
   renderMedia(kind);
+  const setProg=pr=>{const b=document.getElementById('mupbar-'+tmpId);if(b)b.style.width=Math.round(pr*100)+'%';const pc=document.getElementById('muppct-'+tmpId);if(pc)pc.textContent=Math.round(pr*100);};
   try{
     const up=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',albumId:al.id,kind,name:f.name})}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
-    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
-    const cr=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',albumId:al.id,kind,label:'',key:up.key,inPool:!!toPool})}).then(r=>r.json());
-    if(cr&&cr.id){piece.id=cr.id;piece.key=up.key;if(!toPool)openMedia(kind,cr.id);}
-  }catch(e){}
+    await xhrPut(up.uploadUrl,f,up.contentType,setProg);
+    const cr=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',albumId:al.id,kind,label:'',key:up.key,filename:f.name,inPool:!!toPool})}).then(r=>r.json());
+    if(cr&&cr.id){piece.id=cr.id;piece.key=up.key;}
+    delete piece._up;renderMedia(kind);
+    if(cr&&cr.id&&!toPool)openMedia(kind,cr.id);
+  }catch(e){delete piece._up;renderMedia(kind);}
 }
 async function replaceMediaFile(kind,id,f){
-  const p=findMedia(kind,id);if(!p)return;p.img=URL.createObjectURL(f);renderMedia(kind);
+  const p=findMedia(kind,id);if(!p)return;p.img=URL.createObjectURL(f);p.filename=f.name;p._up=0;renderMedia(kind);
+  const setProg=pr=>{const b=document.getElementById('mupbar-'+id);if(b)b.style.width=Math.round(pr*100)+'%';const pc=document.getElementById('muppct-'+id);if(pc)pc.textContent=Math.round(pr*100);};
   try{
     const up=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',albumId:AL().id,kind,name:f.name})}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
-    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
-    await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,key:up.key})});p.key=up.key;
+    await xhrPut(up.uploadUrl,f,up.contentType,setProg);
+    await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,key:up.key,filename:f.name})});p.key=up.key;
   }catch(e){}
+  delete p._up;renderMedia(kind);
   if(document.getElementById('modalBg').classList.contains('show'))openMedia(kind,id);
 }
 function setMediaLabel(kind,id,label){const p=findMedia(kind,id);if(!p)return;p.label=label;
@@ -2758,13 +2799,14 @@ function openMedia(kind,id){
   const moveBtn=cfg.hasPool?`<button class="ghost-btn" onclick="moveMedia('${kind}','${id}',${p.pool?'false':'true'});closeModal()">${p.pool?'↑ To '+cfg.mainName.toLowerCase():'↓ To pool'}</button>`:'';
   document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>${cfg.title}</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
   <div class="modal-body">
-    <div class="art-large">${p.img?`<img src="${p.img}">`:'<div class="art-large-ph">No image yet</div>'}</div>
+    <div class="art-large">${p.filename&&!isViewableImg(p.filename)?fileCardHTML(p.filename):(p.img?`<img src="${p.img}">`:'<div class="art-large-ph">No image yet</div>')}</div>
     <div style="margin-top:14px"><div class="mf-lbl">Label</div>
       <div class="art-pills" id="artPills-${id}">${cfg.labels.map(l=>`<span class="lchip ${p.label===l?'on':''}" onclick="setMediaLabel('${kind}','${id}','${l}')">${l}</span>`).join('')}</div>
       <input class="art-custom" placeholder="Or type a custom label…" value="${esc(p.label)}" onblur="setMediaLabel('${kind}','${id}',this.value)"></div>
     <div class="art-modal-actions">
       <button class="ghost-btn ${p.finalized?'is-final-btn':''}" onclick="toggleMediaFinal('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 6"/></svg>${p.finalized?'Finalized':'Mark finalized'}</button>
       <button class="ghost-btn" onclick="replaceMedia('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Replace image</button>
+      ${p.key?`<button class="ghost-btn" onclick="downloadFile('${esc(p.key)}','${esc(p.filename||p.label||cfg.word)}')">${DL_SVG}Download</button>`:''}
       ${moveBtn}
       <button class="ghost-btn" style="color:#e0322a;border-color:rgba(224,50,42,.5)" onclick="deleteMedia('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
     </div>
@@ -2798,15 +2840,25 @@ function closeImageViewer(){const v=document.getElementById('imgViewer');if(v){v
 // media tile tap: mobile → full-screen viewer; desktop → editor modal (unchanged)
 function openMediaTap(kind,id){
   if(!isMobile())return openMedia(kind,id);
-  const al=AL();const list=[...mediaMain(al,kind).filter(x=>!x.song&&x.img),...mediaPool(al,kind).filter(x=>x.img)].map(p=>({img:p.img,label:p.label||MEDIA[kind].word,id:p.id}));
+  const tapped=findMedia(kind,id);
+  if(tapped&&tapped.filename&&!isViewableImg(tapped.filename))return openMedia(kind,id); // non-previewable → editor (has download)
+  const viewable=x=>x.img&&!(x.filename&&!isViewableImg(x.filename));
+  const al=AL();const list=[...mediaMain(al,kind).filter(x=>!x.song&&viewable(x)),...mediaPool(al,kind).filter(viewable)].map(p=>({img:p.img,label:p.label||MEDIA[kind].word,id:p.id}));
   const idx=list.findIndex(x=>x.id===id);
   if(idx<0)return openMedia(kind,id); // no image yet → go straight to the editor
   openImageViewer(list,idx,{onEdit:it=>openMedia(kind,it.id)});
 }
 function merchImgTap(id,which){
-  const it=merchItem(id);if(!it)return;const url=which==='print'?it.print:it.mockup;
-  if(isMobile()&&url){const list=[];if(it.mockup)list.push({img:it.mockup,label:(it.name||'Item')+' — Mockup'});if(it.print)list.push({img:it.print,label:(it.name||'Item')+' — Print-ready'});
-    openImageViewer(list,Math.max(0,list.findIndex(x=>x.img===url)),{});return;}
+  const it=merchItem(id);if(!it)return;
+  const url=which==='print'?it.print:it.mockup;
+  const name=which==='print'?it.printName:it.mockupName;
+  const key=which==='print'?it.printKey:it.mockupKey;
+  // Non-previewable formats (PSD/AI/…) can't open in the viewer — tap = download.
+  if(url&&name&&!isViewableImg(name)){downloadFile(key,name);return;}
+  if(isMobile()&&url){const list=[];
+    if(it.mockup&&!(it.mockupName&&!isViewableImg(it.mockupName)))list.push({img:it.mockup,label:(it.name||'Item')+' — Mockup'});
+    if(it.print&&!(it.printName&&!isViewableImg(it.printName)))list.push({img:it.print,label:(it.name||'Item')+' — Print-ready'});
+    if(list.length){openImageViewer(list,Math.max(0,list.findIndex(x=>x.img===url)),{});return;}}
   browseMerchImg(id,which);
 }
 /* ===== styled dialogs — drop-in replacements for alert/confirm/prompt ===== */
@@ -2892,7 +2944,19 @@ function merchItemHTML(it,i){
 }
 function merchSlot(it,which,label){
   const url=which==='print'?it.print:it.mockup;
-  return `<div class="merch-slot ${url?'filled':''}" onclick="merchImgTap('${it.id}','${which}')">${url?`<img src="${url}"><div class="ms-cap">${label}</div>`:`<div class="ms-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="ms-lbl">${label}</div><div style="font-size:10.5px;color:var(--txt-3)">click to upload</div></div>`}</div>`;
+  const name=which==='print'?it.printName:it.mockupName;
+  const key=which==='print'?it.printKey:it.mockupKey;
+  const up=it['_up'+which];
+  const notViewable=name&&!isViewableImg(name);
+  const preview=notViewable?fileCardHTML(name):`<img src="${url}">`;
+  if(up!=null){
+    const pct=Math.round(up*100);
+    return `<div class="merch-slot uploading">${preview}<div class="ms-up"><div class="ms-upbar"><i id="upbar-${it.id}-${which}" style="width:${pct}%"></i></div><div class="ms-uppct"><span id="uppct-${it.id}-${which}">${pct}</span>% · uploading…</div></div></div>`;
+  }
+  if(url){
+    return `<div class="merch-slot filled" onclick="merchImgTap('${it.id}','${which}')">${preview}<div class="ms-cap">${label}</div>${key?`<button class="ms-dl" title="Download original" onclick="event.stopPropagation();downloadFile('${esc(key)}','${esc(name||label)}')">${DL_SVG}</button>`:''}</div>`;
+  }
+  return `<div class="merch-slot" onclick="merchImgTap('${it.id}','${which}')"><div class="ms-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><div class="ms-lbl">${label}</div><div style="font-size:10.5px;color:var(--txt-3)">click to upload</div></div></div>`;
 }
 function toggleMerch(id){merchOpen[id]=!merchOpen[id];renderMerchList();}
 function flashMerchScroll(){
@@ -2967,14 +3031,18 @@ function browseMerchImg(id,which){merchImgTarget={id,which};document.getElementB
 async function uploadMerchImg(f){
   const t=merchImgTarget||{};const id=t.id,which=t.which;if(!id)return;
   const it=merchItem(id);const localUrl=URL.createObjectURL(f);
-  if(it){if(which==='print')it.print=localUrl;else it.mockup=localUrl;}
+  if(it){if(which==='print'){it.print=localUrl;it.printName=f.name;}else{it.mockup=localUrl;it.mockupName=f.name;}it['_up'+which]=0;}
   renderMerchList();
+  const setProg=p=>{const b=document.getElementById('upbar-'+id+'-'+which);if(b)b.style.width=Math.round(p*100)+'%';const pc=document.getElementById('uppct-'+id+'-'+which);if(pc)pc.textContent=Math.round(p*100);};
   try{
     const up=await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',id,which,name:f.name})}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
-    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
-    await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-image',id,which,key:up.key})});
+    await xhrPut(up.uploadUrl,f,up.contentType,setProg);
+    await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'set-image',id,which,key:up.key,name:f.name})});
+    if(it){if(which==='print')it.printKey=up.key;else it.mockupKey=up.key;}
   }catch(e){/* local preview stays this session */}
+  if(it)delete it['_up'+which];
+  renderMerchList();
 }
 
 /* ===== NOTIFICATIONS (full activity) ===== */

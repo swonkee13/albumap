@@ -56,6 +56,7 @@ export async function POST(req: Request) {
         kind,
         label: (body?.label as string | undefined) ?? "",
         r2_key: (body?.key as string | undefined) ?? null,
+        filename: (body?.filename as string | undefined)?.slice(0, 200) ?? null,
         in_pool: body?.inPool === true,
         position: count ?? 0,
       })
@@ -74,6 +75,7 @@ export async function POST(req: Request) {
     if ("inPool" in (body ?? {})) patch.in_pool = body.inPool === true;
     if ("finalized" in (body ?? {})) patch.finalized = body.finalized === true;
     if (body?.key) patch.r2_key = body.key;
+    if (typeof body?.filename === "string") patch.filename = body.filename.slice(0, 200);
     if (!Object.keys(patch).length) return NextResponse.json({ ok: false }, { status: 400 });
     const { error } = await supabase.from("artwork_pieces").update(patch).eq("id", id);
     if (error) return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
