@@ -903,12 +903,14 @@ function render(){
   else if(v==='sequencer')renderSequencer();
   else if(v==='schedule')renderSchedule();
   else if(v==='artwork')renderArtwork();
+  else if(v==='photos')renderPhotos();
+  else if(v==='logos')renderLogos();
   else if(v==='merch')renderMerch();
   else if(v==='activity')renderActivity();
   document.getElementById('scroll').scrollTop=0;
   // call bar only makes sense inside an album
   const cb=document.getElementById('callbar');
-  const inAlbum=['dashboard','grid','songs','sequencer','schedule','artwork','merch','activity'].includes(route.view);
+  const inAlbum=['dashboard','grid','songs','sequencer','schedule','artwork','photos','logos','merch','activity'].includes(route.view);
   cb.style.display=inAlbum?'':'none';
   if(inAlbum)renderCallBar();
   saveRoute();
@@ -943,7 +945,7 @@ function activityTarget(text){
 }
 function actNav(i){const al=AL();if(!al||!al.activity||!al.activity[i])return;const tgt=activityTarget(al.activity[i].text);if(tgt)nav(tgt);}
 function gotoGrid(songId){nav({view:'grid',artistId:route.artistId,albumId:route.albumId,gridSong:songId||null});}
-const LIB_SECTIONS=[{v:'dashboard',label:'Overview'},{v:'grid',label:'Recording grid'},{v:'songs',label:'Songs'},{v:'sequencer',label:'Tracklist'},{v:'schedule',label:'Schedule'},{v:'artwork',label:'Artwork'},{v:'merch',label:'Merch'},{v:'activity',label:'Notifications'}];
+const LIB_SECTIONS=[{v:'dashboard',label:'Overview'},{v:'grid',label:'Recording grid'},{v:'songs',label:'Songs'},{v:'sequencer',label:'Tracklist'},{v:'schedule',label:'Schedule'},{v:'artwork',label:'Artwork'},{v:'photos',label:'Band photos'},{v:'logos',label:'Logos'},{v:'merch',label:'Merch'},{v:'activity',label:'Notifications'}];
 function renderLib(){
   document.getElementById('libList').innerHTML=artists.map(a=>{
     const ini=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
@@ -969,7 +971,7 @@ function renderCrumbs(){
   let h=`<span class="c ${route.view==='roster'?'here':''}" onclick="nav({view:'roster'})">Artists</span>`;
   if(route.artistId){const a=A();h+=`<span class="sep">/</span><span class="c ${route.view==='albums'?'here':''}" onclick="nav({view:'albums',artistId:'${a.id}'})">${a.name}</span>`;}
   if(route.albumId){const al=AL();h+=`<span class="sep">/</span><span class="c ${route.view==='dashboard'?'here':''}" onclick="nav({view:'dashboard',artistId:'${route.artistId}',albumId:'${route.albumId}'})">${al.title}</span>`;}
-  const names={grid:"Recording grid",songs:"Songs",ideas:"Songs",sequencer:"Tracklist",schedule:"Schedule",artwork:"Artwork",merch:"Merch",activity:"Notifications"};
+  const names={grid:"Recording grid",songs:"Songs",ideas:"Songs",sequencer:"Tracklist",schedule:"Schedule",artwork:"Artwork",photos:"Band photos",logos:"Logos",merch:"Merch",activity:"Notifications"};
   if(names[route.view])h+=`<span class="sep">/</span><span class="c here">${names[route.view]}</span>`;
   document.getElementById('crumbs').innerHTML=h;
 }
@@ -1089,8 +1091,24 @@ function renderDashboard(){
     <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div><div><h3 class="sec-t">Merch</h3><div class="cnt">${(al.merchItems||[]).length} item${(al.merchItems||[]).length!==1?'s':''}${(al.merchItems||[]).filter(x=>x.mockup).length?' · '+(al.merchItems||[]).filter(x=>x.mockup).length+' with mockups':''}</div></div></div>
     <button class="expand" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
     <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.merchItems&&al.merchItems.length)?al.merchItems.slice(0,5).map((it,i)=>merchDashSlot(it,i)).join(''):`<div class="slot" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add merch item</div><div class="sm">Full records</div></div></div>`}</div>
-  </div>`;
+  </div>
+  ${dashMediaSection(a,al,'photo')}
+  ${dashMediaSection(a,al,'logo')}`;
   fitBandName();
+}
+function dashMediaSection(a,al,kind){
+  const cfg=MEDIA[kind];const main=(al[MEDIA_FIELDS[kind][0]]||[]);const pool=(al[MEDIA_FIELDS[kind][1]]||[]);
+  const icon=kind==='photo'
+    ?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>'
+    :'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.4"/></svg>';
+  const cnt=`${main.filter(x=>!x.song).length} ${cfg.word}${cfg.hasPool&&pool.length?' · '+pool.length+' in pool':''}`;
+  const tiles=main.length?main.slice(0,5).map(m=>`<div class="slot ${m.img?'filled':''}" onclick="nav({view:'${cfg.view}',artistId:'${a.id}',albumId:'${al.id}'})">${m.img?`<img src="${m.img}"><div class="m-label">${esc(m.label||'')}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">${esc(m.label||cfg.word)}</div></div>`}</div>`).join('')
+    :`<div class="slot" onclick="nav({view:'${cfg.view}',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">${cfg.addLabel}</div></div></div>`;
+  return `<div class="section" style="margin-top:18px">
+    <div class="sec-head"><div class="lt"><div class="ic">${icon}</div><div><h3 class="sec-t">${cfg.title}</h3><div class="cnt">${cnt}</div></div></div>
+    <button class="expand" onclick="nav({view:'${cfg.view}',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
+    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${tiles}</div>
+  </div>`;
 }
 function slotHTML(m,i,type,isCover){
   return `<div class="slot ${m.img?'filled':''} ${isCover?'is-cover':''}" onclick="dashSlotClick('${type}',${i},${m.img?'true':'false'})">
@@ -1393,7 +1411,7 @@ function browseBankAudio(){browseTarget='bank';document.getElementById('audioInp
 document.getElementById('audioInput').addEventListener('change',e=>{handleAudio([...e.target.files],browseTarget);e.target.value='';});
 document.getElementById('merchImgInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadMerchImg(f);});
 document.getElementById('refFileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadRefFile(f);});
-document.getElementById('artFileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f)return;if(artFileTarget==='new')uploadArtwork(f);else replaceArtworkFile(artFileTarget,f);});
+document.getElementById('artFileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(!f||!mediaFileCtx)return;const c=mediaFileCtx;mediaFileCtx=null;if(c.mode==='new')uploadMedia(c.kind,c.pool,f);else replaceMediaFile(c.kind,c.id,f);});
 function dzOver(e,el){e.preventDefault();el.classList.add('drag');}
 function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAudio([...e.dataTransfer.files],si);}
 function renderSongsAudio(){renderSongList();renderBank();}
@@ -1719,84 +1737,103 @@ function genTimeline(){
 }
 
 /* ===== ARTWORK / MERCH full ===== */
-/* ===== ALBUM ARTWORK (working set + pool) ===== */
+/* ===== MEDIA: album artwork / band photos / logos (working set + pool) ===== */
 const ART_LABELS=["Front cover","Back cover","Inside / gatefold","Vinyl label","Insert","Sticker","Poster","Social post","Single cover","Alt cover"];
-function artTile(m){
-  const isSong=!!m.song;
-  const cap=esc(m.label||(isSong?'Single':'Untitled'));
-  return `<div class="exp-tile ${isSong?'is-single':''}" ${isSong?'':`draggable="true" ondragstart="artDragStart(event,'${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openArtwork('${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.img?`<img src="${m.img}">`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">No image</div></div>`}<div class="cap">${cap}</div></div>`;
+const PHOTO_LABELS=["Press photo","Live","Studio","Portrait","Group","Candid","Promo","Social","B&amp;W","Alt"];
+const LOGO_LABELS=["Primary logo","Secondary logo","Icon / mark","Wordmark","Monochrome","Inverse","Stacked","Horizontal","Alt"];
+const MEDIA={
+  artwork:{view:'artwork',title:'Album artwork',mainName:'Working art',poolName:'Art pool',hasPool:true,labels:ART_LABELS,addLabel:'Add artwork',word:'art',sub:'Your <b>working art</b> is the tentative main lineup; the <b>pool</b> holds alternates &amp; extras. Drag pieces between them, click any to open large and edit its label, replace, or delete. Single covers from song pages show up here too.'},
+  photo:{view:'photos',title:'Band photos',mainName:'Working photos',poolName:'Photo pool',hasPool:true,labels:PHOTO_LABELS,addLabel:'Add photo',word:'photos',sub:'Your <b>working photos</b> are the promo shots you’re leaning toward; the <b>pool</b> holds alternates. Drag between them; click any to open large and edit its label, replace, or delete.'},
+  logo:{view:'logos',title:'Logos',mainName:'Logos',poolName:null,hasPool:false,labels:LOGO_LABELS,addLabel:'Add logo',word:'logos',sub:'Your logos &amp; marks. Click any to open it large and edit its label, replace, or delete.'}
+};
+const MEDIA_FIELDS={artwork:['artwork','artworkPool'],photo:['photos','photosPool'],logo:['logos','logosPool']};
+function mediaMain(al,kind){return al[MEDIA_FIELDS[kind][0]]||[];}
+function mediaPool(al,kind){return al[MEDIA_FIELDS[kind][1]]||[];}
+function setMediaMain(al,kind,arr){al[MEDIA_FIELDS[kind][0]]=arr;}
+function setMediaPool(al,kind,arr){al[MEDIA_FIELDS[kind][1]]=arr;}
+function noImgDrop(){return `<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">No image</div></div>`;}
+function mediaTile(kind,m){
+  const isSong=!!m.song;const cap=esc(m.label||(isSong?'Single':'Untitled'));
+  return `<div class="exp-tile ${isSong?'is-single':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMedia('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.img?`<img src="${m.img}">`:noImgDrop()}<div class="cap">${cap}</div></div>`;
 }
-function renderArtwork(){
-  const al=AL();const main=al.artwork||[];const pool=al.artworkPool||[];
+function renderMedia(kind){
+  const cfg=MEDIA[kind];const al=AL();const main=mediaMain(al,kind);const pool=mediaPool(al,kind);
   const mainCount=main.filter(x=>!x.song).length;
-  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Album artwork</div><div class="ws-sub">Your <b>working art</b> is the tentative main lineup; the <b>pool</b> holds alternates &amp; extras. Drag pieces between them, click any piece to open it large and edit its label, replace, or delete. Single covers from song pages show up here too.</div></div>
+  let html=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">${cfg.title}</div><div class="ws-sub">${cfg.sub}</div></div>
   <div class="art-section">
-    <div class="art-sec-head">Working art<span class="art-cnt">${mainCount}</span><button class="solid-btn" style="margin-left:auto;padding:8px 15px" onclick="addArtwork(false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add artwork</button></div>
-    <div class="exp-gallery art-drop" ondragover="artDragOver(event)" ondragleave="this.classList.remove('dragover')" ondrop="artDrop(event,false)">${main.length?main.map(m=>artTile(m)).join(''):'<div class="art-empty">Drop art here, or click “Add artwork”. These are your leading pieces.</div>'}</div>
-  </div>
-  <div class="art-section">
-    <div class="art-sec-head">Art pool<span class="art-cnt">${pool.length}</span><span class="art-sub">alternates &amp; extras</span><button class="ghost-btn" style="margin-left:auto;padding:7px 13px" onclick="addArtwork(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add to pool</button></div>
-    <div class="exp-gallery art-drop" ondragover="artDragOver(event)" ondragleave="this.classList.remove('dragover')" ondrop="artDrop(event,true)">${pool.length?pool.map(m=>artTile(m)).join(''):'<div class="art-empty">Drag pieces here to keep them as options without cluttering the working set.</div>'}</div>
+    <div class="art-sec-head">${cfg.mainName}<span class="art-cnt">${mainCount}</span><button class="solid-btn" style="margin-left:auto;padding:8px 15px" onclick="addMedia('${kind}',false)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>${cfg.addLabel}</button></div>
+    <div class="exp-gallery art-drop" ondragover="mediaDragOver(event)" ondragleave="this.classList.remove('dragover')" ondrop="mediaDrop(event,'${kind}',false)">${main.length?main.map(m=>mediaTile(kind,m)).join(''):`<div class="art-empty">Drop ${cfg.word} here, or click “${cfg.addLabel}”.</div>`}</div>
   </div>`;
+  if(cfg.hasPool){
+    html+=`<div class="art-section">
+    <div class="art-sec-head">${cfg.poolName}<span class="art-cnt">${pool.length}</span><span class="art-sub">alternates &amp; extras</span><button class="ghost-btn" style="margin-left:auto;padding:7px 13px" onclick="addMedia('${kind}',true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add to pool</button></div>
+    <div class="exp-gallery art-drop" ondragover="mediaDragOver(event)" ondragleave="this.classList.remove('dragover')" ondrop="mediaDrop(event,'${kind}',true)">${pool.length?pool.map(m=>mediaTile(kind,m)).join(''):`<div class="art-empty">Drag pieces here to keep them as options without cluttering the working set.</div>`}</div>
+  </div>`;
+  }
+  content.innerHTML=html;
 }
-function findArt(id){const al=AL();let p=(al.artwork||[]).find(x=>!x.song&&x.id===id);if(p)return p;return (al.artworkPool||[]).find(x=>x.id===id)||null;}
-let artDragId=null,artFileTarget=null,artAddPool=false;
-function artDragStart(e,id){artDragId=id;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',id);}catch(_){}}
-function artDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('dragover');}
-function artDrop(e,toPool){e.preventDefault();e.currentTarget.classList.remove('dragover');const id=artDragId||(e.dataTransfer&&e.dataTransfer.getData('text/plain'));artDragId=null;if(id)moveArtwork(id,toPool);}
-function moveArtwork(id,toPool){
-  const al=AL();const main=al.artwork||[],pool=al.artworkPool||[];
+function renderArtwork(){renderMedia('artwork');}
+function renderPhotos(){renderMedia('photo');}
+function renderLogos(){renderMedia('logo');}
+function findMedia(kind,id){const al=AL();let p=mediaMain(al,kind).find(x=>!x.song&&x.id===id);if(p)return p;return mediaPool(al,kind).find(x=>x.id===id)||null;}
+let mediaDragCtx=null,mediaFileCtx=null;
+function mediaDragStart(e,kind,id){mediaDragCtx={kind,id};e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',id);}catch(_){}}
+function mediaDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';e.currentTarget.classList.add('dragover');}
+function mediaDrop(e,kind,toPool){e.preventDefault();e.currentTarget.classList.remove('dragover');if(!mediaDragCtx||mediaDragCtx.kind!==kind)return;const id=mediaDragCtx.id;mediaDragCtx=null;moveMedia(kind,id,toPool);}
+function moveMedia(kind,id,toPool){
+  const al=AL();const main=mediaMain(al,kind),pool=mediaPool(al,kind);
   let piece=main.find(x=>!x.song&&x.id===id)||pool.find(x=>x.id===id);if(!piece)return;
-  const inPoolNow=!!piece.pool;if(inPoolNow===!!toPool)return;
-  al.artwork=(al.artwork||[]).filter(x=>x!==piece);al.artworkPool=(al.artworkPool||[]).filter(x=>x!==piece);
-  piece.pool=!!toPool;
-  if(toPool)al.artworkPool.push(piece);else al.artwork.splice(al.artwork.filter(x=>!x.song).length,0,piece);
-  renderArtwork();
+  if(!!piece.pool===!!toPool)return;
+  setMediaMain(al,kind,main.filter(x=>x!==piece));setMediaPool(al,kind,pool.filter(x=>x!==piece));
+  piece.pool=!!toPool;const nmain=mediaMain(al,kind),npool=mediaPool(al,kind);
+  if(toPool)npool.push(piece);else nmain.splice(nmain.filter(x=>!x.song).length,0,piece);
+  renderMedia(kind);
   fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,inPool:!!toPool})}).catch(()=>{});
 }
-function addArtwork(toPool){artAddPool=!!toPool;artFileTarget='new';document.getElementById('artFileInput').click();}
-async function uploadArtwork(f){
+function addMedia(kind,toPool){mediaFileCtx={kind,mode:'new',pool:!!toPool};document.getElementById('artFileInput').click();}
+function replaceMedia(kind,id){mediaFileCtx={kind,mode:'replace',id};document.getElementById('artFileInput').click();}
+async function uploadMedia(kind,toPool,f){
   const al=AL();if(!al)return;const localUrl=URL.createObjectURL(f);
-  const piece={id:'tmp'+(++uidc),label:'',img:localUrl,pool:artAddPool,key:null};
-  if(artAddPool){al.artworkPool=al.artworkPool||[];al.artworkPool.push(piece);}else{al.artwork=al.artwork||[];al.artwork.splice(al.artwork.filter(x=>!x.song).length,0,piece);}
-  renderArtwork();
+  const piece={id:'tmp'+(++uidc),label:'',img:localUrl,pool:!!toPool,key:null};
+  if(toPool){const p=mediaPool(al,kind);p.push(piece);setMediaPool(al,kind,p);}else{const m=mediaMain(al,kind);m.splice(m.filter(x=>!x.song).length,0,piece);setMediaMain(al,kind,m);}
+  renderMedia(kind);
   try{
-    const up=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',albumId:al.id,name:f.name})}).then(r=>r.json());
+    const up=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',albumId:al.id,kind,name:f.name})}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
     const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
-    const cr=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',albumId:al.id,label:'',key:up.key,inPool:artAddPool})}).then(r=>r.json());
-    if(cr&&cr.id){piece.id=cr.id;piece.key=up.key;if(!artAddPool)openArtwork(cr.id);}
-  }catch(e){/* local preview stays this session */}
+    const cr=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',albumId:al.id,kind,label:'',key:up.key,inPool:!!toPool})}).then(r=>r.json());
+    if(cr&&cr.id){piece.id=cr.id;piece.key=up.key;if(!toPool)openMedia(kind,cr.id);}
+  }catch(e){}
 }
-function replaceArtwork(id){artFileTarget=id;document.getElementById('artFileInput').click();}
-async function replaceArtworkFile(id,f){
-  const p=findArt(id);if(!p)return;p.img=URL.createObjectURL(f);renderArtwork();
+async function replaceMediaFile(kind,id,f){
+  const p=findMedia(kind,id);if(!p)return;p.img=URL.createObjectURL(f);renderMedia(kind);
   try{
-    const up=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',albumId:AL().id,name:f.name})}).then(r=>r.json());
+    const up=await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'upload-url',albumId:AL().id,kind,name:f.name})}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
     const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
     await fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,key:up.key})});p.key=up.key;
   }catch(e){}
-  if(document.getElementById('modalBg').classList.contains('show'))openArtwork(id);
+  if(document.getElementById('modalBg').classList.contains('show'))openMedia(kind,id);
 }
-function setArtLabel(id,label){const p=findArt(id);if(!p)return;p.label=label;
+function setMediaLabel(kind,id,label){const p=findMedia(kind,id);if(!p)return;p.label=label;
   const pills=document.getElementById('artPills-'+id);if(pills)pills.querySelectorAll('.lchip').forEach(c=>c.classList.toggle('on',c.textContent===label));
-  if(route.view==='artwork')renderArtwork();
+  if(route.view===MEDIA[kind].view)renderMedia(kind);
   fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,label})}).catch(()=>{});
 }
-function deleteArtwork(id){if(!confirm('Delete this artwork piece?'))return;const al=AL();al.artwork=(al.artwork||[]).filter(x=>x.song||x.id!==id);al.artworkPool=(al.artworkPool||[]).filter(x=>x.id!==id);closeModal();if(route.view==='artwork')renderArtwork();fetch('/api/artwork?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});}
-function openArtwork(id){
-  const p=findArt(id);if(!p)return;
-  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Artwork</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+function deleteMedia(kind,id){if(!confirm('Delete this piece?'))return;const al=AL();setMediaMain(al,kind,mediaMain(al,kind).filter(x=>x.song||x.id!==id));setMediaPool(al,kind,mediaPool(al,kind).filter(x=>x.id!==id));closeModal();if(route.view===MEDIA[kind].view)renderMedia(kind);fetch('/api/artwork?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});}
+function openMedia(kind,id){
+  const cfg=MEDIA[kind];const p=findMedia(kind,id);if(!p)return;
+  const moveBtn=cfg.hasPool?`<button class="ghost-btn" onclick="moveMedia('${kind}','${id}',${p.pool?'false':'true'});closeModal()">${p.pool?'↑ To '+cfg.mainName.toLowerCase():'↓ To pool'}</button>`:'';
+  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>${cfg.title}</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
   <div class="modal-body">
     <div class="art-large">${p.img?`<img src="${p.img}">`:'<div class="art-large-ph">No image yet</div>'}</div>
     <div style="margin-top:14px"><div class="mf-lbl">Label</div>
-      <div class="art-pills" id="artPills-${id}">${ART_LABELS.map(l=>`<span class="lchip ${p.label===l?'on':''}" onclick="setArtLabel('${id}','${l}')">${l}</span>`).join('')}</div>
-      <input class="art-custom" placeholder="Or type a custom label…" value="${esc(p.label)}" onblur="setArtLabel('${id}',this.value)"></div>
+      <div class="art-pills" id="artPills-${id}">${cfg.labels.map(l=>`<span class="lchip ${p.label===l?'on':''}" onclick="setMediaLabel('${kind}','${id}','${l}')">${l}</span>`).join('')}</div>
+      <input class="art-custom" placeholder="Or type a custom label…" value="${esc(p.label)}" onblur="setMediaLabel('${kind}','${id}',this.value)"></div>
     <div class="art-modal-actions">
-      <button class="ghost-btn" onclick="replaceArtwork('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Replace image</button>
-      <button class="ghost-btn" onclick="moveArtwork('${id}',${p.pool?'false':'true'});closeModal()">${p.pool?'↑ To working art':'↓ To pool'}</button>
-      <button class="ghost-btn" style="color:#e0322a;border-color:rgba(224,50,42,.5)" onclick="deleteArtwork('${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
+      <button class="ghost-btn" onclick="replaceMedia('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Replace image</button>
+      ${moveBtn}
+      <button class="ghost-btn" style="color:#e0322a;border-color:rgba(224,50,42,.5)" onclick="deleteMedia('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
     </div>
   </div>`;
   document.getElementById('modalBg').classList.add('show');

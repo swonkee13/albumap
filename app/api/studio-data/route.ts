@@ -343,14 +343,18 @@ export async function GET() {
     /* table not present yet */
   }
 
-  // Artwork pieces (v2.4): working set (in_pool=false) + alternates pool.
-  const artMainByAlbum: Record<string, unknown[]> = {};
-  const artPoolByAlbum: Record<string, unknown[]> = {};
+  // Artwork/photo/logo pieces (v2.4/v2.5): working set + alternates pool, by kind.
+  const mk = (): Record<string, unknown[]> => ({});
+  const buckets: Record<string, Record<string, unknown[]>> = {
+    artworkMain: mk(), artworkPool: mk(),
+    photoMain: mk(), photoPool: mk(),
+    logoMain: mk(),
+  };
   try {
     if (albumIds.length) {
       const { data: pieces } = await supabase
         .from("artwork_pieces")
-        .select("id, album_id, label, r2_key, in_pool, position, created_at")
+        .select("id, album_id, kind, label, r2_key, in_pool, position, created_at")
         .in("album_id", albumIds)
         .order("position", { ascending: true })
         .order("created_at", { ascending: true });
@@ -358,7 +362,9 @@ export async function GET() {
         (pieces ?? []).map(async (p) => {
           const url = p.r2_key ? await signGet(client, p.r2_key) : null;
           const item = { id: p.id, label: p.label ?? "", img: url, pool: p.in_pool === true };
-          const bucket = p.in_pool ? artPoolByAlbum : artMainByAlbum;
+          const kind = p.kind === "photo" ? "photo" : p.kind === "logo" ? "logo" : "artwork";
+          const key = kind === "logo" ? "logoMain" : `${kind}${p.in_pool ? "Pool" : "Main"}`;
+          const bucket = buckets[key];
           if (!bucket[p.album_id]) bucket[p.album_id] = [];
           (bucket[p.album_id] as unknown[]).push(item);
         }),
@@ -367,6 +373,8 @@ export async function GET() {
   } catch {
     /* table not present yet */
   }
+  const artMainByAlbum = buckets.artworkMain;
+  const artPoolByAlbum = buckets.artworkPool;
 
   // Members
   const membersByAlbum: Record<string, unknown[]> = {};
@@ -467,6 +475,9 @@ export async function GET() {
       schedule,
       artwork: [...(artMainByAlbum[al.id] ?? []), ...(songArtByAlbum[al.id] ?? [])],
       artworkPool: artPoolByAlbum[al.id] ?? [],
+      photos: buckets.photoMain[al.id] ?? [],
+      photosPool: buckets.photoPool[al.id] ?? [],
+      logos: buckets.logoMain[al.id] ?? [],
       merch: MERCH_LABELS.map((label, i) => ({
         label,
         img: assetMap[al.id]?.merch?.[i] ?? null,

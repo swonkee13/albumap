@@ -290,12 +290,15 @@ create policy "merch_items: via owned album" on public.merch_items for all
 create table if not exists public.artwork_pieces (
   id uuid primary key default gen_random_uuid(),
   album_id uuid not null references public.albums (id) on delete cascade,
+  kind text not null default 'artwork',   -- 'artwork' | 'photo' | 'logo'
   label text default '',
   r2_key text,
   in_pool boolean not null default false,
   position int not null default 0,
   created_at timestamptz default now()
 );
+-- (if the table pre-dates band photos/logos, add the kind column)
+alter table public.artwork_pieces add column if not exists kind text not null default 'artwork';
 alter table public.artwork_pieces enable row level security;
 drop policy if exists "artwork_pieces: via owned album" on public.artwork_pieces;
 create policy "artwork_pieces: via owned album" on public.artwork_pieces for all

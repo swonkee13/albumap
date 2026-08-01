@@ -20,6 +20,9 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const action = body?.action as string | undefined;
 
+  const KINDS: Record<string, string> = { artwork: "art", photo: "photo", logo: "logo" };
+  const kind = (body?.kind as string | undefined) && KINDS[body.kind as string] ? (body.kind as string) : "artwork";
+
   if (action === "upload-url") {
     const albumId = body?.albumId as string | undefined;
     const name = (body?.name as string | undefined)?.trim();
@@ -27,7 +30,7 @@ export async function POST(req: Request) {
     const { data: album } = await supabase.from("albums").select("id").eq("id", albumId).maybeSingle();
     if (!album) return NextResponse.json({ ok: false }, { status: 403 });
     const safe = name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
-    const key = `art/${albumId}/${crypto.randomUUID()}-${safe}`;
+    const key = `${KINDS[kind]}/${albumId}/${crypto.randomUUID()}-${safe}`;
     const contentType = contentTypeForName(name);
     const uploadUrl = await getSignedUrl(
       r2Client(),
@@ -50,6 +53,7 @@ export async function POST(req: Request) {
       .from("artwork_pieces")
       .insert({
         album_id: albumId,
+        kind,
         label: (body?.label as string | undefined) ?? "",
         r2_key: (body?.key as string | undefined) ?? null,
         in_pool: body?.inPool === true,
