@@ -1264,12 +1264,14 @@ const MICO={
   songs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
   play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
   more:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+  media:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="m21 15-5-5L6 21"/></svg>',
   artists:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
   settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 0 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8 1.7 1.7 0 0 0 .3-1.9 2 2 0 0 1 0-4 1.7 1.7 0 0 0-.3-1.9 2 2 0 1 1 2.8-2.8 1.7 1.7 0 0 0 2.9-1.2 2 2 0 0 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8 1.7 1.7 0 0 0-.3 1.9 2 2 0 0 1 0 4z"/></svg>'
 };
 function renderMobileTabs(){
   const el=document.getElementById('mobileTabs');if(!el)return;
-  const ALBUM_VIEWS=['dashboard','grid','songs','sequencer','schedule','artwork','photos','logos','merch','activity'];
+  const ALBUM_VIEWS=['dashboard','grid','songs','sequencer','schedule','artwork','photos','logos','merch','media','activity'];
+  const MEDIA_VIEWS=['media','artwork','photos','logos','merch'];
   const inAlbum=route.albumId&&ALBUM_VIEWS.includes(route.view);
   const tab=(view,label,icon,onclick)=>`<button class="mtab ${route.view===view?'active':''}" onclick="${onclick}">${icon}<span>${label}</span></button>`;
   const albNav=v=>`nav({view:'${v}',artistId:'${route.artistId}',albumId:'${route.albumId}'})`;
@@ -1279,7 +1281,7 @@ function renderMobileTabs(){
       tab('grid','Grid',MICO.grid,albNav('grid'))+
       tab('songs','Songs',MICO.songs,albNav('songs'))+
       tab('sequencer','Player',MICO.play,albNav('sequencer'))+
-      `<button class="mtab" onclick="openDrawer()">${MICO.more}<span>More</span></button>`;
+      `<button class="mtab ${MEDIA_VIEWS.includes(route.view)?'active':''}" onclick="${albNav('media')}">${MICO.media}<span>Media</span></button>`;
   }else{
     el.innerHTML=
       tab('roster','Artists',MICO.artists,"nav({view:'roster'})")+
@@ -1406,6 +1408,7 @@ function render(){
   else if(v==='photos')renderPhotos();
   else if(v==='logos')renderLogos();
   else if(v==='merch')renderMerch();
+  else if(v==='media')renderMediaHub();
   else if(v==='activity')renderActivity();
   document.getElementById('scroll').scrollTop=0;
   // call bar only makes sense inside an album
@@ -1638,21 +1641,32 @@ function renderDashboard(){
     </div>
   </div>
 
-  <!-- artwork -->
-  <div class="section" style="margin-top:18px">
-    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div><div><h3 class="sec-t">Album artwork</h3><div class="cnt">${(al.artwork||[]).filter(x=>!x.song).length} working${(al.artworkPool||[]).length?' · '+al.artworkPool.length+' in pool':''}${(al.artwork||[]).some(x=>x.song)?' · +'+al.artwork.filter(x=>x.song).length+' single'+(al.artwork.filter(x=>x.song).length!==1?'s':''):''}</div></div></div>
-    <button class="expand" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.artwork&&al.artwork.length)?al.artwork.slice(0,5).map(m=>`<div class="slot ${m.img?'filled':''}" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})">${m.img?`<img src="${m.img}"><div class="m-label">${esc(m.label||(m.song?'Single':''))}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">${esc(m.label||'Art')}</div></div>`}</div>`).join(''):`<div class="slot" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add artwork</div></div></div>`}</div>
-  </div>
-  <!-- merch -->
-  <div class="section" style="margin-top:18px">
-    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div><div><h3 class="sec-t">Merch</h3><div class="cnt">${(al.merchItems||[]).length} item${(al.merchItems||[]).length!==1?'s':''}${(al.merchItems||[]).filter(x=>x.mockup).length?' · '+(al.merchItems||[]).filter(x=>x.mockup).length+' with mockups':''}</div></div></div>
-    <button class="expand" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.merchItems&&al.merchItems.length)?al.merchItems.slice(0,5).map((it,i)=>merchDashSlot(it,i)).join(''):`<div class="slot" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add merch item</div><div class="sm">Full records</div></div></div>`}</div>
-  </div>
+  ${artworkDashSection(a,al)}
+  ${merchDashSection(a,al)}
   ${dashMediaSection(a,al,'photo')}
   ${dashMediaSection(a,al,'logo')}`;
   fitBandName();fitHeroCover();
+}
+// Album-artwork + merch dashboard sections, factored so the mobile Media hub
+// reuses the exact same markup as the dashboard.
+function artworkDashSection(a,al){return `<div class="section" style="margin-top:18px">
+    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div><div><h3 class="sec-t">Album artwork</h3><div class="cnt">${(al.artwork||[]).filter(x=>!x.song).length} working${(al.artworkPool||[]).length?' · '+al.artworkPool.length+' in pool':''}${(al.artwork||[]).some(x=>x.song)?' · +'+al.artwork.filter(x=>x.song).length+' single'+(al.artwork.filter(x=>x.song).length!==1?'s':''):''}</div></div></div>
+    <button class="expand" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
+    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.artwork&&al.artwork.length)?al.artwork.slice(0,5).map(m=>`<div class="slot ${m.img?'filled':''}" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})">${m.img?`<img src="${m.img}"><div class="m-label">${esc(m.label||(m.song?'Single':''))}</div>`:`<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">${esc(m.label||'Art')}</div></div>`}</div>`).join(''):`<div class="slot" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add artwork</div></div></div>`}</div>
+  </div>`;}
+function merchDashSection(a,al){return `<div class="section" style="margin-top:18px">
+    <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 0 1-8 0"/></svg></div><div><h3 class="sec-t">Merch</h3><div class="cnt">${(al.merchItems||[]).length} item${(al.merchItems||[]).length!==1?'s':''}${(al.merchItems||[]).filter(x=>x.mockup).length?' · '+(al.merchItems||[]).filter(x=>x.mockup).length+' with mockups':''}</div></div></div>
+    <button class="expand" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})">View all <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
+    <div class="slot-grid" style="grid-template-columns:repeat(5,1fr)">${(al.merchItems&&al.merchItems.length)?al.merchItems.slice(0,5).map((it,i)=>merchDashSlot(it,i)).join(''):`<div class="slot" onclick="nav({view:'merch',artistId:'${a.id}',albumId:'${al.id}'})"><div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 5v14M5 12h14"/></svg><div class="lbl">Add merch item</div><div class="sm">Full records</div></div></div>`}</div>
+  </div>`;}
+// Mobile Media hub — the four visual-asset sections on their own page.
+function renderMediaHub(){
+  const a=A(),al=AL();
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${esc(al.title)}</div><div class="view-title">Media</div><div class="ws-sub">All your album's visual assets — artwork, merch, band photos and logos. Tap a section to open it full-screen.</div></div>
+  ${artworkDashSection(a,al)}
+  ${merchDashSection(a,al)}
+  ${dashMediaSection(a,al,'photo')}
+  ${dashMediaSection(a,al,'logo')}`;
 }
 function dashMediaSection(a,al,kind){
   const cfg=MEDIA[kind];const main=(al[MEDIA_FIELDS[kind][0]]||[]);const pool=(al[MEDIA_FIELDS[kind][1]]||[]);
