@@ -125,19 +125,30 @@ export async function GET() {
   const client = r2Client();
 
   // Grid cells
-  let tracks: Array<{ song_id: string; instrument: string; status: string }> = [];
+  let tracks: Array<{
+    song_id: string;
+    instrument: string;
+    status: string;
+    assignee: string | null;
+  }> = [];
   if (songIds.length) {
     const { data } = await supabase
       .from("song_tracks")
-      .select("song_id, instrument, status")
+      .select("song_id, instrument, status, assignee")
       .in("song_id", songIds);
     tracks = data ?? [];
   }
   const cellMap: Record<string, Record<string, string>> = {};
+  // Parallel map of who owns each cell: { song_id: { instrument: memberName } }.
+  const assignMap: Record<string, Record<string, string>> = {};
   for (const t of tracks) {
     if (!cellMap[t.song_id]) cellMap[t.song_id] = {};
     const id = normStatus(t.status);
     if (id != null) cellMap[t.song_id][t.instrument] = id;
+    if (t.assignee) {
+      if (!assignMap[t.song_id]) assignMap[t.song_id] = {};
+      assignMap[t.song_id][t.instrument] = t.assignee;
+    }
   }
 
   // Audio files (presigned playback URLs)
@@ -272,12 +283,14 @@ export async function GET() {
   const songsByAlbum: Record<string, unknown[]> = {};
   for (const s of songs) {
     const cells = cellMap[s.id] ?? {};
+    const assign = assignMap[s.id] ?? {};
     if (!songsByAlbum[s.album_id]) songsByAlbum[s.album_id] = [];
     songsByAlbum[s.album_id].push({
       id: s.id,
       t: s.title,
       art: songArtUrl[s.id] ?? null,
       cells,
+      assign,
       dur: 210,
       files: filesBySong[s.id] ?? [],
       comments: commentsBySong[s.id] ?? [],
