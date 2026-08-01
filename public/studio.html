@@ -940,6 +940,15 @@
     body.drawer-open .sidebar{transform:translateX(0)}
     .drawer-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);z-index:125;opacity:0;pointer-events:none;transition:opacity .26s}
     body.drawer-open .drawer-scrim{opacity:1;pointer-events:auto}
+    /* merch collapsed rows: the desktop sizing (200px thumb, 28px title) is far
+       too big for a phone — shrink the thumb and text so nothing crowds/overlaps */
+    .idea-song[data-mi] .idea-head{padding:12px 12px;gap:12px;align-items:flex-start}
+    .idea-song[data-mi] .merch-thumb{width:76px;height:76px;border-radius:12px}
+    .idea-song[data-mi] .merch-thumb svg{width:30px;height:30px}
+    .idea-song[data-mi] .merch-thumb .final-badge{width:20px;height:20px}
+    .idea-song[data-mi] .idea-title{font-size:17px;line-height:1.25}
+    .idea-song[data-mi] .merch-sub{font-size:12px;gap:5px;margin-top:5px}
+    .idea-song[data-mi] .merch-sub .swatch{width:13px;height:13px}
     /* topbar → two rows: [☰ logo … 🔔] then breadcrumbs full-width below */
     .hamburger{display:grid}
     .brand-mark{display:block}
