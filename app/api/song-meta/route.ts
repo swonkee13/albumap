@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   if (!songId) return NextResponse.json({ ok: false }, { status: 400 });
 
   const patch: Record<string, unknown> = {};
+  if (typeof body.title === "string" && body.title.trim()) patch.title = body.title.trim().slice(0, 200);
   if (typeof body.lyrics === "string") patch.lyrics = body.lyrics;
   if (typeof body.notes === "string") patch.notes = body.notes;
   if (Array.isArray(body.refs)) patch.refs = body.refs;
