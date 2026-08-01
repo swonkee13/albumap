@@ -400,7 +400,13 @@
   .legend .sw{width:16px;height:16px;border-radius:6px}
 
   /* song ideas / audio player */
-  .idea-song{background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);margin-top:16px;overflow:hidden}
+  .idea-song{background:var(--card);border:1px solid var(--line-soft);border-radius:var(--r-lg);margin-top:16px;overflow:hidden;transition:box-shadow .16s,border-color .16s,background .16s}
+  /* an EXPANDED song stands out: lighter card, accent border + left bar, tinted header */
+  .idea-song[data-song]:not(.collapsed){background:var(--card-hi);border-color:var(--accent);box-shadow:inset 4px 0 0 -1px var(--accent),0 12px 34px rgba(0,0,0,.32)}
+  .idea-song[data-song]:not(.collapsed)>.idea-head{background:var(--accent-dim)}
+  .idea-song[data-song]:not(.collapsed)>.idea-head:hover{background:var(--accent-dim)}
+  .idea-song[data-song]:not(.collapsed) .idea-title{color:#fff}
+  .idea-song[data-song]:not(.collapsed) .idea-num{color:var(--accent-hi)}
   .idea-head{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none;transition:.14s}
   .idea-head:hover{background:var(--panel-2)}
   .idea-num{font-family:'JetBrains Mono';font-size:13px;color:var(--txt-3);width:24px;flex:none}
@@ -431,6 +437,15 @@
   .track-main{flex:1;min-width:0}
   .track-top{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .track-name{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* file title (primary) + raw filename (secondary) + upload date */
+  .track-names{display:flex;align-items:baseline;gap:8px;min-width:0;overflow:hidden}
+  .track-title{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:360px}
+  .track-file{font-size:11px;color:var(--txt-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:none;max-width:230px}
+  .track-rename{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:3px;border-radius:5px;display:grid;place-items:center;flex:none;opacity:0;transition:.12s}
+  .track-rename svg{width:13px;height:13px}
+  .track:hover .track-rename{opacity:1}
+  .track-rename:hover{color:var(--accent-hi);background:var(--hover)}
+  .track-date{font-family:'JetBrains Mono';font-size:10.5px;color:var(--txt-3);margin-left:auto;flex:none;white-space:nowrap}
   .fmt-tag{font-family:'JetBrains Mono';font-size:9.5px;font-weight:600;padding:2px 6px;border-radius:5px;flex:none;text-transform:uppercase}
   .fmt-tag.wav{background:rgba(62,207,142,.15);color:var(--green)}
   .fmt-tag.mp3{background:rgba(245,166,35,.15);color:var(--amber)}
@@ -767,7 +782,14 @@
   .cmt-body .cmeta{display:flex;align-items:center;gap:8px;margin-bottom:3px}
   .cmt-body .cwho{font-weight:600;font-size:12.5px}
   .cmt-body .cstamp{font-family:'JetBrains Mono';font-size:11px;color:var(--accent-hi);background:var(--accent-dim);padding:1px 6px;border-radius:5px}
+  .cmt-body .cdate{font-family:'JetBrains Mono';font-size:10.5px;color:var(--txt-3)}
   .cmt-body .ctext{font-size:13px;color:var(--txt-2);line-height:1.4}
+  .cmt-acts{margin-left:auto;display:inline-flex;gap:2px;opacity:0;transition:.12s}
+  .cmt-row:hover .cmt-acts{opacity:1}
+  .cmt-acts button{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:3px;border-radius:5px;display:grid;place-items:center}
+  .cmt-acts button svg{width:13px;height:13px}
+  .cmt-acts button:hover{color:var(--accent-hi);background:var(--hover)}
+  .cmt-acts button:last-child:hover{color:#e0322a}
 
   /* share modal */
   .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:100;display:none;place-items:center;padding:24px}
@@ -1671,7 +1693,7 @@ function songBody(s,i){
    <div class="song-zones">
     <!-- ZONE 1: audio ideas, contained -->
     <div class="zone">
-      <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="zh-t">Ideas &amp; demos</div><div class="zh-c">${s.files.length} file${s.files.length!==1?'s':''}</div></div>
+      <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div class="zh-t">Files (Demos &amp; Ideas)</div><div class="zh-c">${s.files.length} file${s.files.length!==1?'s':''}</div></div>
       <div class="zone-body">
         ${s.files.length?`<div class="tracks">${[...s.files].sort((a,b)=>(b.master?1:0)-(a.master?1:0)).map(t=>`<div class="track-group">${trackRow(t,i)}${trackComments(t,i,s)}</div>`).join('')}</div>`:`<div class="empty-note">No ideas here yet — drop the first one below.</div>`}
         <div class="dropzone slim" onclick="browseAudio(${i})" ondragover="dzOver(event,this)" ondragleave="this.classList.remove('drag')" ondrop="dzDrop(event,${i},this)">
@@ -1707,6 +1729,10 @@ function songBody(s,i){
    </div>`;
 }
 function parseStamp(s){if(!s)return null;const m=String(s).trim().match(/^(\d+):(\d{1,2})$/);if(!m)return null;return parseInt(m[1],10)*60+parseInt(m[2],10);}
+function fmtDate(iso){if(!iso)return '';try{return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(e){return '';}}
+function fmtDateTime(iso){if(!iso)return '';try{const d=new Date(iso);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}catch(e){return '';}}
+// Give a file a human title (shown ahead of the filename). Blank removes it.
+function editFileTitle(id){const t=findFile(id);if(!t)return;const cur=t.title||'';const val=(prompt('File title (leave blank to remove):',cur)||'').trim();if(val===cur)return;t.title=val;if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,title:val})}).catch(()=>{});renderSongsAudio();}
 function trackRow(t,si){
   if(!t.id)t.id=++uidc;
   if(!t.waveform)t.waveform=stableWave((t.name||'')+si,160);
@@ -1732,7 +1758,7 @@ function trackRow(t,si){
     <button class="ico-btn" title="Remove" onclick="rmTrack(${t.id},${si})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>`;
   return `<div class="track ${isM?'master':''}" data-tid="${t.id}">
     <button class="play-btn" onclick="togglePlay(${t.id})"><svg class="play-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg><svg class="pause-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg></button>
-    <div class="track-main"><div class="track-top"><span class="fmt-tag ${t.fmt}">${t.fmt}</span>${isM?'<span class="master-badge">MASTER</span>':''}<span class="track-name">${t.name}</span><span class="track-note">${t.note||''}</span></div>
+    <div class="track-main"><div class="track-top"><span class="fmt-tag ${t.fmt}">${t.fmt}</span>${isM?'<span class="master-badge">MASTER</span>':''}<span class="track-names">${(t.title||'').trim()?`<span class="track-title">${esc(t.title)}</span><span class="track-file" title="${esc(t.name)}">${esc(t.name)}</span>`:`<span class="track-title">${esc(t.name)}</span>`}</span><button class="track-rename" title="${(t.title||'').trim()?'Edit title':'Add a title'}" onclick="event.stopPropagation();editFileTitle(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>${t.at?`<span class="track-date" title="Uploaded ${esc(fmtDateTime(t.at))}">${esc(fmtDate(t.at))}</span>`:''}${t.note?`<span class="track-note">${esc(t.note)}</span>`:''}</div>
       <div class="scrub"><div class="wave" onpointerdown="waveDown(event,${t.id})" data-tid="${t.id}">${t.waveform.map(h=>`<div class="bar" style="height:${Math.round(h*100)}%"></div>`).join('')}${marks}</div><div class="time"><span class="cur" data-cur="${t.id}">0:00</span> / ${dur}</div></div>
       ${labelBarHTML(t)}</div>
     <div class="track-actions">${acts}</div></div>`;
@@ -1779,19 +1805,23 @@ function toggleLabel(id,label){
   if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,labels:t.labels})}).catch(()=>{});
 }
 // Per-file comments shown directly under each track, with its own composer.
+function canEditComment(c){return !!(meMatch(c.who)||c.who==='You');}
 function trackComments(t,i,s){
   const firstSid=(s.files&&s.files.length)?((s.files.find(f=>f.master)||s.files[0]).sid||null):null;
-  const cmts=(s.comments||[]).filter(c=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
-  const rows=cmts.length?cmts.map(c=>`<div class="cmt-row"><div class="cmt-av" title="${esc(c.who)}" style="background:${avColor(c.who,c.color)}">${avInner(c.who,(c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
+  // keep each comment's index into s.comments so edit/delete can find it
+  const cmts=(s.comments||[]).map((c,ci)=>({c,ci})).filter(({c})=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
+  const rows=cmts.length?cmts.map(({c,ci})=>`<div class="cmt-row"><div class="cmt-av" title="${esc(c.who)}" style="background:${avColor(c.who,c.color)}">${avInner(c.who,(c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}${c.at?`<span class="cdate">${esc(fmtDate(c.at))}</span>`:''}${canEditComment(c)?`<span class="cmt-acts"><button title="Edit" onclick="editComment('${s.id}',${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete" onclick="deleteComment('${s.id}',${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
   return `<div class="track-cmts">${rows}<div class="tc-add"><input id="fcmt-${t.id}" placeholder="Comment on this file…" onkeydown="if(event.key==='Enter')postFileComment('${s.id}',${t.id})"><button class="ico-btn" title="Post comment" onclick="postFileComment('${s.id}',${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>`;
 }
+function editComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];const val=(prompt('Edit comment:',c.text)||'').trim();if(!val||val===c.text)return;c.text=val;route.songId=songId;renderSongsAudio();if(c.id)fetch('/api/comment',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,text:val})}).catch(()=>{});}
+function deleteComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];if(!confirm('Delete this comment?'))return;const cid=c.id;s.comments.splice(ci,1);route.songId=songId;renderSongsAudio();if(cid)fetch('/api/comment?id='+encodeURIComponent(cid),{method:'DELETE'}).catch(()=>{});}
 function postFileComment(songId,trackId){
   const inp=document.getElementById('fcmt-'+trackId);if(!inp)return;const text=inp.value.trim();if(!text)return;inp.value='';
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);const t=findFile(trackId);
   let stamp='';if(curTid===trackId&&curAudio&&!curAudio.paused)stamp=curStamp();
   const fileSid=t?t.sid:null;
-  if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text,fileSid});route.songId=songId;renderSongList();}
-  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).catch(()=>{});
+  if(s){const c={who:'You',color:'#FF4D1C',stamp,text,fileSid,at:new Date().toISOString()};s.comments.push(c);route.songId=songId;renderSongList();
+    fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).then(r=>r.json()).then(d=>{if(d&&d.id)c.id=d.id;}).catch(()=>{});}
 }
 function stableWave(seed,n){n=n||120;let h=[],s=0;for(let i=0;i<seed.length;i++)s+=seed.charCodeAt(i);let prev=0.4;for(let i=0;i<n;i++){s=(s*9301+49297)%233280;const r=s/233280;const env=Math.pow(Math.sin((i/n)*Math.PI),0.6);const target=(0.12+r*0.88)*(0.35+0.65*env);prev=prev*0.55+target*0.45;h.push(Math.max(.08,Math.min(1,prev)));}return h;}
 /* decode real audio into a peak waveform */
@@ -1830,7 +1860,7 @@ function handleAudio(files,target){
   if(!isBank&&!song)return;
   if(!isBank&&song)route.songId=song.id; // keep this song expanded through the re-renders
   audio.forEach(f=>{const fmt=/wav/i.test(f.name)?'wav':/mp3|mpeg/i.test(f.name)?'mp3':/m4a|aiff/i.test(f.name)?'m4a':'mp3';
-    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,labels:[],waveform:stableWave(f.name+f.size,160)};
+    const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,title:'',fmt,note:'uploading…',url,dur:null,at:new Date().toISOString(),labels:[],waveform:stableWave(f.name+f.size,160)};
     if(isBank){al.bank=al.bank||[];al.bank.push(t);}else{song.files.push(t);}
     renderSongsAudio();
     const probe=new Audio();probe.src=url;probe.addEventListener('loadedmetadata',()=>{t.dur=probe.duration;renderSongsAudio();});
@@ -2628,8 +2658,8 @@ function postComment(songId){
   let fileSid=null,stamp='';
   if(curTid){const t=findFile(curTid);if(t&&s&&s.files.indexOf(t)>=0){fileSid=t.sid||null;stamp=curStamp();}}
   if(!fileSid&&s&&s.files.length){fileSid=(s.files.find(f=>f.master)||s.files[0]).sid||null;}
-  if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text,fileSid});route.songId=songId;renderSongList();}
-  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).catch(()=>{});
+  if(s){const c={who:'You',color:'#FF4D1C',stamp,text,fileSid,at:new Date().toISOString()};s.comments.push(c);route.songId=songId;renderSongList();
+    fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).then(r=>r.json()).then(d=>{if(d&&d.id)c.id=d.id;}).catch(()=>{});}
 }
 /* ===== references (artist / song / genre / link / file) ===== */
 const REF_TYPES={

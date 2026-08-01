@@ -176,6 +176,8 @@ alter table public.song_files add column if not exists is_master boolean not nul
 alter table public.song_files add column if not exists labels text[] not null default '{}';
 alter table public.song_files add column if not exists album_id uuid references public.albums (id) on delete cascade;
 alter table public.song_files alter column song_id drop not null;
+-- v2.9: a human title for a file, shown ahead of the raw filename (editable).
+alter table public.song_files add column if not exists title text;
 
 -- Backfill album_id for existing song-linked files.
 update public.song_files f

@@ -86,6 +86,8 @@ export async function PATCH(req: Request) {
   const master = body?.master;
   const labels = body?.labels as string[] | undefined;
   const assignTo = body?.assignTo as string | undefined; // songId, or "bank"
+  const title = body?.title as string | undefined; // human file title
+  const name = body?.name as string | undefined; // rename the underlying filename
   if (!id) return NextResponse.json({ ok: false }, { status: 400 });
 
   const { data: row } = await supabase
@@ -107,6 +109,16 @@ export async function PATCH(req: Request) {
 
   if (Array.isArray(labels)) {
     patch.labels = labels.filter((l) => typeof l === "string").slice(0, 24);
+  }
+
+  if (typeof title === "string") {
+    const t = title.trim().slice(0, 200);
+    patch.title = t || null;
+  }
+
+  if (typeof name === "string") {
+    const n = name.trim().slice(0, 200);
+    if (n) patch.name = n;
   }
 
   if (typeof assignTo === "string") {

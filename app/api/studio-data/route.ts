@@ -164,7 +164,7 @@ export async function GET() {
     if (songIds.length) {
       const { data: files } = await supabase
         .from("song_files")
-        .select("id, song_id, name, fmt, r2_key, duration, is_master, labels, created_at")
+        .select("id, song_id, name, title, fmt, r2_key, duration, is_master, labels, created_at")
         .in("song_id", songIds)
         .order("created_at", { ascending: true });
       await Promise.all(
@@ -174,10 +174,12 @@ export async function GET() {
           filesBySong[f.song_id].push({
             sid: f.id,
             name: f.name,
+            title: f.title ?? "",
             fmt: f.fmt,
             note: "",
             url,
             dur: f.duration ?? null,
+            at: f.created_at,
             master: f.is_master === true,
             labels: Array.isArray(f.labels) ? f.labels : [],
           });
@@ -200,7 +202,7 @@ export async function GET() {
     if (albumIds.length) {
       const { data: bankFiles } = await supabase
         .from("song_files")
-        .select("id, album_id, name, fmt, r2_key, duration, labels, created_at")
+        .select("id, album_id, name, title, fmt, r2_key, duration, labels, created_at")
         .in("album_id", albumIds)
         .is("song_id", null)
         .order("created_at", { ascending: true });
@@ -211,10 +213,12 @@ export async function GET() {
           (bankByAlbum[f.album_id] as unknown[]).push({
             sid: f.id,
             name: f.name,
+            title: f.title ?? "",
             fmt: f.fmt,
             note: "",
             url,
             dur: f.duration ?? null,
+            at: f.created_at,
             labels: Array.isArray(f.labels) ? f.labels : [],
           });
         }),
@@ -230,17 +234,19 @@ export async function GET() {
     if (songIds.length) {
       const { data: comments } = await supabase
         .from("song_comments")
-        .select("song_id, file_id, author, color, stamp, body, created_at")
+        .select("id, song_id, file_id, author, color, stamp, body, created_at")
         .in("song_id", songIds)
         .order("created_at", { ascending: true });
       for (const c of comments ?? []) {
         if (!commentsBySong[c.song_id]) commentsBySong[c.song_id] = [];
         commentsBySong[c.song_id].push({
+          id: c.id,
           who: c.author,
           color: c.color || colorFor(c.author || "?"),
           stamp: c.stamp || "",
           text: c.body,
           fileSid: c.file_id || null,
+          at: c.created_at,
         });
       }
     }
