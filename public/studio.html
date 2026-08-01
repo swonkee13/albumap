@@ -909,6 +909,42 @@
     .hero-actions{justify-content:center;flex-wrap:wrap;gap:10px}
     .member-caption{justify-content:center}
     .hero-gauges{margin:12px 0 0!important;justify-content:center;flex-wrap:wrap;width:100%}
+    /* ---- mobile recording grid (song-centric checklist) ---- */
+    .mg-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+    .mg-toolbar .ghost-btn{padding:8px 13px;font-size:12.5px}
+    .mg-songs{display:flex;gap:8px;overflow-x:auto;padding:0 0 14px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+    .mg-songs::-webkit-scrollbar{display:none}
+    .mg-chip{flex:none;padding:9px 15px;border-radius:22px;border:1px solid var(--line);background:var(--card);color:var(--txt-2);font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+    .mg-chip.on{background:var(--accent-dim);border-color:var(--accent);color:var(--accent-hi)}
+    .mg-songhead{display:flex;align-items:center;gap:12px;padding:4px 2px 14px}
+    .mg-shl{flex:1;min-width:0}
+    .mg-songname{font-family:'Poppins';font-weight:700;font-size:20px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mg-songmeta{font-size:11.5px;color:var(--txt-3);font-family:'JetBrains Mono';margin-top:2px}
+    .mg-assignall{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--txt-2);font-size:12.5px;font-weight:600;cursor:pointer;flex:none}
+    .mg-assignall svg{width:15px;height:15px}
+    .mg-list{display:flex;flex-direction:column;gap:9px}
+    .mg-row{display:flex;align-items:center;gap:12px;padding:15px 16px;border-radius:14px;background:var(--card);border:1px solid var(--line-soft);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .1s}
+    .mg-row:active{background:var(--card-hi)}
+    .mg-inst{flex:1;min-width:0;font-weight:600;font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .mg-assign{flex:none;min-width:44px;height:36px;display:grid;place-items:center;background:transparent;border:none;color:var(--txt-3);cursor:pointer;border-radius:9px;padding:0 6px}
+    .mg-assign>svg{width:19px;height:19px}
+    .mg-assign .cell-avstack{position:static;display:inline-flex}
+    .mg-assign .cell-av{position:static}
+    .mg-pill{flex:none;display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border-radius:20px;font-size:12.5px;font-weight:700;min-width:104px;justify-content:center}
+    .mg-pill svg{width:14px;height:14px}
+    .mg-pill .mark,.mg-pill>div{width:auto;height:auto}
+    .mg-pill.empty{background:transparent;border:1.5px dashed #3a3a42;color:var(--txt-3);font-weight:600}
+    .mg-pill.na{background:transparent;border:1.5px solid var(--line);color:var(--txt-3)}
+    .mg-legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px;padding:0 2px}
+    .mg-lg{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--txt-3)}
+    .mg-dot{width:13px;height:13px;border-radius:4px;border:1.5px solid;display:inline-block;flex:none}
+    /* assign menu → bottom sheet on mobile */
+    .assign-menu.am-sheet{position:fixed;left:10px;right:10px;bottom:calc(10px + env(safe-area-inset-bottom));top:auto!important;transform:none!important;width:auto;max-width:none;max-height:72vh;border-radius:18px;padding:8px;box-shadow:0 -10px 50px rgba(0,0,0,.6)}
+    .assign-menu.am-sheet .am-head{padding:12px 12px 8px}
+    .assign-menu.am-sheet .am-row{padding:13px 12px;font-size:15px;border-radius:12px}
+    .assign-menu.am-sheet .am-box{width:26px;height:26px}
+    .assign-menu.am-sheet .cell-av{width:28px!important;height:28px!important}
+    .assign-menu.am-sheet .am-done{padding:14px;font-size:15px}
   }
   @media(max-width:640px){
     .slot-grid{grid-template-columns:repeat(2,1fr)!important}
@@ -1591,6 +1627,7 @@ function cellMarkHTML(st){
   return `<div class="mark" style="background:${st.color};color:${contrastOn(st.color)}">${statusIcon(st.icon)}</div>`;
 }
 function renderGrid(){
+  if(isMobile())return renderGridMobile();
   const a=A(),al=AL();const insts=albumInstruments(al);const sts=albumStatuses(al);
   if(gridFilter&&!memberByName(al,gridFilter))gridFilter=null; // stale filter after album switch
   const head=`<tr><th class="songcol">Song</th>${insts.map((inst,ci)=>`<th class="instcol"><span class="inst-name" title="${esc(inst)}">${esc(inst)}</span><span class="inst-tools">${ci>0?`<button title="Move left" onclick="moveInstrument(${ci},-1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 6l-6 6 6 6"/></svg></button>`:''}${ci<insts.length-1?`<button title="Move right" onclick="moveInstrument(${ci},1)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></button>`:''}<button title="Assign whole column" onclick="openAssignMenu(event,'col',${ci})">${PERSON_SVG}</button><button title="Rename" onclick="renameInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete column" onclick="deleteInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></th>`).join('')}<th class="addcol"><button class="add-inst" onclick="addInstrument()" title="Add instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></th></tr>`;
@@ -1610,6 +1647,42 @@ function renderGrid(){
 function cycleCell(si,ci){const al=AL();const s=al.songs[si];const inst=albumInstruments(al)[ci];if(!inst)return;const sts=albumStatuses(al);if(!sts.length)return;const cur=cellStatus(s,inst);let idx=cur==null?0:sts.findIndex(x=>x.id===cur);if(idx<0)idx=0;const next=sts[(idx+1)%sts.length];if(!s.cells)s.cells={};s.cells[inst]=next.id;renderGrid();persistCell(s.id,inst,next.id);}
 function setCellNA(si,ci){const al=AL();const s=al.songs[si];const inst=albumInstruments(al)[ci];if(!inst)return;const sts=albumStatuses(al);const na=sts.find(x=>x.na);if(!na)return;if(!s.cells)s.cells={};const cur=cellStatus(s,inst);const next=(cur===na.id)?sts[0].id:na.id;s.cells[inst]=next;renderGrid();persistCell(s.id,inst,next);}
 
+/* ===== MOBILE RECORDING GRID — song-centric checklist (desktop uses the table) ===== */
+let mGridSong=null; // selected song id in the mobile grid
+function mgStatusPill(st){
+  if(!st)return `<span class="mg-pill empty">—</span>`;
+  if(st.icon==='empty')return `<span class="mg-pill empty">${esc(st.name)}</span>`;
+  if(st.na)return `<span class="mg-pill na">${esc(st.name)}</span>`;
+  return `<span class="mg-pill" style="background:${st.color};color:${contrastOn(st.color)}">${statusIcon(st.icon)}${esc(st.name)}</span>`;
+}
+function selectMGridSong(id){mGridSong=id;renderGridMobile();}
+function renderGridMobile(){
+  const a=A(),al=AL();const insts=albumInstruments(al);const sts=albumStatuses(al);
+  // resolve selected song (persisted var → dashboard deep-link → first)
+  let sel=al.songs.find(s=>s.id===mGridSong)||al.songs.find(s=>s.id===route.gridSong)||al.songs[0]||null;
+  mGridSong=sel?sel.id:null;
+  const si=sel?al.songs.indexOf(sel):-1;
+  const chips=al.songs.map(s=>`<button class="mg-chip ${s.id===mGridSong?'on':''}" onclick="selectMGridSong('${s.id}')">${esc(s.t)}</button>`).join('')||'<span style="color:var(--txt-3);font-size:13px;padding:6px 0">No songs yet.</span>';
+  let rows;
+  if(!insts.length)rows='<div class="empty-note" style="padding:22px 6px">No parts yet — add your first instrument below.</div>';
+  else if(sel)rows=insts.map((inst,ci)=>{
+    const st=resolveStatus(al,cellStatus(sel,inst));const asg=cellAssignees(sel,inst);
+    return `<div class="mg-row" onclick="cycleCell(${si},${ci})">
+      <div class="mg-inst">${esc(inst)}</div>
+      <button class="mg-assign" title="Assign" onclick="event.stopPropagation();openAssignMenu(event,'cell',${si},${ci})">${asg.length?assignStackHTML(al,asg,22):PERSON_SVG}</button>
+      ${mgStatusPill(st)}
+    </div>`;}).join('');
+  else rows='<div class="empty-note" style="padding:22px 6px">No songs yet — add one below.</div>';
+  const p=sel?songProg(sel,al):0;const stt=sel?songStats(sel,al):{done:0,denom:0};
+  content.innerHTML=`
+  <div class="ws-head"><div class="eyebrow">${esc(al.title)}</div><div class="view-title">Recording grid</div><div class="ws-sub">Pick a song, then <b>tap a part</b> to advance its status. Tap the avatar to assign it.</div></div>
+  <div class="mg-toolbar"><button class="ghost-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Song</button><button class="ghost-btn" onclick="addInstrument()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Part</button><button class="ghost-btn" onclick="openStatusManager()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Statuses</button></div>
+  <div class="mg-songs">${chips}</div>
+  ${sel?`<div class="mg-songhead"><div class="mg-shl"><div class="mg-songname">${esc(sel.t)}</div><div class="mg-songmeta">${p}% · ${stt.done}/${stt.denom} parts done</div></div><button class="mg-assignall" onclick="openAssignMenu(event,'row',${si})">${PERSON_SVG}<span>Assign all</span></button></div>`:''}
+  <div class="mg-list">${rows}</div>
+  ${insts.length?`<div class="mg-legend">${sts.map(st=>`<span class="mg-lg"><i class="mg-dot" style="${st.icon==='empty'?'border-color:#4a4a52':(st.na?'border-color:var(--line)':'background:'+st.color+';border-color:'+st.color)}"></i>${esc(st.name)}</span>`).join('')}</div>`:''}`;
+}
+
 /* ---- assignments: pick who owns a cell / column / song ---- */
 const PERSON_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8.5" r="3.3"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg>';
 let gridFilter=null; // member name to spotlight in the grid, or null = show all
@@ -1627,11 +1700,14 @@ function openAssignMenu(ev,scope,a,b){
   const cx=(ev?ev.clientX:140),cy=(ev?ev.clientY:140);
   assignCtx={scope,si:(scope==='cell'||scope==='row')?a:null,ci:(scope==='cell')?b:(scope==='col'?a:null)};
   const menu=document.createElement('div');menu.className='assign-menu';menu.id='assignMenu';
+  if(isMobile())menu.classList.add('am-sheet'); // mobile: anchored bottom sheet (CSS-positioned)
   document.body.appendChild(menu);
   paintAssignMenu();
-  const mw=236,mh=menu.offsetHeight||280;let x=cx+6,y=cy+6;
-  if(x+mw>innerWidth-8)x=innerWidth-mw-8;if(y+mh>innerHeight-8)y=Math.max(8,cy-mh-6);
-  menu.style.left=x+'px';menu.style.top=y+'px';
+  if(!menu.classList.contains('am-sheet')){
+    const mw=236,mh=menu.offsetHeight||280;let x=cx+6,y=cy+6;
+    if(x+mw>innerWidth-8)x=innerWidth-mw-8;if(y+mh>innerHeight-8)y=Math.max(8,cy-mh-6);
+    menu.style.left=x+'px';menu.style.top=y+'px';
+  }
   setTimeout(()=>document.addEventListener('mousedown',assignMenuOutside),0);
 }
 function assignMenuOutside(e){const m=document.getElementById('assignMenu');if(m&&!m.contains(e.target))closeAssignMenu();}
