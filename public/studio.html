@@ -160,6 +160,18 @@
   .ring{position:relative;width:72px;height:72px;flex:none}
   .ring svg{transform:rotate(-90deg)}
   .ring .pct{position:absolute;inset:0;display:grid;place-items:center;font-family:'Poppins';font-weight:700;font-size:16px}
+  /* hero gauge panel */
+  .hero-gauges{margin-left:auto;display:flex;align-items:flex-start;gap:10px;padding-bottom:4px}
+  .hg-grid{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end;max-width:400px}
+  .gauge{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .gauge-ring{position:relative;width:64px;height:64px}
+  .gauge-ring svg{transform:rotate(-90deg)}
+  .gauge-pct{position:absolute;inset:0;display:grid;place-items:center;font-family:'Poppins';font-weight:700;font-size:15px}
+  .gauge-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+  .gauge-sub{font-size:10px;color:var(--txt-3);font-family:'JetBrains Mono'}
+  .hg-edit{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt-3);cursor:pointer;display:grid;place-items:center;flex:none}
+  .hg-edit:hover{border-color:var(--accent);color:var(--accent-hi)}
+  .hg-edit svg{width:15px;height:15px}
 
   /* dashboard grid */
   .dash-grid{display:grid;gap:18px;margin-top:8px;grid-template-columns:1fr 340px;align-items:start}
@@ -645,6 +657,14 @@
   .song-art:hover .sa-replace{opacity:1}
   .song-art .sa-replace svg{width:16px;height:16px}
   .exp-tile .song-badge{position:absolute;top:8px;left:8px;z-index:3;background:var(--blue);color:#04263b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:6px}
+  /* finalized markers */
+  .final-badge{position:absolute;top:8px;right:8px;z-index:3;width:24px;height:24px;border-radius:50%;background:var(--green);color:#04371f;display:grid;place-items:center;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .final-badge svg{width:14px;height:14px}
+  .exp-tile.is-final{outline:2px solid var(--green);outline-offset:-2px}
+  .merch-thumb{position:relative}
+  .merch-thumb .final-badge{width:26px;height:26px}
+  .ico-btn.is-final-btn{background:var(--green);color:#04371f}
+  .ghost-btn.is-final-btn{border-color:var(--green);color:var(--green)}
   .song-zones{display:flex;flex-direction:column;gap:16px;margin-top:14px}
   .song-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   .song-cols.three{grid-template-columns:1fr 1fr 1fr}
@@ -965,6 +985,53 @@ function statusDot(al,s,inst){const st=resolveStatus(al,cellStatus(s,inst));retu
 function fitBandName(){const el=content.querySelector('.band-name');if(!el)return;el.style.fontSize='';let size=parseFloat(getComputedStyle(el).fontSize)||40;let guard=0;while(el.scrollWidth>el.clientWidth+1&&size>18&&guard<90){size-=1;el.style.fontSize=size+'px';guard++;}}
 // Scale the hero cover square to match the text column height; badge scales with it.
 function fitHeroCover(){const meta=content.querySelector('.hero-meta');const cover=content.querySelector('.hero-cover');const badge=content.querySelector('.hero-logo-badge');if(!meta||!cover)return;const h=Math.max(134,Math.min(260,meta.offsetHeight));cover.style.width=h+'px';cover.style.height=h+'px';const ph=cover.querySelector('.hc-ph');if(ph)ph.style.fontSize=Math.round(h*0.4)+'px';if(badge){const b=Math.round(h*0.44);badge.style.width=b+'px';badge.style.height=b+'px';badge.style.left=Math.round(-b*0.17)+'px';badge.style.bottom=Math.round(-b*0.17)+'px';}}
+/* ===== hero completion gauges (configurable instrument panel) ===== */
+const HERO_METRICS={
+  recording:{label:'Recording',color:'#FF4D1C'},
+  artwork:{label:'Artwork',color:'#4EA8E8'},
+  photos:{label:'Photos',color:'#B06BFF'},
+  logos:{label:'Logos',color:'#2ED3C6'},
+  merch:{label:'Merch',color:'#FF6B9D'},
+  overall:{label:'Overall',color:'#3ECF8E'}
+};
+const HERO_ORDER=['recording','artwork','photos','logos','merch','overall'];
+let heroPanel={};try{heroPanel=JSON.parse(localStorage.getItem('albumap:hero')||'{}');}catch(e){}
+function heroKeys(al){const k=heroPanel&&heroPanel[al.id];return (Array.isArray(k)&&k.length)?k.filter(x=>HERO_METRICS[x]):['recording'];}
+function saveHeroKeys(al,keys){heroPanel[al.id]=keys.length?keys:['recording'];try{localStorage.setItem('albumap:hero',JSON.stringify(heroPanel));}catch(e){}}
+function mediaFinalStats(al,kind){const main=mediaMain(al,kind).filter(x=>!x.song);const done=main.filter(x=>x.finalized).length;return {total:main.length,done,pct:main.length?Math.round(done/main.length*100):0};}
+function merchFinalStats(al){const items=al.merchItems||[];const done=items.filter(x=>x.finalized).length;return {total:items.length,done,pct:items.length?Math.round(done/items.length*100):0};}
+function metricRaw(al,key){
+  if(key==='recording'){const p=albumParts(al);return {pct:albumProg(al),sub:`${p.done}/${p.total} parts`,has:al.songs.length>0&&p.total>0};}
+  if(key==='artwork'){const s=mediaFinalStats(al,'artwork');return {pct:s.pct,sub:`${s.done}/${s.total} final`,has:s.total>0};}
+  if(key==='photos'){const s=mediaFinalStats(al,'photo');return {pct:s.pct,sub:`${s.done}/${s.total} final`,has:s.total>0};}
+  if(key==='logos'){const s=mediaFinalStats(al,'logo');return {pct:s.pct,sub:`${s.done}/${s.total} final`,has:s.total>0};}
+  if(key==='merch'){const s=merchFinalStats(al);return {pct:s.pct,sub:`${s.done}/${s.total} final`,has:s.total>0};}
+  return null;
+}
+function metricValue(al,key,keys){
+  if(key==='overall'){const others=(keys||[]).filter(k=>k!=='overall');const src=others.length?others:['recording','artwork','photos','logos','merch'];
+    const vals=src.map(k=>metricRaw(al,k)).filter(v=>v&&v.has);const pct=vals.length?Math.round(vals.reduce((a,v)=>a+v.pct,0)/vals.length):0;
+    return {pct,sub:`${vals.length} area${vals.length!==1?'s':''}`};}
+  const r=metricRaw(al,key);return r?{pct:r.pct,sub:r.sub}:{pct:0,sub:'—'};
+}
+function gaugeHTML(al,key,keys){const m=metricValue(al,key,keys);const cfg=HERO_METRICS[key];const circ=2*Math.PI*27;
+  return `<div class="gauge"><div class="gauge-ring"><svg width="64" height="64"><circle cx="32" cy="32" r="27" stroke="var(--grey)" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="27" stroke="${cfg.color}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-m.pct/100)}"/></svg><div class="gauge-pct">${m.pct}%</div></div><div class="gauge-label" style="color:${cfg.color}">${cfg.label}</div><div class="gauge-sub">${m.sub}</div></div>`;
+}
+function heroGaugesHTML(a,al){const keys=heroKeys(al);
+  return `<div class="hero-gauges"><div class="hg-grid">${keys.map(k=>gaugeHTML(al,k,keys)).join('')}</div><button class="hg-edit" title="Choose gauges" onclick="openHeroPanelEditor()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div>`;
+}
+function refreshHeroGauges(){const al=AL();const host=content.querySelector('.hero-gauges');if(host&&al){const tmp=document.createElement('div');tmp.innerHTML=heroGaugesHTML(A(),al);host.replaceWith(tmp.firstElementChild);}}
+function openHeroPanelEditor(){
+  const al=AL();if(!al)return;const keys=heroKeys(al);
+  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Header gauges</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:14px;line-height:1.5">Pick which completion dials show in the album header. <b>Artwork / Photos / Logos / Merch</b> are based on items you mark <b>finalized</b>; <b>Overall</b> averages the others.</p>
+    <div class="art-pills">${HERO_ORDER.map(k=>`<span class="lchip ${keys.includes(k)?'on':''}" data-k="${k}" onclick="toggleHeroKey('${k}')" style="border-color:${keys.includes(k)?HERO_METRICS[k].color:''}">${HERO_METRICS[k].label}</span>`).join('')}</div></div>`;
+  document.getElementById('modalBg').classList.add('show');
+}
+function toggleHeroKey(k){const al=AL();let keys=heroKeys(al).slice();if(keys.includes(k))keys=keys.filter(x=>x!==k);else keys.push(k);if(!keys.length)keys=['recording'];saveHeroKeys(al,keys);
+  document.querySelectorAll('#modalInner .lchip[data-k]').forEach(p=>{const kk=p.getAttribute('data-k');const on=keys.includes(kk);p.classList.toggle('on',on);p.style.borderColor=on?HERO_METRICS[kk].color:'';});
+  refreshHeroGauges();
+}
 // Mini sequencer for the dashboard tracklist card: proportional-width, full-height
 // blocks with waveforms, including placeholders (matches the sequencer page).
 function dashSeq(al){
@@ -1170,10 +1237,7 @@ function renderDashboard(){
       </div>
       <div class="member-caption"><span class="mc-dot in"></span>${(al.members||[]).filter(m=>m.status==='in').length} in the studio<span style="margin:0 6px;color:var(--txt-3)">·</span><span class="mc-dot pending"></span>${(al.members||[]).filter(m=>m.status==='pending').length} need inviting</div>
     </div>
-    <div class="overall">
-      <div class="ov-stat"><div class="n mono">${doneParts}/${totalParts}</div><div class="l">Parts done</div></div>
-      <div class="ring"><svg width="72" height="72"><circle cx="36" cy="36" r="32" stroke="var(--grey)" stroke-width="6" fill="none"/><circle cx="36" cy="36" r="32" stroke="var(--accent)" stroke-width="6" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-overall/100)}"/></svg><div class="pct">${overall}%</div></div>
-    </div>
+    ${heroGaugesHTML(a,al)}
   </div>
 
   <div class="dash-grid">
@@ -1971,7 +2035,7 @@ function setMediaPool(al,kind,arr){al[MEDIA_FIELDS[kind][1]]=arr;}
 function noImgDrop(){return `<div class="m-drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg><div class="lbl">No image</div></div>`;}
 function mediaTile(kind,m){
   const isSong=!!m.song;const cap=esc(m.label||(isSong?'Single':'Untitled'));
-  return `<div class="exp-tile ${isSong?'is-single':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMedia('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.img?`<img src="${m.img}">`:noImgDrop()}<div class="cap">${cap}</div></div>`;
+  return `<div class="exp-tile ${isSong?'is-single':''}${m.finalized?' is-final':''}" ${isSong?'':`draggable="true" ondragstart="mediaDragStart(event,'${kind}','${m.id}')"`} title="${isSong?'Open song':'Open / edit'}" onclick="${isSong?`nav({view:'songs',artistId:'${route.artistId}',albumId:'${route.albumId}',songId:'${m.songId}'})`:`openMedia('${kind}','${m.id}')`}">${isSong?'<div class="song-badge">Single</div>':''}${m.finalized?'<div class="final-badge" title="Finalized"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg></div>':''}${m.img?`<img src="${m.img}">`:noImgDrop()}<div class="cap">${cap}</div></div>`;
 }
 function renderMedia(kind){
   const cfg=MEDIA[kind];const al=AL();const main=mediaMain(al,kind);const pool=mediaPool(al,kind);
@@ -2011,7 +2075,7 @@ function addMedia(kind,toPool){mediaFileCtx={kind,mode:'new',pool:!!toPool};docu
 function replaceMedia(kind,id){mediaFileCtx={kind,mode:'replace',id};document.getElementById('artFileInput').click();}
 async function uploadMedia(kind,toPool,f){
   const al=AL();if(!al)return;const localUrl=URL.createObjectURL(f);
-  const piece={id:'tmp'+(++uidc),label:'',img:localUrl,pool:!!toPool,key:null};
+  const piece={id:'tmp'+(++uidc),label:'',img:localUrl,pool:!!toPool,key:null,finalized:false};
   if(toPool){const p=mediaPool(al,kind);p.push(piece);setMediaPool(al,kind,p);}else{const m=mediaMain(al,kind);m.splice(m.filter(x=>!x.song).length,0,piece);setMediaMain(al,kind,m);}
   renderMedia(kind);
   try{
@@ -2038,6 +2102,7 @@ function setMediaLabel(kind,id,label){const p=findMedia(kind,id);if(!p)return;p.
   fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,label})}).catch(()=>{});
 }
 function deleteMedia(kind,id){if(!confirm('Delete this piece?'))return;const al=AL();setMediaMain(al,kind,mediaMain(al,kind).filter(x=>x.song||x.id!==id));setMediaPool(al,kind,mediaPool(al,kind).filter(x=>x.id!==id));closeModal();if(route.view===MEDIA[kind].view)renderMedia(kind);fetch('/api/artwork?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});}
+function toggleMediaFinal(kind,id){const p=findMedia(kind,id);if(!p)return;p.finalized=!p.finalized;fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,finalized:p.finalized})}).catch(()=>{});if(route.view===MEDIA[kind].view)renderMedia(kind);if(document.getElementById('modalBg').classList.contains('show'))openMedia(kind,id);}
 function openMedia(kind,id){
   const cfg=MEDIA[kind];const p=findMedia(kind,id);if(!p)return;
   const moveBtn=cfg.hasPool?`<button class="ghost-btn" onclick="moveMedia('${kind}','${id}',${p.pool?'false':'true'});closeModal()">${p.pool?'↑ To '+cfg.mainName.toLowerCase():'↓ To pool'}</button>`:'';
@@ -2048,6 +2113,7 @@ function openMedia(kind,id){
       <div class="art-pills" id="artPills-${id}">${cfg.labels.map(l=>`<span class="lchip ${p.label===l?'on':''}" onclick="setMediaLabel('${kind}','${id}','${l}')">${l}</span>`).join('')}</div>
       <input class="art-custom" placeholder="Or type a custom label…" value="${esc(p.label)}" onblur="setMediaLabel('${kind}','${id}',this.value)"></div>
     <div class="art-modal-actions">
+      <button class="ghost-btn ${p.finalized?'is-final-btn':''}" onclick="toggleMediaFinal('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 12 5 5L20 6"/></svg>${p.finalized?'Finalized':'Mark finalized'}</button>
       <button class="ghost-btn" onclick="replaceMedia('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Replace image</button>
       ${moveBtn}
       <button class="ghost-btn" style="color:#e0322a;border-color:rgba(224,50,42,.5)" onclick="deleteMedia('${kind}','${id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>Delete</button>
@@ -2090,8 +2156,9 @@ function merchItemHTML(it,i){
   const tshirt='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 5 9 3a3 3 0 0 0 6 0l5 2-2 5-2-1v9H8v-9l-2 1z"/></svg>';
   return `<div class="idea-song ${open?'':'collapsed'}" data-mi="${it.id}" data-mi-index="${i}">
     <div class="idea-head" onclick="toggleMerch('${it.id}')">
-      <div class="merch-thumb">${it.mockup?`<img src="${it.mockup}">`:tshirt}</div>
+      <div class="merch-thumb">${it.finalized?'<div class="final-badge" title="Finalized"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="m5 12 5 5L20 6"/></svg></div>':''}${it.mockup?`<img src="${it.mockup}">`:tshirt}</div>
       <div style="flex:1;min-width:0"><div class="idea-title">${esc(it.name)||'Untitled item'}</div><div class="merch-sub">${sub}</div></div>
+      <button class="ico-btn ${it.finalized?'is-final-btn':''}" title="${it.finalized?'Finalized — click to unmark':'Mark finalized'}" onclick="event.stopPropagation();toggleMerchFinal('${it.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m5 12 5 5L20 6"/></svg></button>
       <button class="ico-btn" title="Delete item" onclick="event.stopPropagation();deleteMerchItem('${it.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
     </div>
     <div class="idea-body" ${open?'':'style="display:none"'}>
@@ -2131,10 +2198,11 @@ async function addMerchItem(){
   if(!res.ok){alert('Could not add the merch item — has the merch_items table been created in Supabase?');return;}
   const {id}=await res.json();
   al.merchItems=al.merchItems||[];
-  al.merchItems.push({id,name:'',brand:'',color:'',sizes:[],hasSizes:true,budget:null,vendor:'',vendorLink:'',sizeQty:{},totalQty:null,mockup:null,print:null});
+  al.merchItems.push({id,name:'',brand:'',color:'',sizes:[],hasSizes:true,budget:null,vendor:'',vendorLink:'',sizeQty:{},totalQty:null,finalized:false,mockup:null,print:null});
   merchOpen[id]=true;renderMerchList();
   const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),60);
 }
+function toggleMerchFinal(id){const it=merchItem(id);if(!it)return;it.finalized=!it.finalized;renderMerchList();fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,finalized:it.finalized})}).catch(()=>{});}
 function deleteMerchItem(id){
   if(!confirm('Delete this merch item? Its images will be removed too.'))return;
   const al=AL();al.merchItems=(al.merchItems||[]).filter(x=>x.id!==id);delete merchOpen[id];renderMerchList();

@@ -72,6 +72,7 @@ export async function POST(req: Request) {
     const patch: Record<string, unknown> = {};
     if ("label" in (body ?? {})) patch.label = String(body.label ?? "");
     if ("inPool" in (body ?? {})) patch.in_pool = body.inPool === true;
+    if ("finalized" in (body ?? {})) patch.finalized = body.finalized === true;
     if (body?.key) patch.r2_key = body.key;
     if (!Object.keys(patch).length) return NextResponse.json({ ok: false }, { status: 400 });
     const { error } = await supabase.from("artwork_pieces").update(patch).eq("id", id);

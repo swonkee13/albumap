@@ -281,6 +281,8 @@ create table if not exists public.merch_items (
 -- (if merch_items already existed, add the v2 quantity columns)
 alter table public.merch_items add column if not exists size_qty jsonb not null default '{}'::jsonb;
 alter table public.merch_items add column if not exists total_qty int;
+-- v2.8: mark a merch item "finalized" (drives the hero completion gauges)
+alter table public.merch_items add column if not exists finalized boolean not null default false;
 alter table public.merch_items enable row level security;
 drop policy if exists "merch_items: via owned album" on public.merch_items;
 create policy "merch_items: via owned album" on public.merch_items for all
@@ -304,6 +306,8 @@ create table if not exists public.artwork_pieces (
 );
 -- (if the table pre-dates band photos/logos, add the kind column)
 alter table public.artwork_pieces add column if not exists kind text not null default 'artwork';
+-- v2.8: mark a piece "finalized" (drives the hero completion gauges)
+alter table public.artwork_pieces add column if not exists finalized boolean not null default false;
 alter table public.artwork_pieces enable row level security;
 drop policy if exists "artwork_pieces: via owned album" on public.artwork_pieces;
 create policy "artwork_pieces: via owned album" on public.artwork_pieces for all

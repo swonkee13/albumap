@@ -321,7 +321,7 @@ export async function GET() {
       const { data: items } = await supabase
         .from("merch_items")
         .select(
-          "id, album_id, name, brand, color, sizes, has_sizes, budget, vendor, vendor_link, mockup_key, print_key, size_qty, total_qty, position, created_at",
+          "id, album_id, name, brand, color, sizes, has_sizes, budget, vendor, vendor_link, mockup_key, print_key, size_qty, total_qty, finalized, position, created_at",
         )
         .in("album_id", albumIds)
         .order("position", { ascending: true })
@@ -343,6 +343,7 @@ export async function GET() {
             vendorLink: m.vendor_link ?? "",
             sizeQty: m.size_qty && typeof m.size_qty === "object" ? m.size_qty : {},
             totalQty: m.total_qty ?? null,
+            finalized: m.finalized === true,
             mockup,
             print,
           });
@@ -364,14 +365,14 @@ export async function GET() {
     if (albumIds.length) {
       const { data: pieces } = await supabase
         .from("artwork_pieces")
-        .select("id, album_id, kind, label, r2_key, in_pool, position, created_at")
+        .select("id, album_id, kind, label, r2_key, in_pool, finalized, position, created_at")
         .in("album_id", albumIds)
         .order("position", { ascending: true })
         .order("created_at", { ascending: true });
       await Promise.all(
         (pieces ?? []).map(async (p) => {
           const url = p.r2_key ? await signGet(client, p.r2_key) : null;
-          const item = { id: p.id, label: p.label ?? "", img: url, pool: p.in_pool === true };
+          const item = { id: p.id, label: p.label ?? "", img: url, pool: p.in_pool === true, finalized: p.finalized === true };
           const kind = p.kind === "photo" ? "photo" : p.kind === "logo" ? "logo" : "artwork";
           const key = kind === "logo" ? "logoMain" : `${kind}${p.in_pool ? "Pool" : "Main"}`;
           const bucket = buckets[key];
