@@ -490,6 +490,8 @@
   .empty-note{color:var(--txt-3);font-size:12.5px;text-align:center;padding:8px 0 2px;font-style:italic}
   /* per-file comments, attached under each track */
   .track-group{display:flex;flex-direction:column}
+  .bank-file{padding-bottom:20px;border-bottom:1px solid var(--line-soft);margin-bottom:14px}
+  .bank-file:last-child{border-bottom:none;padding-bottom:2px;margin-bottom:0}
   .track-group .track{border-bottom-left-radius:0;border-bottom-right-radius:0;border-bottom:none}
   .track-cmts{background:var(--panel-2);border:1px solid var(--line-soft);border-top:1px dashed var(--line);border-radius:0 0 var(--r-md) var(--r-md);padding:6px 14px 10px}
   .track-cmts .cmt-row{padding:8px 0}
@@ -2040,7 +2042,7 @@ function renderBank(){
       <div class="cnt-pill ${bank.length?'has':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${bank.length}</div>
     </div>
     <div class="idea-body" style="display:block">
-      ${bank.length?`<div class="tracks">${bank.map(t=>trackRow(t,-1)).join('')}</div>`:'<div class="empty-note">Nothing here yet — drop an idea below, or send a song idea back to the bank.</div>'}
+      ${bank.length?`<div class="tracks">${bank.map(t=>`<div class="track-group bank-file">${trackRow(t,-1)}${bankComments(t)}<div class="song-cols" style="margin-top:14px"><div class="zone"><div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="zh-t">References</div></div><div class="zone-body">${refsBodyFor('FILE:'+t.id,t.refs)}</div></div><div class="zone"><div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="zh-t">Notes</div></div><div class="zone-body"><textarea class="notes-area" placeholder="Notes for this idea — key, vibe, what to do with it…" onblur="saveFileNotes(${t.id},this.value)">${esc(t.notes||'')}</textarea></div></div></div></div>`).join('')}</div>`:'<div class="empty-note">Nothing here yet — drop an idea below, or send a song idea back to the bank.</div>'}
       <div class="dropzone slim" onclick="browseBankAudio()" ondragover="dzOver(event,this)" ondragleave="this.classList.remove('drag')" ondrop="dzDrop(event,'bank',this)">
         <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
         <div class="big">Drop an unassigned idea here</div><div class="sm">or click to browse · lands in the bank</div>
@@ -2122,13 +2124,14 @@ function trackRow(t,si){
   if(!t.id)t.id=++uidc;
   if(!t.waveform)t.waveform=stableWave((t.name||'')+si,160);
   const dur=t.dur!=null?fmtT(t.dur):'—:—';
-  const song=(AL()&&AL().songs)?AL().songs[si]:null;
-  const allc=(song&&song.comments)?song.comments:[];
+  const isBank0=si<0;
+  const song=(!isBank0&&AL()&&AL().songs)?AL().songs[si]:null;
+  const allc=isBank0?((AL()&&AL().bankComments)||[]):((song&&song.comments)?song.comments:[]);
   const cdur=t.dur||(song&&song.dur)||210;
-  // Comments belong to a specific file (t.sid). Legacy comments with no file_id
-  // fall onto the song's master/first file so they still appear somewhere.
+  // Comments belong to a specific file (t.sid). Legacy song comments with no
+  // file_id fall onto the song's master/first file so they still appear.
   const firstSid=(song&&song.files&&song.files.length)?((song.files.find(f=>f.master)||song.files[0]).sid||null):null;
-  const cmts=allc.filter(c=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
+  const cmts=allc.filter(c=>c.fileSid?(t.sid&&c.fileSid===t.sid):(!isBank0&&t.sid&&t.sid===firstSid));
   const marks=cmts.map(c=>{const sec=parseStamp(c.stamp);if(sec==null)return '';const frac=Math.max(0,Math.min(1,sec/cdur));
     return `<div class="wave-mark" data-sec="${sec}" style="left:${(frac*100).toFixed(2)}%;background:${c.color||'#FF4D1C'}" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation();seekAt(${t.id},${frac})" title="${esc(c.who)} @ ${esc(c.stamp)} — ${esc(c.text)}"><span>${esc((c.who||'?')[0])}</span><div class="wm-pop"><b>${esc(c.who)}</b> · ${esc(c.stamp)}<br>${esc(c.text)}</div></div>`;}).join('');
   const bank=si<0;
@@ -2203,23 +2206,46 @@ function toggleLabel(id,label){
 }
 // Per-file comments shown directly under each track, with its own composer.
 function canEditComment(c){return !!(meMatch(c.who)||c.who==='You');}
+// Shared comment UI (identical for song files and bank files). `cmts` is a list
+// of {c,ci}; editCall/delCall build the onclick per index; postCall is the
+// composer's post expression.
+function commentRowsHTML(cmts,editCall,delCall){
+  return cmts.length?cmts.map(({c,ci})=>`<div class="cmt-row"><div class="cmt-av" title="${esc(c.who)}" style="background:${avColor(c.who,c.color)}">${avInner(c.who,(c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}${c.at?`<span class="cdate">${esc(fmtDate(c.at))}</span>`:''}${canEditComment(c)?`<span class="cmt-acts"><button title="Edit" onclick="${editCall(ci)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete" onclick="${delCall(ci)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
+}
+function commentComposerHTML(t,postCall){
+  return `<div class="tc-add"><input id="fcmt-${t.id}" placeholder="Comment on this file…" onkeydown="if(event.key==='Enter'){${postCall}}"><button class="ico-btn" title="Post comment" onclick="${postCall}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div>`;
+}
 function trackComments(t,i,s){
   const firstSid=(s.files&&s.files.length)?((s.files.find(f=>f.master)||s.files[0]).sid||null):null;
-  // keep each comment's index into s.comments so edit/delete can find it
   const cmts=(s.comments||[]).map((c,ci)=>({c,ci})).filter(({c})=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
-  const rows=cmts.length?cmts.map(({c,ci})=>`<div class="cmt-row"><div class="cmt-av" title="${esc(c.who)}" style="background:${avColor(c.who,c.color)}">${avInner(c.who,(c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}${c.at?`<span class="cdate">${esc(fmtDate(c.at))}</span>`:''}${canEditComment(c)?`<span class="cmt-acts"><button title="Edit" onclick="editComment('${s.id}',${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete" onclick="deleteComment('${s.id}',${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
-  return `<div class="track-cmts">${rows}<div class="tc-add"><input id="fcmt-${t.id}" placeholder="Comment on this file…" onkeydown="if(event.key==='Enter')postFileComment('${s.id}',${t.id})"><button class="ico-btn" title="Post comment" onclick="postFileComment('${s.id}',${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>`;
+  return `<div class="track-cmts">${commentRowsHTML(cmts,ci=>`editComment('${s.id}',${ci})`,ci=>`deleteComment('${s.id}',${ci})`)}${commentComposerHTML(t,`postFileComment('${s.id}',${t.id})`)}</div>`;
+}
+function bankComments(t){
+  const al=AL();const cmts=((al&&al.bankComments)||[]).map((c,ci)=>({c,ci})).filter(({c})=>c.fileSid&&t.sid&&c.fileSid===t.sid);
+  return `<div class="track-cmts">${commentRowsHTML(cmts,ci=>`editBankComment(${ci})`,ci=>`deleteBankComment(${ci})`)}${commentComposerHTML(t,`postBankComment(${t.id})`)}</div>`;
 }
 async function editComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];const val=(await uiPrompt('Edit comment',c.text,{title:'Edit comment'})||'').trim();if(!val||val===c.text)return;c.text=val;route.songId=songId;renderSongsAudio();if(c.id)fetch('/api/comment',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,text:val})}).catch(()=>{});}
 async function deleteComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];if(!await uiConfirm('Delete this comment?',{okLabel:'Delete',danger:true}))return;const cid=c.id;s.comments.splice(ci,1);route.songId=songId;renderSongsAudio();if(cid)fetch('/api/comment?id='+encodeURIComponent(cid),{method:'DELETE'}).catch(()=>{});}
 function postFileComment(songId,trackId){
   const inp=document.getElementById('fcmt-'+trackId);if(!inp)return;const text=inp.value.trim();if(!text)return;inp.value='';
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);const t=findFile(trackId);
-  let stamp='';if(curTid===trackId&&curAudio&&!curAudio.paused)stamp=curStamp();
+  const stamp=stampFor(trackId);
   const fileSid=t?t.sid:null;
   if(s){const c={who:'You',color:'#FF4D1C',stamp,text,fileSid,at:new Date().toISOString()};s.comments.push(c);route.songId=songId;renderSongList();
     fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).then(r=>r.json()).then(d=>{if(d&&d.id)c.id=d.id;}).catch(()=>{});}
 }
+// Bank files aren't tied to a song — comments key off the file id (fileSid) and
+// live in al.bankComments. Otherwise identical (stamp, markers, popup).
+function postBankComment(trackId){
+  const inp=document.getElementById('fcmt-'+trackId);if(!inp)return;const text=inp.value.trim();if(!text)return;inp.value='';
+  const al=AL();const t=findFile(trackId);const fileSid=t?t.sid:null;if(!fileSid)return;
+  const stamp=stampFor(trackId);
+  if(!al.bankComments)al.bankComments=[];
+  const c={who:'You',color:'#FF4D1C',stamp,text,fileSid,at:new Date().toISOString()};al.bankComments.push(c);renderBank();
+  fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fileId:fileSid,text,stamp})}).then(r=>r.json()).then(d=>{if(d&&d.id)c.id=d.id;}).catch(()=>{});
+}
+function editBankComment(ci){const al=AL();if(!al.bankComments||!al.bankComments[ci])return;const c=al.bankComments[ci];uiPrompt('Edit comment',c.text,{title:'Edit comment'}).then(val=>{val=(val||'').trim();if(!val||val===c.text)return;c.text=val;renderBank();if(c.id)fetch('/api/comment',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,text:val})}).catch(()=>{});});}
+function deleteBankComment(ci){const al=AL();if(!al.bankComments||!al.bankComments[ci])return;const c=al.bankComments[ci];uiConfirm('Delete this comment?',{okLabel:'Delete',danger:true}).then(ok=>{if(!ok)return;const cid=c.id;al.bankComments.splice(ci,1);renderBank();if(cid)fetch('/api/comment?id='+encodeURIComponent(cid),{method:'DELETE'}).catch(()=>{});});}
 function stableWave(seed,n){n=n||120;let h=[],s=0;for(let i=0;i<seed.length;i++)s+=seed.charCodeAt(i);let prev=0.4;for(let i=0;i<n;i++){s=(s*9301+49297)%233280;const r=s/233280;const env=Math.pow(Math.sin((i/n)*Math.PI),0.6);const target=(0.12+r*0.88)*(0.35+0.65*env);prev=prev*0.55+target*0.45;h.push(Math.max(.08,Math.min(1,prev)));}return h;}
 /* decode real audio into a peak waveform */
 async function decodeWaveform(url,n){
@@ -3176,7 +3202,10 @@ async function inviteMember(){
   if(!res.ok){uiAlert('Could not add member.');return;}
   await reloadData({...route});
 }
-function curStamp(){return (curAudio&&!curAudio.paused)?fmtT(curAudio.currentTime):'';}
+// Timestamp for a comment on the CURRENT track — uses the playhead position even
+// when paused (so you can pause to type and still stamp where you stopped).
+function curStamp(){return (curAudio&&curAudio.currentTime>0.05)?fmtT(curAudio.currentTime):'';}
+function stampFor(trackId){return (curTid===trackId&&curAudio&&curAudio.currentTime>0.05)?fmtT(curAudio.currentTime):'';}
 function postComment(songId){
   const inp=document.getElementById('cmt-'+songId);if(!inp)return;const text=inp.value.trim();if(!text)return;
   inp.value='';
@@ -3206,42 +3235,53 @@ function refSub(r){const t=refType(r);
   if(t==='link')return esc(r.url||'');
   if(t==='file')return 'File'+(r.url?'':' · uploading…');
   return esc(r.u||'');}
-function refRow(songId,r,idx){const t=refType(r);const title=esc(r.title||r.t||'(untitled)');
+// References work on a "host" — a song (hid = song id) or a bank file
+// (hid = "FILE:"+client id). Same UI + flow for both.
+function refHostById(hid){
+  const al=AL();if(!al)return null;
+  if(typeof hid==='string'&&hid.indexOf('FILE:')===0){const t=findFile(+hid.slice(5));if(!t)return null;t.refs=t.refs||[];return {kind:'file',t,refs:t.refs,persist:()=>persistFileRefs(t),rerender:()=>renderBank()};}
+  const s=al.songs.find(x=>x.id===hid);if(!s)return null;s.refs=s.refs||[];return {kind:'song',s,refs:s.refs,persist:()=>persistRefs(s),rerender:()=>{route.songId=s.id;renderSongList();}};
+}
+function refRow(hid,r,idx){const t=refType(r);const title=esc(r.title||r.t||'(untitled)');
   const open=(t==='link'&&r.url)?`<a class="ico-btn" href="${esc(r.url)}" target="_blank" rel="noopener" title="Open" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>`
     :(t==='file'&&r.url)?`<a class="ico-btn" href="${esc(r.url)}" target="_blank" rel="noopener" title="Open file" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></a>`:'';
-  return `<div class="ref-row"><div class="ri ri-${t}">${REF_TYPES[t].icon}</div><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div><div class="ref-sub">${refSub(r)}</div></div>${open}<button class="ico-btn" title="Remove" onclick="removeRef('${songId}',${idx})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`;
+  return `<div class="ref-row"><div class="ri ri-${t}">${REF_TYPES[t].icon}</div><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div><div class="ref-sub">${refSub(r)}</div></div>${open}<button class="ico-btn" title="Remove" onclick="removeRef('${hid}',${idx})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`;
 }
-function refsBody(s){
-  const rows=(s.refs&&s.refs.length)?s.refs.map((r,idx)=>refRow(s.id,r,idx)).join(''):'<div class="empty-note">Artists, songs, genres, links or files you want this to feel like.</div>';
-  const menu=['artist','song','genre','link','file'].map(t=>`<button onclick="addRefType('${s.id}','${t}')">${REF_TYPES[t].icon}${REF_TYPES[t].label}</button>`).join('');
-  return `${rows}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="toggleRefMenu('${s.id}')">＋ Add reference</button><div class="ref-menu" id="refmenu-${s.id}" style="display:none">${menu}</div>`;
+function refsBodyFor(hid,refs){
+  const rows=(refs&&refs.length)?refs.map((r,idx)=>refRow(hid,r,idx)).join(''):'<div class="empty-note">Artists, songs, genres, links or files you want this to feel like.</div>';
+  const menu=['artist','song','genre','link','file'].map(t=>`<button onclick="addRefType('${hid}','${t}')">${REF_TYPES[t].icon}${REF_TYPES[t].label}</button>`).join('');
+  return `${rows}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="toggleRefMenu('${hid}')">＋ Add reference</button><div class="ref-menu" id="refmenu-${hid}" style="display:none">${menu}</div>`;
 }
-function toggleRefMenu(songId,forceClose){const m=document.getElementById('refmenu-'+songId);if(!m)return;m.style.display=(forceClose||m.style.display!=='none')?'none':'';}
+function refsBody(s){return refsBodyFor(s.id,s.refs);}
+function toggleRefMenu(hid,forceClose){const m=document.getElementById('refmenu-'+hid);if(!m)return;m.style.display=(forceClose||m.style.display!=='none')?'none':'';}
 function persistRefs(s){const clean=(s.refs||[]).map(r=>r.type==='file'?{type:'file',title:r.title,key:r.key||null}:r);fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId:s.id,refs:clean})}).catch(()=>{});}
-async function addRefType(songId,type){
-  toggleRefMenu(songId,true);
-  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs=s.refs||[];
+function persistFileRefs(t){if(!t.sid)return;const clean=(t.refs||[]).map(r=>r.type==='file'?{type:'file',title:r.title,key:r.key||null}:r);fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,refs:clean})}).catch(()=>{});}
+async function addRefType(hid,type){
+  toggleRefMenu(hid,true);
+  const host=refHostById(hid);if(!host)return;
   let ref=null;
   if(type==='artist'){const n=(await uiPrompt('Artist name','',{title:'Reference — artist'})||'').trim();if(!n)return;ref={type,title:n};}
   else if(type==='song'){const n=(await uiPrompt('Song title','',{title:'Reference — song'})||'').trim();if(!n)return;const by=(await uiPrompt('Artist (optional)','',{title:'Reference — song'})||'').trim();ref={type,title:n,by};}
   else if(type==='genre'){const n=(await uiPrompt('Genre','',{title:'Reference — genre'})||'').trim();if(!n)return;ref={type,title:n};}
   else if(type==='link'){let u=(await uiPrompt('Link URL','',{title:'Reference — link',placeholder:'https://…'})||'').trim();if(!u)return;if(!/^https?:\/\//i.test(u))u='https://'+u;const l=(await uiPrompt('Label (optional)','',{title:'Reference — link'})||'').trim();ref={type,title:l||u,url:u};}
-  else if(type==='file'){refFileTarget=songId;document.getElementById('refFileInput').click();return;}
-  s.refs.push(ref);route.songId=songId;renderSongList();persistRefs(s);
+  else if(type==='file'){refFileTarget=hid;document.getElementById('refFileInput').click();return;}
+  host.refs.push(ref);host.rerender();host.persist();
 }
-function removeRef(songId,idx){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs.splice(idx,1);route.songId=songId;renderSongList();persistRefs(s);}
+function removeRef(hid,idx){const host=refHostById(hid);if(!host)return;host.refs.splice(idx,1);host.rerender();host.persist();}
 let refFileTarget=null;
 async function uploadRefFile(f){
-  const songId=refFileTarget;const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs=s.refs||[];
+  const host=refHostById(refFileTarget);if(!host)return;
   const ref={type:'file',title:f.name,key:null,url:URL.createObjectURL(f)};
-  s.refs.push(ref);route.songId=songId;renderSongList();
+  host.refs.push(ref);host.rerender();
   try{
-    const up=await fetch('/api/ref-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,name:f.name})}).then(r=>r.json());
+    const payload=host.kind==='file'?{fileId:host.t.sid,name:f.name}:{songId:host.s.id,name:f.name};
+    const up=await fetch('/api/ref-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(r=>r.json());
     if(!up.ok)throw new Error('url');
     const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
-    ref.key=up.key;persistRefs(s);
+    ref.key=up.key;host.persist();
   }catch(e){/* local preview stays this session */}
 }
+function saveFileNotes(fileClientId,value){const t=findFile(fileClientId);if(!t)return;t.notes=value;if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,notes:value})}).catch(()=>{});}
 async function addCredit(songId){
   const who=await uiPrompt('Credit — who?','',{title:'Add credit'});if(!who||!who.trim())return;const role=(await uiPrompt('Role (guitar, vox, writing…)','',{title:'Add credit'})||'').trim();const split=(await uiPrompt('Split % (optional, e.g. 40%)','',{title:'Add credit'})||'').trim();
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;

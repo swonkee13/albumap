@@ -203,17 +203,28 @@ export async function GET() {
 
   // Idea bank: album-level audio files not linked to any song (song_id null).
   const bankByAlbum: Record<string, unknown[]> = {};
+  const bankFileIds: string[] = [];
   try {
     if (albumIds.length) {
       const { data: bankFiles } = await supabase
         .from("song_files")
-        .select("id, album_id, name, title, fmt, r2_key, duration, labels, created_at")
+        .select("id, album_id, name, title, fmt, r2_key, duration, labels, created_at, notes, refs")
         .in("album_id", albumIds)
         .is("song_id", null)
         .order("created_at", { ascending: true });
       await Promise.all(
         (bankFiles ?? []).map(async (f) => {
           const url = await signGet(client, f.r2_key);
+          bankFileIds.push(f.id);
+          const refsArr = Array.isArray(f.refs)
+            ? await Promise.all(
+                (f.refs as Array<Record<string, unknown>>).map(async (r) =>
+                  r && r.type === "file" && typeof r.key === "string"
+                    ? { ...r, url: await signGet(client, r.key) }
+                    : r,
+                ),
+              )
+            : [];
           if (!bankByAlbum[f.album_id]) bankByAlbum[f.album_id] = [];
           (bankByAlbum[f.album_id] as unknown[]).push({
             sid: f.id,
@@ -225,12 +236,47 @@ export async function GET() {
             dur: f.duration ?? null,
             at: f.created_at,
             labels: Array.isArray(f.labels) ? f.labels : [],
+            notes: f.notes ?? "",
+            refs: refsArr,
           });
         }),
       );
     }
   } catch {
     /* columns not present yet */
+  }
+
+  // Idea-bank comments: attach to a file, not a song (song_id null).
+  const bankCommentsByAlbum: Record<string, unknown[]> = {};
+  try {
+    if (bankFileIds.length) {
+      const fileAlbum: Record<string, string> = {};
+      for (const alId of Object.keys(bankByAlbum))
+        for (const f of bankByAlbum[alId] as Array<{ sid: string }>)
+          fileAlbum[f.sid] = alId;
+      const { data: bcomments } = await supabase
+        .from("song_comments")
+        .select("id, file_id, author, color, stamp, body, created_at")
+        .is("song_id", null)
+        .in("file_id", bankFileIds)
+        .order("created_at", { ascending: true });
+      for (const c of bcomments ?? []) {
+        const alId = fileAlbum[c.file_id as string];
+        if (!alId) continue;
+        if (!bankCommentsByAlbum[alId]) bankCommentsByAlbum[alId] = [];
+        bankCommentsByAlbum[alId].push({
+          id: c.id,
+          who: c.author,
+          color: c.color || colorFor(c.author || "?"),
+          stamp: c.stamp || "",
+          text: c.body,
+          fileSid: c.file_id || null,
+          at: c.created_at,
+        });
+      }
+    }
+  } catch {
+    /* fine if no bank comments */
   }
 
   // Comments
@@ -529,6 +575,7 @@ export async function GET() {
       })),
       merchItems: merchByAlbum[al.id] ?? [],
       bank: bankByAlbum[al.id] ?? [],
+      bankComments: bankCommentsByAlbum[al.id] ?? [],
       activity: activityByAlbum[al.id] ?? [],
     });
   }

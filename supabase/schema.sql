@@ -179,6 +179,24 @@ alter table public.song_files alter column song_id drop not null;
 -- v2.9: a human title for a file, shown ahead of the raw filename (editable).
 alter table public.song_files add column if not exists title text;
 
+-- v2.11: idea-bank parity — bank files (no song) get the same timestamped
+-- comments plus their own References + Notes modules.
+alter table public.song_files add column if not exists notes text;
+alter table public.song_files add column if not exists refs jsonb not null default '[]'::jsonb;
+-- comments may now attach to a bank file instead of a song: song_id nullable,
+-- and RLS is satisfied via the song OR via the file's album.
+alter table public.song_comments alter column song_id drop not null;
+drop policy if exists "song_comments: via owned album" on public.song_comments;
+create policy "song_comments: via owned album" on public.song_comments for all
+  using (
+    (song_comments.song_id is not null and exists (select 1 from public.songs s join public.albums a on a.id = s.album_id where s.id = song_comments.song_id and a.owner_id = auth.uid()))
+    or (song_comments.file_id is not null and exists (select 1 from public.song_files f join public.albums a on a.id = f.album_id where f.id = song_comments.file_id and a.owner_id = auth.uid()))
+  )
+  with check (
+    (song_comments.song_id is not null and exists (select 1 from public.songs s join public.albums a on a.id = s.album_id where s.id = song_comments.song_id and a.owner_id = auth.uid()))
+    or (song_comments.file_id is not null and exists (select 1 from public.song_files f join public.albums a on a.id = f.album_id where f.id = song_comments.file_id and a.owner_id = auth.uid()))
+  );
+
 -- v2.10: archive an album (kept, hidden from the working view; restore/delete
 -- from Settings). Archiving an artist archives all of its albums.
 alter table public.albums add column if not exists archived boolean not null default false;

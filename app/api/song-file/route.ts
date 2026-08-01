@@ -121,6 +121,15 @@ export async function PATCH(req: Request) {
     if (n) patch.name = n;
   }
 
+  // Idea-bank files carry their own notes + references.
+  if ("notes" in (body ?? {})) {
+    const n = body.notes == null ? null : String(body.notes).slice(0, 5000);
+    patch.notes = n || null;
+  }
+  if (Array.isArray(body?.refs)) {
+    patch.refs = body.refs.slice(0, 40);
+  }
+
   if (typeof assignTo === "string") {
     if (assignTo === "bank") {
       // Send back to the album's idea bank: detach from song, keep album link.

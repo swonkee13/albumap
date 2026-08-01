@@ -15,15 +15,32 @@ export async function POST(req: Request) {
   const fileId = (body?.fileId as string | undefined) || null;
   const text = (body?.text as string | undefined)?.trim();
   const stamp = ((body?.stamp as string | undefined) ?? "").trim();
-  if (!songId || !text) return NextResponse.json({ ok: false }, { status: 400 });
+  // A comment targets a song (per-song files) OR just a file (idea-bank files).
+  if ((!songId && !fileId) || !text)
+    return NextResponse.json({ ok: false }, { status: 400 });
 
-  // Resolve album + song title for ownership check (RLS) and the activity line.
-  const { data: song } = await supabase
-    .from("songs")
-    .select("id, title, album_id")
-    .eq("id", songId)
-    .maybeSingle();
-  if (!song) return NextResponse.json({ ok: false }, { status: 403 });
+  // Resolve album + a label for the activity line (song title, else file name).
+  let albumForComment: string | null = null;
+  let label = "an idea";
+  if (songId) {
+    const { data: song } = await supabase
+      .from("songs")
+      .select("id, title, album_id")
+      .eq("id", songId)
+      .maybeSingle();
+    if (!song) return NextResponse.json({ ok: false }, { status: 403 });
+    albumForComment = song.album_id;
+    label = song.title;
+  } else if (fileId) {
+    const { data: file } = await supabase
+      .from("song_files")
+      .select("id, name, title, album_id")
+      .eq("id", fileId)
+      .maybeSingle();
+    if (!file) return NextResponse.json({ ok: false }, { status: 403 });
+    albumForComment = file.album_id;
+    label = (file.title || file.name || "an idea") as string;
+  }
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -35,7 +52,7 @@ export async function POST(req: Request) {
   const { data: inserted, error } = await supabase
     .from("song_comments")
     .insert({
-      song_id: songId,
+      song_id: songId ?? null,
       file_id: fileId,
       author,
       color: colorFor(author),
@@ -48,12 +65,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }
 
-  await logActivity(
-    supabase,
-    user,
-    song.album_id,
-    `commented on <b>${song.title}</b>${stamp ? ` at ${stamp}` : ""}`,
-  );
+  if (albumForComment) {
+    await logActivity(
+      supabase,
+      user,
+      albumForComment,
+      `commented on <b>${label}</b>${stamp ? ` at ${stamp}` : ""}`,
+    );
+  }
   return NextResponse.json({ ok: true, id: inserted.id });
 }
 

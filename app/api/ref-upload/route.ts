@@ -15,18 +15,33 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => null);
   const songId = body?.songId as string | undefined;
+  const fileId = body?.fileId as string | undefined; // idea-bank file reference
   const name = (body?.name as string | undefined)?.trim();
-  if (!songId || !name) return NextResponse.json({ ok: false }, { status: 400 });
+  if ((!songId && !fileId) || !name)
+    return NextResponse.json({ ok: false }, { status: 400 });
 
-  const { data: song } = await supabase
-    .from("songs")
-    .select("id")
-    .eq("id", songId)
-    .maybeSingle();
-  if (!song) return NextResponse.json({ ok: false }, { status: 403 });
+  // Ownership check via RLS + build the storage scope.
+  let scope: string;
+  if (songId) {
+    const { data: song } = await supabase
+      .from("songs")
+      .select("id")
+      .eq("id", songId)
+      .maybeSingle();
+    if (!song) return NextResponse.json({ ok: false }, { status: 403 });
+    scope = `refs/${songId}`;
+  } else {
+    const { data: file } = await supabase
+      .from("song_files")
+      .select("id")
+      .eq("id", fileId)
+      .maybeSingle();
+    if (!file) return NextResponse.json({ ok: false }, { status: 403 });
+    scope = `refs/file/${fileId}`;
+  }
 
   const safe = name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(0, 120);
-  const key = `refs/${songId}/${crypto.randomUUID()}-${safe}`;
+  const key = `${scope}/${crypto.randomUUID()}-${safe}`;
   const contentType = contentTypeForName(name);
   const uploadUrl = await getSignedUrl(
     r2Client(),
