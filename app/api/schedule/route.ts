@@ -13,15 +13,16 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
   const albumId = body?.albumId as string | undefined;
   const schedule = body?.schedule;
-  const releaseDate = (body?.releaseDate as string | undefined) || null;
+  const releaseDate =
+    typeof body?.releaseDate === "string" && body.releaseDate ? body.releaseDate : null;
   if (!albumId || !Array.isArray(schedule)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 
-  const { error } = await supabase
-    .from("albums")
-    .update({ schedule, release_date: releaseDate })
-    .eq("id", albumId);
+  // Only touch release_date when one is provided (don't wipe it on manual edits).
+  const update: Record<string, unknown> = { schedule };
+  if (releaseDate) update.release_date = releaseDate;
+  const { error } = await supabase.from("albums").update(update).eq("id", albumId);
   if (error) {
     return NextResponse.json({ ok: false, error: error.message }, { status: 400 });
   }

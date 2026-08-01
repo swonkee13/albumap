@@ -212,6 +212,8 @@
   .act-row.clickable{cursor:pointer;transition:background .12s}
   .act-row.clickable:hover{background:var(--hover)}
   /* notifications dropdown */
+  .notif-bell{position:relative}
+  .notif-dot{position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:#3ECF8E;border:2px solid var(--panel);box-shadow:0 0 6px rgba(62,207,142,.8)}
   .notif-drop{position:absolute;top:42px;right:0;width:350px;max-height:64vh;overflow-y:auto;background:var(--card-hi);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 18px 50px rgba(0,0,0,.6);z-index:80}
   .notif-drop .nd-head{padding:12px 16px;font-family:'Poppins';font-weight:600;font-size:14px;border-bottom:1px solid var(--line-soft);position:sticky;top:0;background:var(--card-hi)}
   .notif-drop .nd-row{display:flex;gap:12px;padding:11px 16px;border-top:1px solid var(--line-soft);cursor:pointer;transition:background .12s}
@@ -490,6 +492,18 @@
   .gen-box .gt{font-family:'Poppins';font-weight:600;font-size:15px}
   .gen-box .gd{color:var(--txt-3);font-size:12.5px;margin-top:3px}
   .gen-box input[type=date]{background:var(--panel-2);border:1px solid var(--line);color:var(--txt);padding:9px 12px;border-radius:10px;font-family:inherit;font-size:13px;color-scheme:dark}
+  .gen-box .mf{display:flex;flex-direction:column;gap:5px}
+  .gen-box .mf label{font-size:11px;font-weight:600;color:var(--txt-3);text-transform:uppercase;letter-spacing:.06em}
+  .gen-box .mf input{background:var(--panel-2);border:1px solid var(--line);color:var(--txt);padding:9px 12px;border-radius:10px;font-family:inherit;font-size:13px;outline:none;color-scheme:dark}
+  .gen-box .mf input:focus{border-color:var(--accent)}
+  .sched-type{display:flex;gap:6px}
+  .tag.kind-deadline{background:rgba(224,50,42,.15);color:#e0322a}
+  .tag.kind-goal{background:rgba(78,168,232,.16);color:var(--blue)}
+  .tl-card{position:relative}
+  .sch-del{position:absolute;top:10px;right:10px;background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:5px;border-radius:6px;opacity:0;transition:.12s;display:grid;place-items:center}
+  .sch-del svg{width:14px;height:14px}
+  .tl-card:hover .sch-del{opacity:1}
+  .sch-del:hover{color:#e0322a;background:var(--hover)}
 
   /* exp gallery */
   .exp-gallery{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));margin-top:8px}
@@ -939,11 +953,16 @@ function render(){
   if(qn){
     if(inAlbum&&route.albumId){
       const gridBtn=route.view!=='grid'?`<button class="solid-btn" style="padding:8px 15px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
-      qn.innerHTML=gridBtn+`<button class="circ" title="Notifications" onclick="toggleNotif(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button><div class="notif-drop" id="notifDrop" style="display:none"></div>`;
+      const unread=albumUnread(AL());
+      qn.innerHTML=gridBtn+`<button class="circ notif-bell" title="Notifications" onclick="toggleNotif(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>${unread>0?'<span class="notif-dot"></span>':''}</button><div class="notif-drop" id="notifDrop" style="display:none"></div>`;
     }else qn.innerHTML='';
   }
 }
+let notifSeen={};try{notifSeen=JSON.parse(localStorage.getItem('albumap:notifseen')||'{}');}catch(e){}
+function albumUnread(al){if(!al||!Array.isArray(al.activity))return 0;const seen=notifSeen[al.id];if(!seen)return al.activity.length;return al.activity.filter(x=>x.at&&new Date(x.at)>new Date(seen)).length;}
+function markNotifSeen(al){if(!al||!Array.isArray(al.activity))return;notifSeen[al.id]=(al.activity[0]&&al.activity[0].at)||new Date().toISOString();try{localStorage.setItem('albumap:notifseen',JSON.stringify(notifSeen));}catch(e){}const dot=document.querySelector('.notif-bell .notif-dot');if(dot)dot.remove();}
 function toggleNotif(e){if(e)e.stopPropagation();const d=document.getElementById('notifDrop');if(!d)return;
+  if(d.style.display==='none')markNotifSeen(AL());
   if(d.style.display!=='none'){d.style.display='none';return;}
   const al=AL();const acts=(al&&al.activity)?al.activity:[];
   d.innerHTML=`<div class="nd-head">Notifications</div>${acts.length?acts.slice(0,15).map((ac,i)=>`<div class="nd-row" onclick="closeNotif();actNav(${i})"><div class="act-dot" title="${esc(ac.who)}" style="background:${avColor(ac.who,ac.color)}">${avInner(ac.who,(ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="nd-empty">No activity yet.</div>'}<div class="nd-foot" onclick="closeNotif();nav({view:'activity',artistId:route.artistId,albumId:route.albumId})">View all →</div>`;
@@ -1125,7 +1144,7 @@ function renderDashboard(){
         <div class="section">
           <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></div><div><h3 class="sec-t">Schedule</h3><div class="cnt">${nextDate?('Next: '+nextDate.mo+' '+nextDate.dy):'No dates'}</div></div></div>
           <button class="expand" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})">Timeline <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-          <div class="card-scroll">${al.schedule.length?al.schedule.map(s=>`<div class="sched-row" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})"><div class="date-chip"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div></div><div class="info"><div class="tt">${esc(s.t)}</div><div class="meta"><span class="tag ${s.tag}">${s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'}</span>${esc(s.d)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:16px 20px">No dates yet — set a release date in Schedule.</div>'}</div>
+          <div class="card-scroll">${al.schedule.length?al.schedule.map(s=>{const st=schedTag(s);return `<div class="sched-row" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})"><div class="date-chip"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div></div><div class="info"><div class="tt">${esc(s.t)}</div><div class="meta"><span class="tag ${st.cls}">${st.label}</span>${esc(s.d||'')}</div></div></div>`;}).join(''):'<div class="empty-note" style="padding:16px 20px">No dates yet — add milestones in Schedule.</div>'}</div>
         </div>
       </div>
     </div>
@@ -1794,25 +1813,49 @@ document.addEventListener('pointerup',()=>{
 });
 
 /* ===== SCHEDULE ===== */
+const SCHED_MO=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const SCHED_MOI={JAN:'01',FEB:'02',MAR:'03',APR:'04',MAY:'05',JUN:'06',JUL:'07',AUG:'08',SEP:'09',OCT:'10',NOV:'11',DEC:'12'};
+let schedKind='deadline';
 function renderSchedule(){
-  const a=A(),al=AL();
-  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Release schedule</div><div class="ws-sub">Every deadline, working back from release day. Set your release date and albumap fills in the milestones for you.</div></div>
-  <div class="gen-box"><div style="flex:1"><div class="gt">↩ Reverse-timeline generator</div><div class="gd">Enter a release date — we back-build masters, artwork, pre-saves and merch deadlines automatically.</div></div>
-    <input type="date" id="relDate" value="2026-12-05"><button class="solid-btn" onclick="genTimeline()">Generate</button></div>
+  const al=AL();
+  content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Release schedule</div><div class="ws-sub">Add every milestone, deadline and goal for this record. Mark each as a <b>goal date</b> or a <b>hard deadline</b> — they’re color-coded on the timeline.</div></div>
+  <div class="gen-box" style="align-items:flex-end;gap:12px">
+    <div class="mf" style="flex:2;min-width:150px"><label>Item</label><input id="schT" placeholder="e.g. Masters to mastering engineer"></div>
+    <div class="mf" style="flex:3;min-width:180px"><label>Description</label><input id="schD" placeholder="Details (optional)"></div>
+    <div class="mf" style="flex:none"><label>Date</label><input type="date" id="schDate"></div>
+    <div class="mf" style="flex:none"><label>Type</label><div class="sched-type"><span class="lchip ${schedKind==='goal'?'on':''}" id="schKind-goal" onclick="setSchedKind('goal')">Goal date</span><span class="lchip ${schedKind==='deadline'?'on':''}" id="schKind-deadline" onclick="setSchedKind('deadline')">Hard deadline</span></div></div>
+    <button class="solid-btn" onclick="addScheduleItem()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add</button>
+  </div>
   <div class="timeline-v" id="schedTimeline"></div>`;
-  drawSchedule(al.schedule);
+  drawSchedule(al.schedule||[]);
 }
+function setSchedKind(k){schedKind=k;['goal','deadline'].forEach(x=>{const el=document.getElementById('schKind-'+x);if(el)el.classList.toggle('on',x===k);});}
+function schedDate(s){if(s.date)return s.date;if(s.yr&&s.mo&&s.dy)return `${s.yr}-${SCHED_MOI[s.mo]||'01'}-${String(s.dy).padStart(2,'0')}`;return '';}
+function sortSchedule(arr){arr.sort((a,b)=>(schedDate(a)||'').localeCompare(schedDate(b)||''));}
 function drawSchedule(sched){
-  document.getElementById('schedTimeline').innerHTML=sched.map((s,i)=>{const col=s.tag==='done'?'var(--green)':s.tag==='due'?'var(--amber)':'var(--accent)';return `<div class="tl-row"><div class="tl-mark"><div class="tl-dot" style="background:${col}"></div>${i<sched.length-1?'<div class="tl-line"></div>':''}</div><div class="tl-card"><div class="d"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div><div class="yr">${s.yr}</div></div><div class="body"><div class="tt">${s.t}</div><div class="ds">${s.d}</div></div><span class="tag ${s.tag}">${s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'}</span></div></div>`;}).join('');
+  const host=document.getElementById('schedTimeline');if(!host)return;
+  if(!sched.length){host.innerHTML='<div class="empty-note" style="padding:28px;text-align:left">No schedule items yet — add your first milestone above.</div>';return;}
+  const kindMap={goal:{col:'var(--blue)',label:'Goal',cls:'kind-goal'},deadline:{col:'#e0322a',label:'Deadline',cls:'kind-deadline'}};
+  host.innerHTML=sched.map((s,i)=>{
+    const k=s.kind&&kindMap[s.kind];
+    const col=k?k.col:(s.tag==='done'?'var(--green)':s.tag==='due'?'var(--amber)':'var(--accent)');
+    const label=k?k.label:(s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming');
+    const cls=k?k.cls:(s.tag||'up');
+    return `<div class="tl-row"><div class="tl-mark"><div class="tl-dot" style="background:${col}"></div>${i<sched.length-1?'<div class="tl-line"></div>':''}</div><div class="tl-card"><div class="d"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div><div class="yr">${s.yr}</div></div><div class="body"><div class="tt">${esc(s.t)}</div><div class="ds">${esc(s.d||'')}</div></div><span class="tag ${cls}">${label}</span><button class="sch-del" title="Delete" onclick="deleteScheduleItem(${i})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div></div>`;}).join('');
 }
-function genTimeline(){
-  const v=document.getElementById('relDate').value;if(!v){alert('Pick a release date first.');return;}
-  const rel=new Date(v+'T00:00:00');const MO=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-  const mk=(weeksBefore,t,d)=>{const dt=new Date(rel);dt.setDate(dt.getDate()-weeksBefore*7);return{mo:MO[dt.getMonth()],dy:String(dt.getDate()).padStart(2,'0'),yr:String(dt.getFullYear()),t,d,tag:'up'};};
-  const sched=[mk(10,"Masters to mastering engineer","Final mixes bounced, WAV 24/48"),mk(8,"Artwork final to distributor","3000×3000 cover, credits locked"),mk(6,"Merch proofs due","Tee + vinyl jacket approval"),mk(6,"Distribution upload","Deliver to DSPs with 4-week lead"),mk(4,"Pre-save campaign live","Lead single + socials"),mk(1,"Vinyl arrives / press kit","Final checks before release"),{mo:MO[rel.getMonth()],dy:String(rel.getDate()).padStart(2,'0'),yr:String(rel.getFullYear()),t:"Release day",d:"All DSPs + physical ship",tag:'up'}];
-  const al=AL();al.schedule=sched;drawSchedule(sched);
-  fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,schedule:sched,releaseDate:v})}).catch(()=>{});
+function schedTag(s){if(s.kind==='deadline')return{cls:'kind-deadline',label:'Deadline'};if(s.kind==='goal')return{cls:'kind-goal',label:'Goal'};return{cls:s.tag||'up',label:s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'};}
+function persistSchedule(al){fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,schedule:al.schedule})}).catch(()=>{});}
+function addScheduleItem(){
+  const t=(document.getElementById('schT').value||'').trim();if(!t){alert('Add an item name.');return;}
+  const d=(document.getElementById('schD').value||'').trim();
+  const dv=document.getElementById('schDate').value;if(!dv){alert('Pick a date.');return;}
+  const dt=new Date(dv+'T00:00:00');
+  const item={t,d,date:dv,kind:schedKind,mo:SCHED_MO[dt.getMonth()],dy:String(dt.getDate()).padStart(2,'0'),yr:String(dt.getFullYear())};
+  const al=AL();al.schedule=al.schedule||[];al.schedule.push(item);sortSchedule(al.schedule);
+  drawSchedule(al.schedule);persistSchedule(al);
+  document.getElementById('schT').value='';document.getElementById('schD').value='';document.getElementById('schDate').value='';
 }
+function deleteScheduleItem(i){const al=AL();if(!al.schedule||!al.schedule[i])return;al.schedule.splice(i,1);drawSchedule(al.schedule);persistSchedule(al);}
 
 /* ===== ARTWORK / MERCH full ===== */
 /* ===== MEDIA: album artwork / band photos / logos (working set + pool) ===== */

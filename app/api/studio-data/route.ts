@@ -414,6 +414,7 @@ export async function GET() {
         if ((activityByAlbum[a.album_id] as unknown[]).length >= 50) continue;
         activityByAlbum[a.album_id].push({
           who: a.actor || "Someone",
+          at: a.created_at,
           color: colorFor(a.actor || "?"),
           text: a.body,
           time: relTime(a.created_at),
