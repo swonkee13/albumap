@@ -240,6 +240,23 @@ export async function GET() {
     }),
   );
 
+  // Reference lists: sign any file-type references (type:'file' with an r2 key).
+  const refsBySong: Record<string, unknown[]> = {};
+  await Promise.all(
+    songs.map(async (s) => {
+      const arr = Array.isArray(s.refs) ? (s.refs as Array<Record<string, unknown>>) : [];
+      refsBySong[s.id] = await Promise.all(
+        arr.map(async (r) => {
+          if (r && r.type === "file" && typeof r.key === "string") {
+            const url = await signGet(client, r.key);
+            return { ...r, url };
+          }
+          return r;
+        }),
+      );
+    }),
+  );
+
   // Songs shaped for the UI. cells is a map { instrumentName: state } so it
   // works with per-album dynamic instrument columns (v2).
   const songsByAlbum: Record<string, unknown[]> = {};
@@ -256,7 +273,7 @@ export async function GET() {
       comments: commentsBySong[s.id] ?? [],
       lyrics: s.lyrics ?? "",
       notes: s.notes ?? "",
-      refs: Array.isArray(s.refs) ? s.refs : [],
+      refs: refsBySong[s.id] ?? [],
       credits: Array.isArray(s.credits) ? s.credits : [],
     });
   }

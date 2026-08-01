@@ -582,6 +582,17 @@
   .ref-row:first-child,.credit-row:first-child{border-top:none}
   .ref-row .ri{width:26px;height:26px;border-radius:6px;background:var(--panel-2);display:grid;place-items:center;color:var(--txt-3);flex:none}
   .ref-row .ri svg{width:14px;height:14px}
+  .ref-row .ri.ri-artist{color:var(--blue)}
+  .ref-row .ri.ri-song{color:var(--accent-hi)}
+  .ref-row .ri.ri-genre{color:var(--green)}
+  .ref-row .ri.ri-link{color:#B06BFF}
+  .ref-row .ri.ri-file{color:var(--amber)}
+  .ref-sub{color:var(--txt-3);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ref-row a.ico-btn{text-decoration:none}
+  .ref-menu{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .ref-menu button{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);background:var(--panel-2);color:var(--txt-2);font-weight:600;font-size:11.5px;cursor:pointer;font-family:inherit}
+  .ref-menu button:hover{border-color:var(--accent);color:var(--txt)}
+  .ref-menu button svg{width:12px;height:12px}
   .credit-row .who{font-weight:600;flex:1}
   .credit-row .role{color:var(--txt-3);font-size:12px}
   .credit-row .split{font-family:'JetBrains Mono';font-size:12.5px;color:var(--accent-hi);font-weight:600}
@@ -723,6 +734,7 @@
 <input type="file" id="fileInput" class="hidden">
 <input type="file" id="audioInput" accept="audio/*,.wav,.mp3,.m4a,.aiff" multiple class="hidden">
 <input type="file" id="merchImgInput" accept="image/*" class="hidden">
+<input type="file" id="refFileInput" class="hidden">
 
 <script>
 /* ================= DATA ================= */
@@ -1207,7 +1219,7 @@ function songBody(s,i){
     <div class="song-cols">
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="zh-t">References</div></div>
-        <div class="zone-body">${s.refs.length?s.refs.map(r=>`<div class="ref-row"><div class="ri"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></div><div style="flex:1;min-width:0"><div style="font-weight:600">${r.t}</div><div style="color:var(--txt-3);font-size:11.5px">${r.u}</div></div></div>`).join(''):'<div class="empty-note">Songs you want this to feel like.</div>'}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="addRef('${s.id}')">＋ Add reference</button></div>
+        <div class="zone-body">${refsBody(s)}</div>
       </div>
       <div class="zone">
         <div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 7h20M2 17h20"/></svg></div><div class="zh-t">Credits &amp; splits</div></div>
@@ -1324,6 +1336,7 @@ function browseAudio(si){browseTarget=si;document.getElementById('audioInput').c
 function browseBankAudio(){browseTarget='bank';document.getElementById('audioInput').click();}
 document.getElementById('audioInput').addEventListener('change',e=>{handleAudio([...e.target.files],browseTarget);e.target.value='';});
 document.getElementById('merchImgInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadMerchImg(f);});
+document.getElementById('refFileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)uploadRefFile(f);});
 function dzOver(e,el){e.preventDefault();el.classList.add('drag');}
 function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAudio([...e.dataTransfer.files],si);}
 function renderSongsAudio(){renderSongList();renderBank();}
@@ -1969,11 +1982,58 @@ function postComment(songId){
   if(s){s.comments.push({who:'You',color:'#FF4D1C',stamp,text,fileSid});route.songId=songId;renderSongList();}
   fetch('/api/comment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,text,stamp,fileId:fileSid})}).catch(()=>{});
 }
-function addRef(songId){
-  const t=prompt('Reference — song / artist');if(!t||!t.trim())return;const u=(prompt('What for? (feel, tone, guitar texture…)')||'').trim();
-  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;
-  s.refs.push({t:t.trim(),u});route.songId=songId;renderSongList();
-  fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,refs:s.refs})}).catch(()=>{});
+/* ===== references (artist / song / genre / link / file) ===== */
+const REF_TYPES={
+  artist:{label:'Artist',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>'},
+  song:{label:'Song',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>'},
+  genre:{label:'Genre',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.6 13.4 12 22l-9-9V3h10z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg>'},
+  link:{label:'Link',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>'},
+  file:{label:'File',icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'},
+  note:{label:'Note',icon:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>'}
+};
+function refType(r){return (r&&r.type&&REF_TYPES[r.type])?r.type:'note';}
+function refSub(r){const t=refType(r);
+  if(t==='song')return r.by?('Song · '+esc(r.by)):'Song';
+  if(t==='artist')return 'Artist';
+  if(t==='genre')return 'Genre';
+  if(t==='link')return esc(r.url||'');
+  if(t==='file')return 'File'+(r.url?'':' · uploading…');
+  return esc(r.u||'');}
+function refRow(songId,r,idx){const t=refType(r);const title=esc(r.title||r.t||'(untitled)');
+  const open=(t==='link'&&r.url)?`<a class="ico-btn" href="${esc(r.url)}" target="_blank" rel="noopener" title="Open" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></a>`
+    :(t==='file'&&r.url)?`<a class="ico-btn" href="${esc(r.url)}" target="_blank" rel="noopener" title="Open file" onclick="event.stopPropagation()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M5 21h14"/></svg></a>`:'';
+  return `<div class="ref-row"><div class="ri ri-${t}">${REF_TYPES[t].icon}</div><div style="flex:1;min-width:0"><div style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${title}</div><div class="ref-sub">${refSub(r)}</div></div>${open}<button class="ico-btn" title="Remove" onclick="removeRef('${songId}',${idx})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>`;
+}
+function refsBody(s){
+  const rows=(s.refs&&s.refs.length)?s.refs.map((r,idx)=>refRow(s.id,r,idx)).join(''):'<div class="empty-note">Artists, songs, genres, links or files you want this to feel like.</div>';
+  const menu=['artist','song','genre','link','file'].map(t=>`<button onclick="addRefType('${s.id}','${t}')">${REF_TYPES[t].icon}${REF_TYPES[t].label}</button>`).join('');
+  return `${rows}<button class="ghost-btn" style="margin-top:10px;width:100%;justify-content:center" onclick="toggleRefMenu('${s.id}')">＋ Add reference</button><div class="ref-menu" id="refmenu-${s.id}" style="display:none">${menu}</div>`;
+}
+function toggleRefMenu(songId,forceClose){const m=document.getElementById('refmenu-'+songId);if(!m)return;m.style.display=(forceClose||m.style.display!=='none')?'none':'';}
+function persistRefs(s){const clean=(s.refs||[]).map(r=>r.type==='file'?{type:'file',title:r.title,key:r.key||null}:r);fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId:s.id,refs:clean})}).catch(()=>{});}
+function addRefType(songId,type){
+  toggleRefMenu(songId,true);
+  const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs=s.refs||[];
+  let ref=null;
+  if(type==='artist'){const n=(prompt('Artist name')||'').trim();if(!n)return;ref={type,title:n};}
+  else if(type==='song'){const n=(prompt('Song title')||'').trim();if(!n)return;const by=(prompt('Artist (optional)')||'').trim();ref={type,title:n,by};}
+  else if(type==='genre'){const n=(prompt('Genre')||'').trim();if(!n)return;ref={type,title:n};}
+  else if(type==='link'){let u=(prompt('Link URL (https://…)')||'').trim();if(!u)return;if(!/^https?:\/\//i.test(u))u='https://'+u;const l=(prompt('Label (optional)')||'').trim();ref={type,title:l||u,url:u};}
+  else if(type==='file'){refFileTarget=songId;document.getElementById('refFileInput').click();return;}
+  s.refs.push(ref);route.songId=songId;renderSongList();persistRefs(s);
+}
+function removeRef(songId,idx){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs.splice(idx,1);route.songId=songId;renderSongList();persistRefs(s);}
+let refFileTarget=null;
+async function uploadRefFile(f){
+  const songId=refFileTarget;const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs=s.refs||[];
+  const ref={type:'file',title:f.name,key:null,url:URL.createObjectURL(f)};
+  s.refs.push(ref);route.songId=songId;renderSongList();
+  try{
+    const up=await fetch('/api/ref-upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,name:f.name})}).then(r=>r.json());
+    if(!up.ok)throw new Error('url');
+    const put=await fetch(up.uploadUrl,{method:'PUT',headers:{'Content-Type':up.contentType},body:f});if(!put.ok)throw new Error('put');
+    ref.key=up.key;persistRefs(s);
+  }catch(e){/* local preview stays this session */}
 }
 function addCredit(songId){
   const who=prompt('Credit — who?');if(!who||!who.trim())return;const role=(prompt('Role (guitar, vox, writing…)')||'').trim();const split=(prompt('Split % (optional, e.g. 40%)')||'').trim();
