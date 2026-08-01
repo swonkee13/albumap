@@ -145,6 +145,16 @@
 
   /* dashboard grid */
   .dash-grid{display:grid;gap:18px;margin-top:8px;grid-template-columns:1fr 340px;align-items:start}
+  .dash-2x2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.dash-2x2{grid-template-columns:1fr}}
+  .dash-2x2 .section{height:360px;display:flex;flex-direction:column;overflow:hidden}
+  .dash-2x2 .card-scroll{flex:1;overflow-y:auto;min-height:0}
+  .dotrow{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap}
+  .gdot{width:9px;height:9px;border-radius:50%;flex:none}
+  .songs-row{display:flex;align-items:center;gap:12px;padding:8px 20px;cursor:pointer;transition:background .12s}
+  .songs-row:hover{background:var(--hover)}
+  .song-artmini{width:38px;height:38px;border-radius:8px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3);font-family:'Poppins';font-weight:700;font-size:14px}
+  .song-artmini img{width:100%;height:100%;object-fit:cover}
   .dash-main{display:flex;flex-direction:column;gap:18px;min-width:0}
   .dash-rail{display:flex;flex-direction:column;gap:18px}
   .section{background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line-soft);overflow:hidden}
@@ -833,6 +843,8 @@ function songStats(s,instruments){let denom=0,sum=0,done=0;for(const inst of(ins
 function songProg(s,instruments){const st=songStats(s,instruments);return st.denom?Math.round(st.sum/(st.denom*4)*100):0;}
 function albumProg(al){const insts=albumInstruments(al);if(!al.songs.length)return 0;return Math.round(al.songs.reduce((a,s)=>a+songProg(s,insts),0)/al.songs.length);}
 function albumParts(al){const insts=albumInstruments(al);let done=0,total=0;al.songs.forEach(s=>{const st=songStats(s,insts);done+=st.done;total+=st.denom;});return{done,total};}
+// Dot color per grid state (0 not started · 1 scratch · 2 tracked · 3 comped · 4 done · 5 N/A).
+function dotColor(st){return ['#3a3a42','#F5A623','#FF4D1C','rgba(62,207,142,.55)','#3ECF8E','#242429'][st]||'#3a3a42';}
 function fmtT(s){s=Math.max(0,Math.round(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function statusColor(s){return s==="in-progress"?"var(--amber)":s==="released"?"var(--green)":"var(--txt-3)";}
 function statusLabel(s){return s==="in-progress"?"In progress":s==="released"?"Released":"Draft";}
@@ -978,33 +990,35 @@ function renderDashboard(){
 
   <div class="dash-grid">
     <div class="dash-main">
-      <!-- recording -->
-      <div class="section">
-        <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Recording progress</h3><div class="cnt">${al.songs.length} songs · ${insts.length} part${insts.length!==1?'s':''} each</div></div></div>
-        <button class="expand" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})">Open grid <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-        ${al.songs.slice(0,5).map((s,i)=>{const st=songStats(s,insts),p=songProg(s,insts),col=p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)';
-          return `<div class="song-row" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})"><div class="idx">${String(i+1).padStart(2,'0')}</div><div class="sname"><div class="st">${s.t}</div><div class="parts">${st.done}/${st.denom} parts done · ${s.files.length} idea${s.files.length!==1?'s':''}</div></div><div class="song-prog"><div class="pbar"><div class="fill" style="width:${p}%;background:${col}"></div></div><div class="pct-sm">${p}%</div></div></div>`;}).join('')}
-        <div class="sec-foot"><button class="expand" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})">See all ${al.songs.length} songs &amp; full checkerboard →</button></div>
-      </div>
-
-      <!-- quick surfaces -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
-        <div class="section" style="cursor:pointer" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}'})">
-          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Songs</h3><div class="cnt">${al.songs.reduce((n,s)=>n+s.files.length,0)} demos &amp; snippets</div></div></div><div class="expand">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></div></div>
-          <div style="padding:2px 20px 18px;color:var(--txt-3);font-size:12.5px;line-height:1.5">Drop WAVs & MP3s under each song. Plays in place — no more emailing files.</div>
+      <div class="dash-2x2">
+        <!-- recording (top-left) -->
+        <div class="section">
+          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Recording progress</h3><div class="cnt">${al.songs.length} songs · ${insts.length} part${insts.length!==1?'s':''} each</div></div></div>
+          <button class="expand" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})">Open grid <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
+          <div class="card-scroll">${al.songs.length?al.songs.map((s,i)=>{const p=songProg(s,insts),col=p===100?'var(--green)':p>=50?'var(--accent)':'var(--amber)';
+            return `<div class="song-row" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}',gridSong:'${s.id}'})"><div class="idx">${String(i+1).padStart(2,'0')}</div><div class="sname"><div class="st">${esc(s.t)}</div><div class="dotrow">${insts.length?insts.map(inst=>`<span class="gdot" style="background:${dotColor(cellState(s,inst))}"></span>`).join(''):'<span style="color:var(--txt-3);font-size:11px">no instruments yet</span>'}</div></div><div class="song-prog"><div class="pbar" style="width:70px"><div class="fill" style="width:${p}%;background:${col}"></div></div><div class="pct-sm">${p}%</div></div></div>`;}).join(''):'<div class="empty-note" style="padding:16px 20px">No songs yet.</div>'}</div>
+          <div class="sec-foot"><button class="expand" onclick="nav({view:'grid',artistId:'${a.id}',albumId:'${al.id}'})">Full checkerboard →</button></div>
         </div>
+
+        <!-- songs (top-right) -->
+        <div class="section">
+          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><div><h3 class="sec-t">Songs</h3><div class="cnt">${al.songs.length} song${al.songs.length!==1?'s':''} · ${al.songs.reduce((n,s)=>n+s.files.length,0)} ideas</div></div></div>
+          <button class="expand" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}'})">Open <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
+          <div class="card-scroll">${al.songs.length?al.songs.map((s,i)=>`<div class="songs-row" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})"><div class="song-artmini">${s.art?`<img src="${s.art}">`:esc((s.t[0]||'?'))}</div><div class="sname"><div class="st">${esc(s.t)}</div><div class="parts">${s.files.length} idea${s.files.length!==1?'s':''}</div></div></div>`).join(''):'<div class="empty-note" style="padding:16px 20px">No songs yet.</div>'}</div>
+        </div>
+
+        <!-- tracklist (bottom-left) -->
         <div class="section" style="cursor:pointer" onclick="nav({view:'sequencer',artistId:'${a.id}',albumId:'${al.id}'})">
           <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9h14M5 15h14M9 5v14M15 5v14"/></svg></div><div><h3 class="sec-t">Tracklist</h3><div class="cnt">${fmtT(al.songs.reduce((n,s)=>n+s.dur,0))} runtime</div></div></div><div class="expand">Sequence <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></div></div>
-          <div style="display:flex;height:44px;padding:0 20px 18px;gap:2px;align-items:flex-end">${al.songs.map((s,i)=>`<div style="flex-grow:${s.dur};flex-basis:0;height:${30+songProg(s,insts)*0.14}%;background:${SONG_COLORS[i%SONG_COLORS.length]};border-radius:3px;min-width:3px"></div>`).join('')}</div>
+          <div class="card-scroll" style="display:flex;align-items:flex-end;gap:3px;padding:20px">${al.songs.map((s,i)=>`<div style="flex-grow:${s.dur};flex-basis:0;height:${30+songProg(s,insts)*0.6}%;background:${SONG_COLORS[i%SONG_COLORS.length]};border-radius:3px;min-width:4px"></div>`).join('')||'<div class="empty-note" style="margin:auto">No songs yet.</div>'}</div>
         </div>
-      </div>
 
-      <!-- schedule -->
-      <div class="section">
-        <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></div><div><h3 class="sec-t">Schedule</h3><div class="cnt">${nextDate?('Next: '+nextDate.mo+' '+nextDate.dy):'No dates'}</div></div></div>
-        <button class="expand" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})">Full timeline <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
-        ${al.schedule.slice(0,3).map(s=>`<div class="sched-row" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})"><div class="date-chip"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div></div><div class="info"><div class="tt">${s.t}</div><div class="meta"><span class="tag ${s.tag}">${s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'}</span>${s.d}</div></div></div>`).join('')}
-        <div class="sec-foot"></div>
+        <!-- schedule (bottom-right) -->
+        <div class="section">
+          <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg></div><div><h3 class="sec-t">Schedule</h3><div class="cnt">${nextDate?('Next: '+nextDate.mo+' '+nextDate.dy):'No dates'}</div></div></div>
+          <button class="expand" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})">Timeline <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></button></div>
+          <div class="card-scroll">${al.schedule.length?al.schedule.map(s=>`<div class="sched-row" onclick="nav({view:'schedule',artistId:'${a.id}',albumId:'${al.id}'})"><div class="date-chip"><div class="mo">${s.mo}</div><div class="dy">${s.dy}</div></div><div class="info"><div class="tt">${esc(s.t)}</div><div class="meta"><span class="tag ${s.tag}">${s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'}</span>${esc(s.d)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:16px 20px">No dates yet — set a release date in Schedule.</div>'}</div>
+        </div>
       </div>
     </div>
 
