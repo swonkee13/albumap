@@ -302,7 +302,10 @@
   /* per-cell assignee badge (bottom-right) + hover assign button (top-right) */
   .cell-av{border-radius:50%;display:inline-grid;place-items:center;font-size:9px;font-weight:700;color:#fff;overflow:hidden;flex:none;line-height:1}
   .cell-av .av-img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-  .cell>.cell-av{position:absolute;right:5px;bottom:5px;box-shadow:0 0 0 2px var(--panel);pointer-events:none;z-index:1}
+  .cell-av.more{background:#2a2a30;color:var(--txt-2);font-size:8.5px}
+  .cell-avstack{position:absolute;right:5px;bottom:5px;display:inline-flex;flex-direction:row;pointer-events:none;z-index:1}
+  .cell-avstack .cell-av{margin-left:-6px;box-shadow:0 0 0 2px var(--panel)}
+  .cell-avstack .cell-av:first-child{margin-left:0}
   .cell-assign{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;border:none;background:rgba(20,20,23,.72);backdrop-filter:blur(3px);color:var(--txt-2);cursor:pointer;display:grid;place-items:center;opacity:0;transition:.12s;z-index:2}
   .cell-assign svg{width:13px;height:13px}
   .cell:hover .cell-assign{opacity:1}
@@ -316,11 +319,18 @@
   .afl-chip.on{border-color:var(--accent);background:var(--accent-dim);color:var(--accent-hi)}
   /* assign popover menu */
   .assign-menu{position:fixed;z-index:120;width:232px;max-height:60vh;overflow-y:auto;background:var(--panel,#1a1a1f);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 46px rgba(0,0,0,.55);padding:6px}
-  .assign-menu .am-head{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--txt-3);padding:8px 10px 6px}
+  .assign-menu .am-head{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--txt-3);padding:8px 10px 6px;display:flex;flex-direction:column;gap:3px}
+  .assign-menu .am-hint{text-transform:none;letter-spacing:0;font-size:11px;color:var(--txt-3);font-weight:500}
   .assign-menu .am-row{width:100%;display:flex;align-items:center;gap:10px;padding:8px 10px;border:none;background:transparent;color:var(--txt);font-size:13.5px;font-weight:600;cursor:pointer;border-radius:8px;text-align:left}
   .assign-menu .am-row:hover{background:var(--hover)}
+  .assign-menu .am-row.on{background:var(--accent-dim)}
   .assign-menu .am-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .assign-menu .am-box{width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12px;font-weight:800;color:#fff;flex:none}
+  .assign-menu .am-box.all{background:var(--accent);border-color:var(--accent)}
+  .assign-menu .am-box.some{background:transparent;border-color:var(--accent);color:var(--accent-hi)}
   .assign-menu .am-check{color:var(--accent-hi);font-weight:800}
+  .assign-menu .am-done{width:100%;margin-top:6px;padding:9px;border:none;border-top:1px solid var(--line-soft);background:transparent;color:var(--accent-hi);font-weight:700;font-size:13px;cursor:pointer;border-radius:0 0 10px 10px}
+  .assign-menu .am-done:hover{background:var(--hover)}
   .assign-menu .am-clear{border-top:1px solid var(--line-soft);margin-top:4px;color:var(--txt-2)}
   .assign-menu .am-x{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--hover);color:var(--txt-3);font-size:11px;flex:none}
   .assign-menu .am-empty{padding:10px;font-size:12.5px;color:var(--txt-3);line-height:1.5}
@@ -1017,12 +1027,16 @@ function albumInstruments(al){return (al&&Array.isArray(al.instruments))?al.inst
 function albumStatuses(al){return (al&&Array.isArray(al.statuses)&&al.statuses.length)?al.statuses:DEFAULT_STATUSES;}
 function cellStatus(s,inst){return (s&&s.cells&&s.cells[inst]!=null)?s.cells[inst]:null;}
 function resolveStatus(al,id){const sts=albumStatuses(al);return sts.find(x=>x.id===id)||sts[0]||null;}
-/* ---- assignments: who owns each song×instrument part ---- */
-function cellAssignee(s,inst){return (s&&s.assign&&s.assign[inst])?s.assign[inst]:null;}
+/* ---- assignments: who owns each song×instrument part (multiple allowed) ---- */
+function cellAssignees(s,inst){const v=(s&&s.assign)?s.assign[inst]:null;if(Array.isArray(v))return v;if(typeof v==='string'&&v)return [v];return [];}
+function cellHasMember(s,inst,name){return cellAssignees(s,inst).some(n=>n===name);}
+function setCellMember(s,inst,name,add){if(!s.assign)s.assign={};let arr=cellAssignees(s,inst).slice();if(add){if(!arr.includes(name))arr.push(name);}else{arr=arr.filter(n=>n!==name);}if(arr.length)s.assign[inst]=arr;else delete s.assign[inst];return arr;}
 function inMembers(al){return (al&&Array.isArray(al.members))?al.members.filter(m=>m.status==='in'):[];}
 function memberByName(al,name){if(!name)return null;const n=String(name).trim().toLowerCase();return (al.members||[]).find(m=>m.name&&m.name.trim().toLowerCase()===n)||null;}
-// Small avatar chip for a cell / task row. `sz` = diameter px.
+// Small avatar chip (filter chips, menu rows, single). `sz` = diameter px.
 function assignAvatarHTML(al,name,sz){const m=memberByName(al,name);const color=avColor(name,(m&&m.color)||colorForName(name));const inner=avInner(name,(m&&m.initials)||initials(name));return `<span class="cell-av" style="width:${sz}px;height:${sz}px;background:${color}" title="${esc(name)}">${inner}</span>`;}
+// Overlapping avatar stack for a cell (max shown, then +N).
+function assignStackHTML(al,names,sz){if(!names||!names.length)return '';const max=3;const show=names.slice(0,max);const extra=names.length-show.length;let h='<span class="cell-avstack">'+show.map(n=>assignAvatarHTML(al,n,sz)).join('');if(extra>0)h+=`<span class="cell-av more" style="width:${sz}px;height:${sz}px" title="${esc(names.join(', '))}">+${extra}</span>`;return h+'</span>';}
 function colorForName(name){const P=["#FF4D1C","#2E8B8B","#B4644A","#4EA8E8","#B06BFF","#3ECF8E","#F5A623","#FF6B9D"];let h=0;name=String(name||'');for(let i=0;i<name.length;i++)h=(h*31+name.charCodeAt(i))>>>0;return P[h%P.length];}
 function initials(name){return String(name||'?').trim().split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase()||'?';}
 // Progress fraction 0..1 for a status id (null = N/A / excluded).
@@ -1412,9 +1426,9 @@ function computeWaiting(al){
   let unassigned=0;
   al.songs.forEach(s=>insts.forEach(inst=>{
     const p=statusProgress(al,cellStatus(s,inst));if(p===null||p>=1)return; // done or N/A → not blocking
-    const who=cellAssignee(s,inst);
-    if(who&&stats[who]){stats[who].count++;stats[who].insts[inst]=1;}
-    else if(!who)unassigned++;
+    const who=cellAssignees(s,inst);
+    if(who.length){who.forEach(n=>{if(stats[n]){stats[n].count++;stats[n].insts[inst]=1;}});}
+    else unassigned++;
   }));
   const rows=ms.map(m=>{const st=stats[m.name];const parts=Object.keys(st.insts);
     const detail=parts.length?parts.slice(0,2).join(', ')+(parts.length>2?' +'+(parts.length-2)+' more':''):'open parts';
@@ -1427,7 +1441,7 @@ function myTasks(al){
   if(!me||!me.name)return [];
   const meName=me.name.trim().toLowerCase();const insts=albumInstruments(al);const out=[];
   al.songs.forEach(s=>{const parts=[];insts.forEach(inst=>{
-    const who=cellAssignee(s,inst);if(!who||who.trim().toLowerCase()!==meName)return;
+    const who=cellAssignees(s,inst);if(!who.some(n=>n.trim().toLowerCase()===meName))return;
     const p=statusProgress(al,cellStatus(s,inst));if(p===null||p>=1)return;
     parts.push({inst,status:resolveStatus(al,cellStatus(s,inst))});
   });if(parts.length)out.push({song:s,parts});});
@@ -1447,7 +1461,7 @@ function renderGrid(){
   const a=A(),al=AL();const insts=albumInstruments(al);const sts=albumStatuses(al);
   if(gridFilter&&!memberByName(al,gridFilter))gridFilter=null; // stale filter after album switch
   const head=`<tr><th class="songcol">Song</th>${insts.map((inst,ci)=>`<th class="instcol"><span class="inst-name" title="${esc(inst)}">${esc(inst)}</span><span class="inst-tools"><button title="Assign whole column" onclick="openAssignMenu(event,'col',${ci})">${PERSON_SVG}</button><button title="Rename" onclick="renameInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete column" onclick="deleteInstrument(${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span></th>`).join('')}<th class="addcol"><button class="add-inst" onclick="addInstrument()" title="Add instrument"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></th></tr>`;
-  const body=al.songs.map((s,si)=>`<tr data-song="${s.id}"><td class="songcol"><span class="sc-name" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${esc(s.t)}</span><button class="song-assign" title="Assign whole song" onclick="event.stopPropagation();openAssignMenu(event,'row',${si})">${PERSON_SVG}</button><button class="song-del" title="Delete song" onclick="event.stopPropagation();deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></td>${insts.map((inst,ci)=>{const st=resolveStatus(al,cellStatus(s,inst));const asg=cellAssignee(s,inst);const dim=(gridFilter&&asg!==gridFilter)?' dim':'';return `<td><div class="cell${dim}" oncontextmenu="event.preventDefault();setCellNA(${si},${ci})" onclick="cycleCell(${si},${ci})" title="${esc(s.t)} · ${esc(inst)} — ${esc(st?st.name:'—')}${asg?' · '+esc(asg):''}${sts.some(x=>x.na)?' (right-click for N/A)':''}">${cellMarkHTML(st)}${asg?assignAvatarHTML(al,asg,18):''}<button class="cell-assign" title="Assign this part" onclick="event.stopPropagation();openAssignMenu(event,'cell',${si},${ci})">${PERSON_SVG}</button></div></td>`;}).join('')}<td class="addcol"></td></tr>`).join('');
+  const body=al.songs.map((s,si)=>`<tr data-song="${s.id}"><td class="songcol"><span class="sc-name" onclick="nav({view:'songs',artistId:'${a.id}',albumId:'${al.id}',songId:'${s.id}'})">${esc(s.t)}</span><button class="song-assign" title="Assign whole song" onclick="event.stopPropagation();openAssignMenu(event,'row',${si})">${PERSON_SVG}</button><button class="song-del" title="Delete song" onclick="event.stopPropagation();deleteSong('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></td>${insts.map((inst,ci)=>{const st=resolveStatus(al,cellStatus(s,inst));const asg=cellAssignees(s,inst);const dim=(gridFilter&&!asg.includes(gridFilter))?' dim':'';return `<td><div class="cell${dim}" oncontextmenu="event.preventDefault();setCellNA(${si},${ci})" onclick="cycleCell(${si},${ci})" title="${esc(s.t)} · ${esc(inst)} — ${esc(st?st.name:'—')}${asg.length?' · '+esc(asg.join(', ')):''}${sts.some(x=>x.na)?' (right-click for N/A)':''}">${cellMarkHTML(st)}${assignStackHTML(al,asg,16)}<button class="cell-assign" title="Assign this part" onclick="event.stopPropagation();openAssignMenu(event,'cell',${si},${ci})">${PERSON_SVG}</button></div></td>`;}).join('')}<td class="addcol"></td></tr>`).join('');
   const legend=sts.map(st=>`<div class="li"><span class="sw" style="${st.icon==='empty'?'background:transparent;border:1.5px dashed #38383f':(st.na?'background:transparent;border:1.5px solid var(--line)':'background:'+st.color)}"></span>${esc(st.name)}${st.na?' · excluded':''}</div>`).join('');
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Recording grid</div><div class="ws-sub">Every song against every part. <b>Click</b> a cell to cycle its status, <b>right-click</b> for N/A, and hover a cell (or use the header/song icons) to <b>assign it to a bandmate</b>. Statuses left→right define progress; N/A ones are excluded from every percentage.</div></div>
   <div style="margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button><button class="ghost-btn" onclick="addInstrument()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add instrument</button><button class="ghost-btn" onclick="openStatusManager()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3"/></svg>Manage statuses</button></div>
@@ -1477,36 +1491,53 @@ function setGridFilter(name){gridFilter=name||null;renderGrid();}
 function openAssignMenu(ev,scope,a,b){
   if(ev){ev.stopPropagation();ev.preventDefault();}
   closeAssignMenu();
-  const al=AL();const ms=inMembers(al);const insts=albumInstruments(al);
+  const cx=(ev?ev.clientX:140),cy=(ev?ev.clientY:140);
   assignCtx={scope,si:(scope==='cell'||scope==='row')?a:null,ci:(scope==='cell')?b:(scope==='col'?a:null)};
-  let cur=null;
-  if(scope==='cell')cur=cellAssignee(al.songs[a],insts[b]);
-  const label=scope==='col'?`Assign “${esc(insts[a])}” · every song`:scope==='row'?`Assign every part of “${esc(al.songs[a].t)}”`:'Assign this part';
-  const rows=ms.length?ms.map(m=>`<button class="am-row" onclick="applyAssign('${escq(m.name)}')"><span class="cell-av" style="width:22px;height:22px;background:${avColor(m.name,m.color)}">${avInner(m.name,m.initials)}</span><span class="am-name">${esc(m.name)}</span>${cur===m.name?'<span class="am-check">✓</span>':''}</button>`).join(''):`<div class="am-empty">No bandmates in the studio yet — invite members from the album header first.</div>`;
   const menu=document.createElement('div');menu.className='assign-menu';menu.id='assignMenu';
-  menu.innerHTML=`<div class="am-head">${label}</div>${rows}<button class="am-row am-clear" onclick="applyAssign(null)"><span class="am-x">✕</span><span class="am-name">Unassigned</span>${(cur===null&&scope==='cell')?'<span class="am-check">✓</span>':''}</button>`;
   document.body.appendChild(menu);
-  const mw=232,mh=menu.offsetHeight||260;let x=(ev?ev.clientX:120)+6,y=(ev?ev.clientY:120)+6;
-  if(x+mw>innerWidth-8)x=innerWidth-mw-8;if(y+mh>innerHeight-8)y=Math.max(8,(ev?ev.clientY:120)-mh-6);
+  paintAssignMenu();
+  const mw=236,mh=menu.offsetHeight||280;let x=cx+6,y=cy+6;
+  if(x+mw>innerWidth-8)x=innerWidth-mw-8;if(y+mh>innerHeight-8)y=Math.max(8,cy-mh-6);
   menu.style.left=x+'px';menu.style.top=y+'px';
   setTimeout(()=>document.addEventListener('mousedown',assignMenuOutside),0);
 }
 function assignMenuOutside(e){const m=document.getElementById('assignMenu');if(m&&!m.contains(e.target))closeAssignMenu();}
-function closeAssignMenu(){const m=document.getElementById('assignMenu');if(m)m.remove();document.removeEventListener('mousedown',assignMenuOutside);}
-function applyAssign(name){
-  const al=AL();const ctx=assignCtx;closeAssignMenu();if(!ctx)return;
-  const insts=albumInstruments(al);const targets=[];
-  if(ctx.scope==='cell'){targets.push({s:al.songs[ctx.si],inst:insts[ctx.ci]});}
-  else if(ctx.scope==='col'){const inst=insts[ctx.ci];al.songs.forEach(s=>targets.push({s,inst}));}
-  else if(ctx.scope==='row'){const s=al.songs[ctx.si];insts.forEach(inst=>targets.push({s,inst}));}
-  const bulk=ctx.scope!=='cell';
-  targets.forEach(t=>{if(!t.inst||!t.s)return;if(!t.s.assign)t.s.assign={};if(name)t.s.assign[t.inst]=name;else delete t.s.assign[t.inst];persistAssign(t.s.id,t.inst,name,bulk);});
-  let text;
-  if(ctx.scope==='col'){const inst=insts[ctx.ci];text=name?`assigned <b>${esc(inst)}</b> across every song to <b>${esc(name)}</b>`:`cleared every <b>${esc(inst)}</b> assignee`;}
-  else if(ctx.scope==='row'){const s=al.songs[ctx.si];text=name?`assigned every part of <b>${esc(s.t)}</b> to <b>${esc(name)}</b>`:`cleared the assignees on <b>${esc(s.t)}</b>`;}
-  else{const s=al.songs[ctx.si];const inst=insts[ctx.ci];text=name?`assigned <b>${esc(inst)}</b> on ${esc(s.t)} to <b>${esc(name)}</b>`:`cleared the assignee for <b>${esc(inst)}</b> on ${esc(s.t)}`;}
+function closeAssignMenu(){const m=document.getElementById('assignMenu');if(m)m.remove();document.removeEventListener('mousedown',assignMenuOutside);assignCtx=null;}
+// The cells this open menu targets (cell → one; col → whole column; row → whole song).
+function assignTargets(){const al=AL();const ctx=assignCtx;const insts=albumInstruments(al);const t=[];if(!ctx)return t;
+  if(ctx.scope==='cell'){t.push({s:al.songs[ctx.si],inst:insts[ctx.ci]});}
+  else if(ctx.scope==='col'){const inst=insts[ctx.ci];al.songs.forEach(s=>t.push({s,inst}));}
+  else if(ctx.scope==='row'){const s=al.songs[ctx.si];insts.forEach(inst=>t.push({s,inst}));}
+  return t.filter(x=>x.s&&x.inst);}
+function memberCellState(name,targets){let have=0;targets.forEach(t=>{if(cellHasMember(t.s,t.inst,name))have++;});return have===0?'none':(have===targets.length?'all':'some');}
+function paintAssignMenu(){
+  const menu=document.getElementById('assignMenu');if(!menu||!assignCtx)return;
+  const al=AL();const ms=inMembers(al);const insts=albumInstruments(al);const ctx=assignCtx;const targets=assignTargets();
+  const label=ctx.scope==='col'?`“${esc(insts[ctx.ci])}” · every song`:ctx.scope==='row'?`Every part of “${esc(al.songs[ctx.si].t)}”`:'Assign this part';
+  const anyAssigned=targets.some(t=>cellAssignees(t.s,t.inst).length);
+  const rows=ms.length?ms.map(m=>{const st=memberCellState(m.name,targets);return `<button class="am-row${st!=='none'?' on':''}" onclick="toggleAssign('${escq(m.name)}')"><span class="cell-av" style="width:22px;height:22px;background:${avColor(m.name,m.color)}">${avInner(m.name,m.initials)}</span><span class="am-name">${esc(m.name)}</span><span class="am-box ${st}">${st==='all'?'✓':st==='some'?'–':''}</span></button>`;}).join(''):`<div class="am-empty">No bandmates in the studio yet — invite members from the album header first.</div>`;
+  menu.innerHTML=`<div class="am-head">${label}<span class="am-hint">Tap to add or remove · more than one is fine</span></div>${rows}${anyAssigned?`<button class="am-row am-clear" onclick="clearAssign()"><span class="am-x">✕</span><span class="am-name">Clear everyone</span></button>`:''}<button class="am-done" onclick="closeAssignMenu()">Done</button>`;
+}
+function toggleAssign(name){
+  const al=AL();const ctx=assignCtx;if(!ctx)return;const targets=assignTargets();if(!targets.length)return;
+  const bulk=ctx.scope!=='cell';const add=!targets.every(t=>cellHasMember(t.s,t.inst,name));
+  targets.forEach(t=>{const arr=setCellMember(t.s,t.inst,name,add);persistAssignees(t.s.id,t.inst,arr,bulk,name,add);});
+  const insts=albumInstruments(al);let text;
+  if(ctx.scope==='col'){const inst=insts[ctx.ci];text=add?`added <b>${esc(name)}</b> to <b>${esc(inst)}</b> on every song`:`removed <b>${esc(name)}</b> from every <b>${esc(inst)}</b>`;}
+  else if(ctx.scope==='row'){const s=al.songs[ctx.si];text=add?`added <b>${esc(name)}</b> to every part of <b>${esc(s.t)}</b>`:`removed <b>${esc(name)}</b> from <b>${esc(s.t)}</b>`;}
+  else{const s=al.songs[ctx.si];const inst=insts[ctx.ci];text=add?`assigned <b>${esc(inst)}</b> on ${esc(s.t)} to <b>${esc(name)}</b>`:`removed <b>${esc(name)}</b> from <b>${esc(inst)}</b> on ${esc(s.t)}`;}
   pushLocalActivity(al,text);
-  renderGrid();
+  renderGrid();paintAssignMenu();
+}
+function clearAssign(){
+  const al=AL();const ctx=assignCtx;if(!ctx)return;const targets=assignTargets();const bulk=ctx.scope!=='cell';
+  targets.forEach(t=>{if(t.s.assign)delete t.s.assign[t.inst];persistAssignees(t.s.id,t.inst,[],bulk,'',false);});
+  const insts=albumInstruments(al);let text;
+  if(ctx.scope==='col'){text=`cleared every <b>${esc(insts[ctx.ci])}</b> assignee`;}
+  else if(ctx.scope==='row'){text=`cleared the assignees on <b>${esc(al.songs[ctx.si].t)}</b>`;}
+  else{const s=al.songs[ctx.si];text=`cleared the assignees for <b>${esc(insts[ctx.ci])}</b> on ${esc(s.t)}`;}
+  pushLocalActivity(al,text);
+  renderGrid();paintAssignMenu();
 }
 function pushLocalActivity(al,text){if(!al)return;if(!Array.isArray(al.activity))al.activity=[];al.activity.unshift({who:(me&&me.name)||'You',color:(me&&me.color)||null,text,time:'just now',at:new Date().toISOString()});}
 /* ---- custom status manager ---- */
@@ -2531,11 +2562,11 @@ async function reloadData(nextRoute){
 function persistCell(songId,instrument,state){
   fetch('/api/cell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,instrument,state})}).catch(()=>{});
 }
-// Persist an assignment change (assignee may be null to clear). Status untouched.
-// `silent` suppresses the server activity log — used for bulk column/song assigns
-// so the feed gets one client-side summary instead of one row per cell.
-function persistAssign(songId,instrument,assignee,silent){
-  fetch('/api/cell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,instrument,assignee:assignee||null,silent:!!silent})}).catch(()=>{});
+// Persist a cell's full assignee list. Status untouched. `changedName`/`added`
+// let the server log a precise line; `silent` (bulk) suppresses that log so the
+// feed gets one client-side summary instead of one row per cell.
+function persistAssignees(songId,instrument,assignees,silent,changedName,added){
+  fetch('/api/cell',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,instrument,assignees:assignees||[],silent:!!silent,changedName:changedName||'',added:!!added})}).catch(()=>{});
 }
 async function createAlbumFlow(artistName){
   let artist,title;

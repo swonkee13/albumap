@@ -353,10 +353,16 @@ update public.song_tracks set status = case status
     when 'tracking' then 'tracked' else status end
   where status in ('0','1','2','3','4','5','tracking');
 
--- v2.9: each recording-grid cell (song × instrument) can be assigned to a band
--- member. Stored as the member's name (matches album_members.name / the `me`
--- name used for avatar rendering). Null = unassigned.
+-- v2.9: each recording-grid cell (song × instrument) can be assigned to band
+-- members. Stored as member names (match album_members.name / the `me` name
+-- used for avatar rendering).
+--   assignee   text    — legacy single-assignee (v2.9.0)
+--   assignees  text[]  — current, allows multiple people on one part
 alter table public.song_tracks add column if not exists assignee text;
+alter table public.song_tracks add column if not exists assignees text[];
+-- fold any legacy single assignee into the array
+update public.song_tracks set assignees = array[assignee]
+  where assignee is not null and (assignees is null or assignees = '{}');
 
 -- SONG EXTRAS: references + credits (JSON arrays)
 alter table public.songs add column if not exists refs jsonb default '[]'::jsonb;

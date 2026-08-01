@@ -130,24 +130,31 @@ export async function GET() {
     instrument: string;
     status: string;
     assignee: string | null;
+    assignees: string[] | null;
   }> = [];
   if (songIds.length) {
     const { data } = await supabase
       .from("song_tracks")
-      .select("song_id, instrument, status, assignee")
+      .select("song_id, instrument, status, assignee, assignees")
       .in("song_id", songIds);
     tracks = data ?? [];
   }
   const cellMap: Record<string, Record<string, string>> = {};
-  // Parallel map of who owns each cell: { song_id: { instrument: memberName } }.
-  const assignMap: Record<string, Record<string, string>> = {};
+  // Parallel map of who owns each cell: { song_id: { instrument: [names] } }.
+  const assignMap: Record<string, Record<string, string[]>> = {};
   for (const t of tracks) {
     if (!cellMap[t.song_id]) cellMap[t.song_id] = {};
     const id = normStatus(t.status);
     if (id != null) cellMap[t.song_id][t.instrument] = id;
-    if (t.assignee) {
+    const names =
+      Array.isArray(t.assignees) && t.assignees.length
+        ? t.assignees.filter(Boolean)
+        : t.assignee
+          ? [t.assignee]
+          : [];
+    if (names.length) {
       if (!assignMap[t.song_id]) assignMap[t.song_id] = {};
-      assignMap[t.song_id][t.instrument] = t.assignee;
+      assignMap[t.song_id][t.instrument] = names;
     }
   }
 
