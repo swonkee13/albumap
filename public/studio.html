@@ -642,10 +642,7 @@
     </div>
     <nav class="nav">
       <div class="nav-item" id="nav-roster" onclick="nav({view:'roster'})">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>Roster
-      </div>
-      <div class="nav-item" onclick="alert('Global schedule across all projects — same reverse-timeline engine, aggregated.')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/></svg>Schedule
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>Artists
       </div>
     </nav>
     <div class="lib">
@@ -858,7 +855,7 @@ function renderLib(){
   }).join('');
 }
 function renderCrumbs(){
-  let h=`<span class="c ${route.view==='roster'?'here':''}" onclick="nav({view:'roster'})">Roster</span>`;
+  let h=`<span class="c ${route.view==='roster'?'here':''}" onclick="nav({view:'roster'})">Artists</span>`;
   if(route.artistId){const a=A();h+=`<span class="sep">/</span><span class="c ${route.view==='albums'?'here':''}" onclick="nav({view:'albums',artistId:'${a.id}'})">${a.name}</span>`;}
   if(route.albumId){const al=AL();h+=`<span class="sep">/</span><span class="c ${route.view==='dashboard'?'here':''}" onclick="nav({view:'dashboard',artistId:'${route.artistId}',albumId:'${route.albumId}'})">${al.title}</span>`;}
   const names={grid:"Recording grid",songs:"Songs",ideas:"Songs",sequencer:"Tracklist",schedule:"Schedule",artwork:"Artwork",merch:"Merch",activity:"Notifications"};
@@ -868,7 +865,7 @@ function renderCrumbs(){
 
 /* ===== ROSTER ===== */
 function renderRoster(){
-  content.innerHTML=`<div style="padding-top:22px"><div class="eyebrow">Studio roster</div><div class="view-title" style="font-size:34px;margin-top:6px">Artists</div></div>
+  content.innerHTML=`<div style="padding-top:22px"><div class="eyebrow">Your artists</div><div class="view-title" style="font-size:34px;margin-top:6px">Artists</div></div>
   <div class="gallery">${artists.map(a=>{const ini=a.name.split(' ').map(w=>w[0]).slice(0,2).join('');
     return `<div class="g-card" onclick="nav({view:'albums',artistId:'${a.id}'})">
       <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}</div>
