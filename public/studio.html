@@ -431,6 +431,20 @@
   .cnt-pill.has{color:var(--accent-hi);border-color:rgba(255,77,28,.3)}
   .cnt-pill svg{width:12px;height:12px}
   .idea-body{padding:2px 16px 16px;border-top:1px solid var(--line-soft)}
+  /* Idea bank: a real section (header breaks OUT of any box), then one collapsible row per idea */
+  .bank-sec{margin-top:40px;border-top:1px solid var(--line-soft);padding-top:26px}
+  .bank-sec-head{display:flex;align-items:center;gap:14px;padding:0 4px 2px}
+  .bank-sec-ic{width:38px;height:38px;flex:none;border-radius:11px;display:grid;place-items:center;background:rgba(255,77,28,.12);color:var(--accent);border:1px solid rgba(255,77,28,.28)}
+  .bank-sec-ic svg{width:19px;height:19px}
+  .bank-sec-title{font-family:'Poppins';font-weight:600;font-size:19px;letter-spacing:-.01em}
+  .bank-sec-sub{color:var(--txt-3);font-size:12px;margin-top:2px;line-height:1.45;max-width:640px}
+  .bank-list{display:flex;flex-direction:column;margin-top:6px}
+  .idea-song[data-bank] .idea-num{color:var(--accent)}
+  .idea-song[data-bank]:not(.collapsed){background:var(--card-hi);border-color:var(--accent);box-shadow:inset 4px 0 0 -1px var(--accent),0 12px 34px rgba(0,0,0,.32)}
+  .idea-song[data-bank]:not(.collapsed)>.idea-head{background:var(--accent-dim)}
+  .idea-song[data-bank]:not(.collapsed)>.idea-head:hover{background:var(--accent-dim)}
+  .idea-song[data-bank]:not(.collapsed) .idea-title{color:#fff}
+  .idea-song[data-bank]:not(.collapsed) .idea-num{color:var(--accent-hi)}
   .dropzone{margin:14px 4px 4px;border:1.5px dashed var(--line);border-radius:var(--r-md);padding:22px;text-align:center;cursor:pointer;transition:.16s;color:var(--txt-3)}
   .dropzone:hover,.dropzone.drag{border-color:var(--accent);background:rgba(255,77,28,.05);color:var(--txt-2)}
   .dropzone .dz-ic{width:40px;height:40px;border-radius:11px;margin:0 auto 10px;background:var(--accent-dim);color:var(--accent-hi);display:grid;place-items:center}
@@ -1099,9 +1113,12 @@
     .view-title{font-size:23px!important}
     /* song-list collapsed header: drop the inline progress bar so the title +
        meta have room (the % still shows in the meta line) */
-    .idea-song[data-song] .idea-head{gap:10px;padding:14px 12px}
+    .idea-song[data-song] .idea-head,.idea-song[data-bank] .idea-head{gap:10px;padding:14px 12px}
     .idea-song[data-song] .idea-head .pbar{display:none}
-    .idea-song[data-song] .idea-title{font-size:15.5px}
+    .idea-song[data-song] .idea-title,.idea-song[data-bank] .idea-title{font-size:15.5px}
+    .bank-sec-title{font-size:17px}
+    .bank-sec-sub{font-size:11.5px}
+    .bank-sec-ic{width:34px;height:34px}
     .ws-sub{font-size:13px}
   }
 
@@ -2037,6 +2054,7 @@ async function deleteInstrument(ci){
 
 /* ===== SONG IDEAS (audio player) ===== */
 let uidc=1000;
+let bankOpen={}; // which idea-bank rows are expanded (preserved across re-renders)
 function renderSongs(){
   const al=AL();
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Songs</div><div class="ws-sub">Every song, everything in one place — drop demos, write lyrics, leave timestamped notes, set references and splits. Click a song to open it.</div></div>
@@ -2051,23 +2069,51 @@ function renderSongs(){
     if(el){ el.classList.remove('collapsed'); const b=el.querySelector('.idea-body'); if(b)b.style.display=''; setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'start'}),60); }
   }
 }
+function bankRowHTML(t,idx){
+  if(!t.id)t.id=++uidc;
+  const al=AL();const allc=(al&&al.bankComments)||[];
+  const cCount=allc.filter(c=>c.fileSid&&t.sid&&c.fileSid===t.sid).length;
+  const dur=(t.dur!=null)?fmtT(t.dur):null;
+  const title=(t.title&&t.title.trim())?t.title:(t.name||'Untitled idea');
+  const sub=[];if(dur)sub.push(dur);sub.push(cCount+' note'+(cCount!==1?'s':''));if(t.at)sub.push(fmtDate(t.at));
+  const open=!!bankOpen[t.id];const collapsed=open?'':'collapsed';
+  const refsZone=`<div class="zone"><div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="zh-t">References</div></div><div class="zone-body">${refsBodyFor('FILE:'+t.id,t.refs)}</div></div>`;
+  const notesZone=`<div class="zone"><div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="zh-t">Notes</div></div><div class="zone-body"><textarea class="notes-area" placeholder="Notes for this idea — key, vibe, what to do with it…" onblur="saveFileNotes(${t.id},this.value)">${esc(t.notes||'')}</textarea></div></div>`;
+  return `<div class="idea-song ${collapsed}" data-bi="${idx}" data-bank="${t.id}">
+    <div class="idea-head" onclick="toggleBankRow(this,${t.id})">
+      <div class="idea-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+      <div style="flex:1;min-width:0"><div class="idea-title">${esc(title)}</div><div style="color:var(--txt-3);font-size:11.5px;margin-top:2px">${sub.join(' · ')}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="cnt-pill ${cCount?'has':''}" title="Comments"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${cCount}</div>
+        <button class="ico-btn" title="Assign to a song" onclick="event.stopPropagation();assignIdea(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button>
+        <button class="ico-btn" title="Remove idea" onclick="event.stopPropagation();rmBankTrack(${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button>
+      </div>
+    </div>
+    <div class="idea-body" ${collapsed?'style="display:none"':''}>
+      <div class="tracks"><div class="track-group bank-file">${trackRow(t,-1)}${bankComments(t)}<div class="song-cols" style="margin-top:14px">${refsZone}${notesZone}</div></div></div>
+    </div></div>`;
+}
 function renderBank(){
   const host=document.getElementById('ideaBank');if(!host)return;
   const al=AL();const bank=al.bank||[];
-  host.innerHTML=`<div class="idea-song" style="margin-top:28px;border-color:rgba(255,77,28,.28)">
-    <div class="idea-head" style="cursor:default">
-      <div class="idea-num"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M9 11h6"/></svg></div>
-      <div style="flex:1;min-width:0"><div class="idea-title">Idea bank</div><div style="color:var(--txt-3);font-size:11.5px;margin-top:2px">Unassigned audio — riffs, demos &amp; snippets not tied to a song yet. Tag them, then assign to a song when ready.</div></div>
+  host.innerHTML=`<div class="bank-sec">
+    <div class="bank-sec-head">
+      <div class="bank-sec-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18v13H3z"/><path d="M3 7l2-3h14l2 3M9 11h6"/></svg></div>
+      <div style="flex:1;min-width:0"><div class="bank-sec-title">Idea bank</div><div class="bank-sec-sub">Unassigned audio — riffs, demos &amp; snippets not tied to a song yet. Tag them, then assign to a song when ready.</div></div>
       <div class="cnt-pill ${bank.length?'has':''}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>${bank.length}</div>
     </div>
-    <div class="idea-body" style="display:block">
-      ${bank.length?`<div class="tracks">${bank.map(t=>`<div class="track-group bank-file">${trackRow(t,-1)}${bankComments(t)}<div class="song-cols" style="margin-top:14px"><div class="zone"><div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg></div><div class="zh-t">References</div></div><div class="zone-body">${refsBodyFor('FILE:'+t.id,t.refs)}</div></div><div class="zone"><div class="zone-head"><div class="zh-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div><div class="zh-t">Notes</div></div><div class="zone-body"><textarea class="notes-area" placeholder="Notes for this idea — key, vibe, what to do with it…" onblur="saveFileNotes(${t.id},this.value)">${esc(t.notes||'')}</textarea></div></div></div></div>`).join('')}</div>`:'<div class="empty-note">Nothing here yet — drop an idea below, or send a song idea back to the bank.</div>'}
-      <div class="dropzone slim" onclick="browseBankAudio()" ondragover="dzOver(event,this)" ondragleave="this.classList.remove('drag')" ondrop="dzDrop(event,'bank',this)">
-        <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
-        <div class="big">Drop an unassigned idea here</div><div class="sm">or click to browse · lands in the bank</div>
-      </div>
+    ${bank.length?`<div class="bank-list">${bank.map((t,idx)=>bankRowHTML(t,idx)).join('')}</div>`:'<div class="empty-note" style="text-align:left;padding:6px 2px 10px">Nothing here yet — drop an idea below, or send a song idea back to the bank.</div>'}
+    <div class="dropzone slim" onclick="browseBankAudio()" ondragover="dzOver(event,this)" ondragleave="this.classList.remove('drag')" ondrop="dzDrop(event,'bank',this)">
+      <div class="dz-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg></div>
+      <div class="big">Drop an unassigned idea here</div><div class="sm">or click to browse · lands in the bank</div>
     </div>
   </div>`;
+}
+function toggleBankRow(head,id){
+  const row=head.parentElement;const willOpen=row.classList.contains('collapsed');
+  row.classList.toggle('collapsed');
+  const b=row.querySelector('.idea-body');if(b)b.style.display=willOpen?'':'none';
+  bankOpen[id]=willOpen;
 }
 function renderSongList(){
   const al=AL();const insts=albumInstruments(al);
