@@ -259,18 +259,24 @@
   .ws-head .ws-sub{color:var(--txt-2);font-size:14px;margin-top:8px;max-width:64ch;line-height:1.5}
 
   /* recording grid */
-  .grid-wrap{overflow-x:auto;border-radius:var(--r-md);border:1px solid var(--line-soft);background:var(--card)}
-  table.rec-grid{border-collapse:collapse;width:100%;min-width:680px}
+  .grid-wrap{overflow-x:auto;overflow-y:visible;border-radius:var(--r-md);border:1px solid var(--line-soft);background:var(--card);scrollbar-color:var(--accent) var(--panel-2);scrollbar-width:auto}
+  .grid-wrap::-webkit-scrollbar{height:14px}
+  .grid-wrap::-webkit-scrollbar-track{background:var(--panel-2);border-radius:0 0 var(--r-md) var(--r-md)}
+  .grid-wrap::-webkit-scrollbar-thumb{background:var(--accent);border-radius:8px;border:3px solid var(--panel-2);background-clip:padding-box}
+  .grid-wrap::-webkit-scrollbar-thumb:hover{background:var(--accent-hi);background-clip:padding-box;border:3px solid var(--panel-2)}
+  .grid-scroll-hint{display:flex;align-items:center;gap:7px;color:var(--accent-hi);font-size:12px;font-weight:600;margin:8px 2px 0}
+  .grid-scroll-hint svg{width:14px;height:14px}
+  table.rec-grid{border-collapse:collapse;width:100%;table-layout:fixed}
   .rec-grid th,.rec-grid td{border-bottom:1px solid var(--line-soft);border-right:1px solid var(--line-soft)}
   .rec-grid thead th{position:sticky;top:0;background:var(--panel-2);z-index:2;padding:14px 10px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--txt-2)}
-  .rec-grid thead th.songcol{text-align:left;padding-left:20px;min-width:190px}
-  .rec-grid tbody td.songcol{text-align:left;padding:0 20px;font-weight:600;font-size:13.5px;background:var(--panel-2);position:sticky;left:0;cursor:pointer}
+  .rec-grid thead th.songcol{text-align:left;padding-left:20px;width:190px}
+  .rec-grid tbody td.songcol{text-align:left;padding:0 20px;font-weight:600;font-size:13.5px;background:var(--panel-2);position:sticky;left:0;cursor:pointer;width:190px}
   .rec-grid tbody td.songcol:hover{color:var(--accent-hi)}
-  .rec-grid tbody td{height:52px;text-align:center;padding:0}
+  .rec-grid tbody td{height:68px;text-align:center;padding:0}
   .cell{width:100%;height:100%;display:grid;place-items:center;cursor:pointer;transition:.12s}
   .cell:hover{filter:brightness(1.35)}
-  .cell .mark{width:26px;height:26px;border-radius:8px;display:grid;place-items:center}
-  .cell .mark svg{width:15px;height:15px}
+  .cell .mark{width:52px;height:52px;border-radius:11px;display:grid;place-items:center}
+  .cell .mark svg{width:30px;height:30px}
   .cell-empty .mark{background:transparent;border:1.5px dashed #38383f}
   .cell-scratch .mark{background:rgba(245,166,35,.16);color:var(--amber)}
   .cell-tracked .mark{background:rgba(255,77,28,.18);color:var(--accent-hi)}
@@ -1248,9 +1254,10 @@ function renderGrid(){
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Recording grid</div><div class="ws-sub">The checkerboard — every song against every part. Add your own instrument columns, click a cell to cycle its state (right-click for N/A). N/A cells are ignored in every percentage.</div></div>
   <div style="margin:0 0 14px;display:flex;gap:10px;flex-wrap:wrap"><button class="solid-btn" onclick="addSongFlow()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add song</button><button class="ghost-btn" onclick="addInstrument()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add instrument</button></div>
   ${insts.length?'':'<div class="empty-note" style="padding:6px 0 16px;text-align:left">No instruments yet — add your first column (e.g. “Pedal steel”) to start the grid.</div>'}
-  <div class="grid-wrap"><table class="rec-grid"><thead>${head}</thead><tbody>
+  <div class="grid-wrap"><table class="rec-grid" style="${insts.length>12?`min-width:${190+46+insts.length*64}px`:''}"><thead>${head}</thead><tbody>
   ${al.songs.length?body:`<tr><td class="songcol" style="color:var(--txt-3)">No songs yet</td>${insts.map(()=>'<td></td>').join('')}<td class="addcol"></td></tr>`}
   </tbody></table></div>
+  ${insts.length>12?`<div class="grid-scroll-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Scroll sideways to see all ${insts.length} instruments</div>`:''}
   <div class="legend"><div class="li"><span class="sw" style="background:transparent;border:1.5px dashed #38383f"></span>Not started</div><div class="li"><span class="sw" style="background:rgba(245,166,35,.5)"></span>Scratch</div><div class="li"><span class="sw" style="background:rgba(255,77,28,.6)"></span>Tracked</div><div class="li"><span class="sw" style="background:rgba(62,207,142,.5)"></span>Comped</div><div class="li"><span class="sw" style="background:var(--green)"></span>Done</div><div class="li"><span class="sw" style="background:transparent;border:1.5px solid var(--line);color:var(--txt-3);display:grid;place-items:center;font-size:11px">–</span>N/A (excluded)</div><div class="li" style="margin-left:auto;color:var(--txt-3)">Click to cycle · right-click for N/A</div></div>`;
   if(route.gridSong){const tr=document.querySelector(`.rec-grid tr[data-song="${route.gridSong}"]`);if(tr)setTimeout(()=>{tr.scrollIntoView({behavior:'smooth',block:'center'});tr.classList.add('grid-row-flash');setTimeout(()=>tr.classList.remove('grid-row-flash'),1800);},60);}
 }
