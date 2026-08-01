@@ -1659,13 +1659,16 @@ document.getElementById('artFileInput').addEventListener('change',e=>{const f=e.
 document.getElementById('profileInput').addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';if(f)doUploadProfilePhoto(f);});
 function dzOver(e,el){e.preventDefault();el.classList.add('drag');}
 function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAudio([...e.dataTransfer.files],si);}
-function renderSongsAudio(){renderSongList();renderBank();}
+// Re-render the song list + bank without losing scroll position (used while
+// files upload, decode, and save so an open song stays put).
+function renderSongsAudio(){const sc=document.getElementById('scroll');const top=sc?sc.scrollTop:0;renderSongList();renderBank();if(sc)sc.scrollTop=top;}
 function handleAudio(files,target){
   const al=AL();const audio=files.filter(f=>/audio|\.wav|\.mp3|\.m4a|\.aiff/i.test(f.type+f.name));
   if(!audio.length){if(files.length)alert('Drop a WAV, MP3, M4A or AIFF.');return;}
   const isBank=(target==='bank');
   const song=isBank?null:al.songs[target];
   if(!isBank&&!song)return;
+  if(!isBank&&song)route.songId=song.id; // keep this song expanded through the re-renders
   audio.forEach(f=>{const fmt=/wav/i.test(f.name)?'wav':/mp3|mpeg/i.test(f.name)?'mp3':/m4a|aiff/i.test(f.name)?'m4a':'mp3';
     const url=URL.createObjectURL(f);const t={id:++uidc,name:f.name,fmt,note:'uploading…',url,dur:null,labels:[],waveform:stableWave(f.name+f.size,160)};
     if(isBank){al.bank=al.bank||[];al.bank.push(t);}else{song.files.push(t);}
