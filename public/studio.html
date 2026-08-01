@@ -187,6 +187,16 @@
   .act-body .at{font-size:12.5px;line-height:1.4}
   .act-body .at b{font-weight:600}
   .act-body .atime{color:var(--txt-3);font-size:11px;margin-top:2px;font-family:'JetBrains Mono'}
+  .act-row.clickable{cursor:pointer;transition:background .12s}
+  .act-row.clickable:hover{background:var(--hover)}
+  /* notifications dropdown */
+  .notif-drop{position:absolute;top:42px;right:0;width:350px;max-height:64vh;overflow-y:auto;background:var(--card-hi);border:1px solid var(--line);border-radius:var(--r-md);box-shadow:0 18px 50px rgba(0,0,0,.6);z-index:80}
+  .notif-drop .nd-head{padding:12px 16px;font-family:'Poppins';font-weight:600;font-size:14px;border-bottom:1px solid var(--line-soft);position:sticky;top:0;background:var(--card-hi)}
+  .notif-drop .nd-row{display:flex;gap:12px;padding:11px 16px;border-top:1px solid var(--line-soft);cursor:pointer;transition:background .12s}
+  .notif-drop .nd-row:hover{background:var(--hover)}
+  .notif-drop .nd-empty{padding:22px 16px;color:var(--txt-3);font-size:12.5px;text-align:center}
+  .notif-drop .nd-foot{padding:11px 16px;border-top:1px solid var(--line-soft);color:var(--accent-hi);font-weight:600;font-size:12.5px;cursor:pointer;text-align:center;position:sticky;bottom:0;background:var(--card-hi)}
+  .notif-drop .nd-foot:hover{background:var(--hover)}
 
   /* schedule mini */
   .sched-row{display:flex;align-items:center;gap:14px;padding:11px 20px;transition:.12s;cursor:pointer}
@@ -672,7 +682,7 @@
         <button class="circ" id="fwdBtn" onclick="fwd()" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
       </div>
       <div class="crumbs" id="crumbs"></div>
-      <div id="quickNav" style="margin-left:auto;display:flex;gap:8px;align-items:center"></div>
+      <div id="quickNav" style="margin-left:auto;display:flex;gap:8px;align-items:center;position:relative"></div>
     </div>
     <div class="scroll" id="scroll"><div class="content" id="content"></div></div>
   </main>
@@ -842,9 +852,33 @@ function render(){
   // Persistent "Recording grid" quick-link, always available inside an album.
   const qn=document.getElementById('quickNav');
   if(qn){
-    qn.innerHTML=(inAlbum&&route.albumId&&route.view!=='grid')?`<button class="solid-btn" style="padding:8px 15px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
+    if(inAlbum&&route.albumId){
+      const gridBtn=route.view!=='grid'?`<button class="solid-btn" style="padding:8px 15px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
+      qn.innerHTML=gridBtn+`<button class="circ" title="Notifications" onclick="toggleNotif(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></button><div class="notif-drop" id="notifDrop" style="display:none"></div>`;
+    }else qn.innerHTML='';
   }
 }
+function toggleNotif(e){if(e)e.stopPropagation();const d=document.getElementById('notifDrop');if(!d)return;
+  if(d.style.display!=='none'){d.style.display='none';return;}
+  const al=AL();const acts=(al&&al.activity)?al.activity:[];
+  d.innerHTML=`<div class="nd-head">Notifications</div>${acts.length?acts.slice(0,15).map((ac,i)=>`<div class="nd-row" onclick="closeNotif();actNav(${i})"><div class="act-dot" style="background:${ac.color}">${esc((ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="nd-empty">No activity yet.</div>'}<div class="nd-foot" onclick="closeNotif();nav({view:'activity',artistId:route.artistId,albumId:route.albumId})">View all →</div>`;
+  d.style.display='';
+}
+function closeNotif(){const d=document.getElementById('notifDrop');if(d)d.style.display='none';}
+// Send the user to whatever an activity entry refers to (best-effort routing).
+function activityTarget(text){
+  const al=AL();if(!al)return null;const base={artistId:route.artistId,albumId:route.albumId};
+  const low=(text||'').replace(/<[^>]+>/g,'').toLowerCase();
+  let song=null,bestLen=0;(al.songs||[]).forEach(s=>{const n=(s.t||'').toLowerCase();if(n&&n.length>1&&low.includes(n)&&n.length>bestLen){bestLen=n.length;song=s;}});
+  if(/tracklist|reorder/.test(low))return {view:'sequencer',...base};
+  if(/artwork/.test(low))return {view:'artwork',...base};
+  if(/merch/.test(low))return {view:'merch',...base};
+  if(/release date|schedule/.test(low))return {view:'schedule',...base};
+  if(song&&/\bgrid\b|marked|\bdone\b|comped|tracked/.test(low))return {view:'grid',gridSong:song.id,...base};
+  if(song)return {view:'songs',songId:song.id,...base};
+  return {view:'activity',...base};
+}
+function actNav(i){const al=AL();if(!al||!al.activity||!al.activity[i])return;const tgt=activityTarget(al.activity[i].text);if(tgt)nav(tgt);}
 function gotoGrid(songId){nav({view:'grid',artistId:route.artistId,albumId:route.albumId,gridSong:songId||null});}
 const LIB_SECTIONS=[{v:'dashboard',label:'Overview'},{v:'grid',label:'Recording grid'},{v:'songs',label:'Songs'},{v:'sequencer',label:'Tracklist'},{v:'schedule',label:'Schedule'},{v:'artwork',label:'Artwork'},{v:'merch',label:'Merch'},{v:'activity',label:'Notifications'}];
 function renderLib(){
@@ -971,7 +1005,7 @@ function renderDashboard(){
       <!-- activity -->
       <div class="section">
         <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div><h3 class="sec-t">Activity</h3><div class="cnt">Latest across the band</div></div></div></div>
-        ${al.activity.slice(0,6).map(ac=>`<div class="act-row"><div class="act-dot" style="background:${ac.color}">${ac.who[0]}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')||'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}
+        ${al.activity.slice(0,6).map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" style="background:${ac.color}">${ac.who[0]}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')||'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}
         ${al.activity.length>6?`<div class="sec-foot"><button class="expand" onclick="nav({view:'activity',artistId:'${a.id}',albumId:'${al.id}'})">View all ${al.activity.length} →</button></div>`:''}
       </div>
     </div>
@@ -1760,7 +1794,7 @@ async function uploadMerchImg(f){
 function renderActivity(){
   const a=A(),al=AL();const acts=al.activity||[];
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Notifications</div><div class="ws-sub">Everything that’s happened on this album — newest first.</div></div>
-  <div class="section" style="margin-top:8px">${acts.length?acts.map(ac=>`<div class="act-row"><div class="act-dot" style="background:${ac.color}">${esc((ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:24px">No activity yet.</div>'}</div>`;
+  <div class="section" style="margin-top:8px">${acts.length?acts.map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" style="background:${ac.color}">${esc((ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:24px">No activity yet.</div>'}</div>`;
 }
 /* ===== SONG DETAIL ===== */
 /* ===== SHARE MODAL ===== */
@@ -1864,6 +1898,7 @@ function stopAllAudio(){if(curAudio){curAudio.pause();curAudio=null;curTid=null;
 
 document.getElementById('scroll').addEventListener('scroll',function(){document.getElementById('topbar').classList.toggle('scrolled',this.scrollTop>10);});
 window.addEventListener('dragover',e=>e.preventDefault());window.addEventListener('drop',e=>e.preventDefault());
+document.addEventListener('click',e=>{const w=document.getElementById('quickNav');if(w&&!w.contains(e.target))closeNotif();});
 
 /* ===== REAL DATA (Supabase via /api) ===== */
 function defaultRoute(){
