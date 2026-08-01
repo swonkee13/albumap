@@ -162,6 +162,10 @@
   .songs-row:hover{background:var(--hover)}
   .song-artmini{width:38px;height:38px;border-radius:8px;flex:none;background:var(--card-hi);overflow:hidden;display:grid;place-items:center;color:var(--txt-3);font-family:'Poppins';font-weight:700;font-size:14px}
   .song-artmini img{width:100%;height:100%;object-fit:cover}
+  .dseq-block{position:relative;flex-basis:0;border-radius:5px;overflow:hidden;min-width:4px}
+  .dseq-wave{position:absolute;inset:0;display:flex;align-items:center;gap:1px;padding:0 3px;opacity:.3}
+  .dseq-wave .dwb{flex:1 1 0;background:#fff;border-radius:1px;min-width:1px}
+  .dseq-ph{position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.85);font-size:13px}
   .dash-main{display:flex;flex-direction:column;gap:18px;min-width:0}
   .dash-rail{display:flex;flex-direction:column;gap:18px}
   .section{background:var(--card);border-radius:var(--r-lg);border:1px solid var(--line-soft);overflow:hidden}
@@ -872,6 +876,14 @@ function albumParts(al){const insts=albumInstruments(al);let done=0,total=0;al.s
 function dotColor(st){return ['#3a3a42','#F5A623','#FF4D1C','rgba(62,207,142,.55)','#3ECF8E','#242429'][st]||'#3a3a42';}
 // Shrink the album title until it fits on one line (never wraps).
 function fitBandName(){const el=content.querySelector('.band-name');if(!el)return;el.style.fontSize='';let size=parseFloat(getComputedStyle(el).fontSize)||40;let guard=0;while(el.scrollWidth>el.clientWidth+1&&size>18&&guard<90){size-=1;el.style.fontSize=size+'px';guard++;}}
+// Mini sequencer for the dashboard tracklist card: proportional-width, full-height
+// blocks with waveforms, including placeholders (matches the sequencer page).
+function dashSeq(al){
+  const items=buildSeqSongs(al);if(!items.length)return '<div class="empty-note" style="margin:auto">No songs yet.</div>';
+  return items.map((s,i)=>{const wave=stableWave((s.name||'ph')+i,Math.max(14,Math.round(s.dur/4)));
+    const style=s.placeholder?`background:${s.color}26;box-shadow:inset 0 0 0 1.5px ${s.color}aa`:`background:linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;
+    return `<div class="dseq-block" style="flex-grow:${s.dur};${style}"><div class="dseq-wave">${wave.map(h=>`<div class="dwb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>${s.placeholder?'<span class="dseq-ph">◇</span>':''}</div>`;}).join('');
+}
 function fmtT(s){s=Math.max(0,Math.round(s||0));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');}
 function statusColor(s){return s==="in-progress"?"var(--amber)":s==="released"?"var(--green)":"var(--txt-3)";}
 function statusLabel(s){return s==="in-progress"?"In progress":s==="released"?"Released":"Draft";}
@@ -1039,7 +1051,7 @@ function renderDashboard(){
         <!-- tracklist (bottom-left) -->
         <div class="section" style="cursor:pointer" onclick="nav({view:'sequencer',artistId:'${a.id}',albumId:'${al.id}'})">
           <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 9h14M5 15h14M9 5v14M15 5v14"/></svg></div><div><h3 class="sec-t">Tracklist</h3><div class="cnt">${fmtT(al.songs.reduce((n,s)=>n+s.dur,0))} runtime</div></div></div><div class="expand">Sequence <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 17 17 7M8 7h9v9"/></svg></div></div>
-          <div class="card-scroll" style="display:flex;align-items:flex-end;gap:3px;padding:20px">${al.songs.map((s,i)=>`<div style="flex-grow:${s.dur};flex-basis:0;height:${30+songProg(s,insts)*0.6}%;background:${SONG_COLORS[i%SONG_COLORS.length]};border-radius:3px;min-width:4px"></div>`).join('')||'<div class="empty-note" style="margin:auto">No songs yet.</div>'}</div>
+          <div class="card-scroll" style="display:flex;gap:3px;padding:14px 16px">${dashSeq(al)}</div>
         </div>
 
         <!-- schedule (bottom-right) -->
@@ -1525,6 +1537,18 @@ function addPlaceholder(){
   seqStop();seqPos=0;renderSeq();seqPersist();
 }
 function removePlaceholder(id){seqSongs=seqSongs.filter(s=>s.id!==id);seqStop();seqPos=0;renderSeq();seqPersist();}
+const PH_PILLS=[30,60,90,120,150,180,210,240,270,300];
+function openPlaceholderDur(id){
+  const s=seqSongs.find(x=>x.id===id);if(!s)return;
+  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Placeholder length</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:14px">Reserve a slot of this length — it sizes the block in the sequencer and on the dashboard.</p>
+    <div class="art-pills">${PH_PILLS.map(sec=>`<span class="lchip ${s.dur===sec?'on':''}" onclick="setPlaceholderDur('${id}',${sec})">${fmtT(sec)}</span>`).join('')}</div>
+    <div style="margin-top:14px"><div class="mf-lbl">Exact time (mm:ss)</div><input class="art-custom" placeholder="e.g. 3:45" value="${fmtT(s.dur)}" onkeydown="if(event.key==='Enter'){setPlaceholderDurStr('${id}',this.value);}" onblur="setPlaceholderDurStr('${id}',this.value)"></div>
+  </div>`;
+  document.getElementById('modalBg').classList.add('show');
+}
+function setPlaceholderDur(id,sec){const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,Math.round(sec));seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
+function setPlaceholderDurStr(id,str){const m=String(str||'').trim().match(/^(\d+):(\d{1,2})$/);let sec;if(m)sec=parseInt(m[1],10)*60+parseInt(m[2],10);else{const n=parseInt(str,10);if(!Number.isNaN(n))sec=n;}if(sec==null||sec<=0)return;const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,sec);seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
 function renderSequencer(){
   const al=AL();
   seqSongs=buildSeqSongs(al);
@@ -1647,7 +1671,7 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerup',e=>{
   if(!blockDrag)return;const bd=blockDrag;blockDrag=null;document.body.style.cursor='';
   const el=blockEl(bd.id);
-  if(!bd.moved){if(el){el.classList.remove('seq-lift');el.style.transform='';}seqSeekClient(e.clientX);return;}
+  if(!bd.moved){if(el){el.classList.remove('seq-lift');el.style.transform='';}const s=seqSongs.find(x=>x.id===bd.id);if(s&&s.placeholder){openPlaceholderDur(bd.id);}else{seqSeekClient(e.clientX);}return;}
   if(el){el.classList.remove('seq-lift');el.style.transform='';}
   layoutBlocks();updateSeqStats();renderSeqOrder();seqStop();seqPos=0;seqPersist();
 });
