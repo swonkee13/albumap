@@ -114,6 +114,16 @@
 
   /* dashboard hero */
   .dash-hero{display:flex;align-items:flex-end;gap:26px;padding:32px 0 24px}
+  @media(max-width:640px){.dash-hero{flex-wrap:wrap;gap:16px}.dash-hero .overall{margin-left:0}}
+  /* album cover (left) with band-logo badge on its corner */
+  .hero-cover-wrap{position:relative;flex:none;margin-bottom:8px}
+  .hero-cover{width:134px;height:134px;border-radius:16px;overflow:hidden;background:var(--card-hi);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;box-shadow:0 14px 34px rgba(0,0,0,.5);transition:.16s}
+  .hero-cover:hover{border-color:var(--accent)}
+  .hero-cover img{width:100%;height:100%;object-fit:cover}
+  .hero-cover .hc-ph{font-family:'Poppins';font-weight:800;font-size:54px;color:var(--txt-3)}
+  .profile-up.hero-logo-badge{position:absolute;bottom:-12px;left:-12px;width:70px;height:70px;border-radius:50%;border:4px solid var(--panel);box-shadow:0 8px 20px rgba(0,0,0,.45)}
+  .profile-up.hero-logo-badge .profile-empty svg{width:24px;height:24px}
+  .profile-up.hero-logo-badge .up-hint{font-size:0}
   .profile-up{width:140px;height:140px;border-radius:50%;flex:none;background:var(--card-hi);border:1px solid var(--line);display:grid;place-items:center;cursor:pointer;overflow:hidden;position:relative;transition:.18s}
   .profile-up:hover{border-color:var(--accent)}
   .profile-up img{width:100%;height:100%;object-fit:cover}
@@ -1135,13 +1145,17 @@ function renderDashboard(){
   const insts=albumInstruments(al);
   const overall=albumProg(al);
   const partsAgg=albumParts(al);const doneParts=partsAgg.done,totalParts=partsAgg.total;
+  const heroCover=al.cover||(al.artwork&&al.artwork[0]&&al.artwork[0].img)||null;
   const nextDate=al.schedule.find(s=>s.tag!=="done");
   const circ=2*Math.PI*32;
   // waiting-on: compute per member the # of not-done parts they "own" (fake: distribute)
   const waiting=computeWaiting(al);
   content.innerHTML=`
   <div class="dash-hero">
-    <div class="profile-up" onclick="uploadImg('artist','${a.id}')">${a.photo?`<img src="${a.photo}">`:`<div class="profile-empty"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="12" cy="9" r="4"/><path d="M3 21a9 9 0 0 1 18 0"/></svg>Add band photo<br>or logo</div>`}<div class="up-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Upload</div></div>
+    <div class="hero-cover-wrap">
+      <div class="hero-cover" title="Album cover — set it in Artwork" onclick="nav({view:'artwork',artistId:'${a.id}',albumId:'${al.id}'})">${heroCover?`<img src="${heroCover}">`:`<div class="hc-ph">${esc((al.title[0]||'?'))}</div>`}</div>
+      <div class="profile-up hero-logo-badge" title="Band logo / photo — click to upload" onclick="uploadImg('artist','${a.id}')">${a.photo?`<img src="${a.photo}">`:`<div class="profile-empty" style="padding:0;font-size:0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="9" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg></div>`}<div class="up-hint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></div></div>
+    </div>
     <div class="hero-meta">
       <div class="eyebrow"><span class="verified"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5z"/></svg></span>Album in production</div>
       <div class="band-name">${al.title}</div>
