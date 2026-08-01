@@ -888,7 +888,22 @@
     .callbar{display:none!important}
     /* galleries + forms breathe on a phone */
     .slot-grid{grid-template-columns:repeat(3,1fr)!important}
-    .gallery{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    /* artist + album cards → compact single-column list rows */
+    .gallery{grid-template-columns:1fr;gap:10px;margin-top:16px}
+    .gallery .g-card{display:grid;grid-template-columns:60px 1fr;grid-template-rows:auto auto;column-gap:14px;align-items:center;padding:14px 16px;min-height:0}
+    .gallery .g-card .art{grid-row:1/3;grid-column:1;width:60px;height:60px;aspect-ratio:1;margin:0;box-shadow:none}
+    .gallery .g-card .art.round{border-radius:50%}
+    .gallery .g-card .art .ph{font-size:20px}
+    .gallery .g-card .gt{grid-column:2;grid-row:1;align-self:end;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .gallery .g-card .gs{grid-column:2;grid-row:2;align-self:start}
+    /* the "New artist/album" tile becomes a matching add-row */
+    .gallery .g-add{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;gap:14px;min-height:0!important;padding:18px 16px!important}
+    .gallery .g-add svg{width:24px!important;height:24px!important;flex:none}
+    .gallery .g-add>div{margin-top:0!important}
+    /* dashboard sections stack single-column (media sections keep their own grid) */
+    .dash-grid{grid-template-columns:1fr}
+    /* waveform bars must shrink to fit the card, not overflow it */
+    .mtrack .wave .bar{min-width:0}
     .modal{width:96vw;max-width:96vw;margin:0}
     /* bottom tab bar */
     .mobile-tabs{position:fixed;left:0;right:0;bottom:0;z-index:120;background:rgba(18,18,21,.94);backdrop-filter:blur(20px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom)}
@@ -901,9 +916,9 @@
     /* dashboard hero → stacked & centered */
     .dash-hero{flex-direction:column;align-items:stretch;gap:12px;padding:6px 0 16px}
     .hero-cover-wrap{margin:2px auto 12px}
-    .hero-cover{width:180px!important;height:180px!important;border-radius:18px}
-    .hero-cover .hc-ph{font-size:72px!important}
-    .hero-logo-badge{width:70px!important;height:70px!important;left:-10px!important;bottom:-10px!important}
+    .hero-cover{width:min(74vw,300px)!important;height:min(74vw,300px)!important;border-radius:20px}
+    .hero-cover .hc-ph{font-size:112px!important}
+    .hero-logo-badge{width:min(26vw,104px)!important;height:min(26vw,104px)!important;left:-12px!important;bottom:-12px!important}
     .hero-meta{padding:0;text-align:center;flex:none}
     .hero-meta .eyebrow{justify-content:center}
     .band-name{white-space:normal!important;font-size:26px!important;text-align:center;margin:6px 0 12px}
@@ -1023,7 +1038,7 @@
   }
   @media(max-width:640px){
     .slot-grid{grid-template-columns:repeat(2,1fr)!important}
-    .gallery{grid-template-columns:repeat(2,1fr);gap:12px}
+    .gallery{grid-template-columns:1fr;gap:14px}
     .content{padding:12px 13px calc(84px + env(safe-area-inset-bottom))}
     .view-title{font-size:23px!important}
     /* song-list collapsed header: drop the inline progress bar so the title +
@@ -1519,7 +1534,7 @@ function renderRoster(){
       <button class="card-edit" title="Rename band" onclick="event.stopPropagation();renameBand('${a.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
       <div class="art round">${a.photo?`<img src="${a.photo}">`:`<div class="ph">${ini}</div>`}</div>
       <div class="gt">${a.name}</div><div class="gs">${a.type} · ${a.sub}</div></div>`;}).join('')}
-    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow(null)"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h1M17 15v6M14 18h6"/></svg><div style="margin-top:12px;font-weight:600">New artist</div></div></div>`;
+    <div class="g-card g-add" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow(null)"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h1M17 15v6M14 18h6"/></svg><div style="margin-top:12px;font-weight:600">New artist</div></div></div>`;
 }
 /* ===== ALBUMS ===== */
 function renderAlbums(){
@@ -1532,7 +1547,7 @@ function renderAlbums(){
     <button class="card-edit" title="Rename album" onclick="event.stopPropagation();renameAlbum('${a.id}','${al.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>
     <div class="art">${cover?`<img src="${cover}">`:`<div class="ph">${al.title[0]}</div>`}</div>
     <div class="gt">${al.title}</div><div class="gs"><span class="status-dot" style="background:${statusColor(al.status)}"></span>${al.year} · ${statusLabel(al.status)}</div></div>`;}).join('')}
-    <div class="g-card" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow('${a.name}')"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
+    <div class="g-card g-add" style="border:1.5px dashed var(--line);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:230px;color:var(--txt-3)" onclick="createAlbumFlow('${a.name}')"><svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 5v14M5 12h14"/></svg><div style="margin-top:12px;font-weight:600">New album</div></div></div>`;
 }
 
 /* ===== DASHBOARD (HUB) ===== */
