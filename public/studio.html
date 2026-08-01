@@ -1068,6 +1068,22 @@
   .img-viewer .iv-nav.next{right:10px}
   .img-viewer .iv-nav svg{width:22px;height:22px}
   .img-viewer .iv-count{position:fixed;bottom:calc(18px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);color:#fff;font-family:'JetBrains Mono';font-size:12px;background:rgba(0,0,0,.55);padding:5px 13px;border-radius:20px}
+  /* styled dialog (alert / confirm / prompt) */
+  .ui-dialog-bg{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);display:none;place-items:center;padding:22px}
+  .ui-dialog-bg.show{display:grid}
+  .ui-dialog{width:100%;max-width:420px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:0 24px 70px rgba(0,0,0,.6);padding:22px 22px 18px;animation:uidPop .16s ease}
+  @keyframes uidPop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+  .uid-title{font-family:'Poppins';font-weight:700;font-size:17px;margin-bottom:8px}
+  .uid-msg{font-size:13.5px;color:var(--txt-2);line-height:1.55;white-space:pre-line}
+  .uid-input{width:100%;margin-top:14px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;color:var(--txt);font-size:14px;outline:none}
+  .uid-input:focus{border-color:var(--accent)}
+  .uid-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}
+  .uid-btn{padding:10px 18px;border-radius:10px;font-weight:600;font-size:13.5px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--txt-2);transition:.12s}
+  .uid-btn.cancel:hover{background:var(--hover);color:var(--txt)}
+  .uid-btn.ok{background:var(--accent);border-color:var(--accent);color:#fff}
+  .uid-btn.ok:hover{background:var(--accent-hi)}
+  .uid-btn.ok.danger{background:#e0322a;border-color:#e0322a}
+  .uid-btn.ok.danger:hover{background:#c72821}
 </style>
 </head>
 <body>
@@ -1109,6 +1125,8 @@
 <nav class="mobile-tabs" id="mobileTabs"></nav>
 <!-- full-screen image viewer (artwork / photos / logos / merch) -->
 <div class="img-viewer" id="imgViewer"></div>
+<!-- styled dialog (replaces native alert/confirm/prompt) -->
+<div class="ui-dialog-bg" id="uiDialogBg"><div class="ui-dialog" id="uiDialogCard"></div></div>
 
 <div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modalInner"></div>
@@ -1136,7 +1154,7 @@
     <div class="call-controls">
       <button class="cctl" id="micBtn" onclick="this.classList.toggle('off')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg></button>
       <button class="cctl" id="camBtn" onclick="this.classList.toggle('off')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m23 7-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></button>
-      <button class="cctl" onclick="alert('Screen share — show the sequencer or a song page to the whole band live.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
+      <button class="cctl" onclick="uiAlert('Screen share — show the sequencer or a song page to the whole band live.')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></button>
       <button class="cctl leave" onclick="closeCall()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.7 13.3a10 10 0 0 1-2-2L11 9 8 4 4 4a16 16 0 0 0 16 16v-4l-5-3z" transform="rotate(135 12 12)"/></svg></button>
     </div>
   </div>
@@ -1904,8 +1922,8 @@ function renderStatusList(){
 function setStatusField(i,field,val){const al=AL();const sts=albumStatusesEditable(al);if(!sts[i])return;sts[i][field]=(field==='na')?!!val:val;persistStatuses(al);if(field==='icon'||field==='na')renderStatusList();statusRefresh();}
 function moveStatus(i,d){const al=AL();const sts=albumStatusesEditable(al);const j=i+d;if(j<0||j>=sts.length)return;const t=sts[i];sts[i]=sts[j];sts[j]=t;persistStatuses(al);renderStatusList();statusRefresh();}
 function addStatus(){const al=AL();const sts=albumStatusesEditable(al);sts.push({id:'st_'+Date.now()+'_'+sts.length,name:'New status',color:'#4EA8E8',icon:'dot',na:false});persistStatuses(al);renderStatusList();statusRefresh();}
-function deleteStatus(i){const al=AL();const sts=albumStatusesEditable(al);if(sts.length<=1)return;if(!confirm('Delete this status? Cells set to it will show as “not started”.'))return;sts.splice(i,1);persistStatuses(al);renderStatusList();statusRefresh();}
-function applyStatusPreset(which){const al=AL();if(!confirm('Replace the status set with this preset?'))return;
+async function deleteStatus(i){const al=AL();const sts=albumStatusesEditable(al);if(sts.length<=1)return;if(!await uiConfirm('Cells set to this status will show as “not started”.',{title:'Delete this status?',okLabel:'Delete',danger:true}))return;sts.splice(i,1);persistStatuses(al);renderStatusList();statusRefresh();}
+async function applyStatusPreset(which){const al=AL();if(!await uiConfirm('Replace the status set with this preset? Existing cell values are kept where the ids match.',{title:'Apply preset',okLabel:'Replace'}))return;
   al.statuses=which==='simple'
     ?[{id:'todo',name:'To-do',color:'#3a3a42',icon:'empty',na:false},{id:'doing',name:'Doing',color:'#F5A623',icon:'half',na:false},{id:'done',name:'Done',color:'#3ECF8E',icon:'check',na:false},{id:'na',name:'N/A',color:'#242429',icon:'dash',na:true}]
     :DEFAULT_STATUSES.map(s=>({...s}));
@@ -1917,15 +1935,15 @@ async function saveInstruments(al,instruments){
   return r&&r.ok;
 }
 async function addInstrument(){
-  const al=AL();if(!al)return;const name=(prompt('New instrument / part name (e.g. Pedal steel)')||'').trim();if(!name)return;
+  const al=AL();if(!al)return;const name=(await uiPrompt('New instrument / part name','',{title:'Add instrument',placeholder:'e.g. Pedal steel',okLabel:'Add'})||'').trim();if(!name)return;
   const insts=albumInstruments(al).slice();
-  if(insts.some(x=>x.toLowerCase()===name.toLowerCase())){alert('That instrument already exists.');return;}
+  if(insts.some(x=>x.toLowerCase()===name.toLowerCase())){uiAlert('That instrument already exists.');return;}
   insts.push(name);await saveInstruments(al,insts);renderGrid();
 }
 async function renameInstrument(ci){
   const al=AL();const insts=albumInstruments(al).slice();const old=insts[ci];if(old==null)return;
-  const name=(prompt('Rename instrument',old)||'').trim();if(!name||name===old)return;
-  if(insts.some((x,i)=>i!==ci&&x.toLowerCase()===name.toLowerCase())){alert('That instrument already exists.');return;}
+  const name=(await uiPrompt('Rename instrument',old,{title:'Rename instrument'})||'').trim();if(!name||name===old)return;
+  if(insts.some((x,i)=>i!==ci&&x.toLowerCase()===name.toLowerCase())){uiAlert('That instrument already exists.');return;}
   insts[ci]=name;
   // move each song's cell data from the old key to the new one
   al.songs.forEach(s=>{if(s.cells&&s.cells[old]!=null){s.cells[name]=s.cells[old];delete s.cells[old];}});
@@ -1943,7 +1961,7 @@ async function moveInstrument(ci,dir){
 }
 async function deleteInstrument(ci){
   const al=AL();const insts=albumInstruments(al).slice();const name=insts[ci];if(name==null)return;
-  if(!confirm(`Delete the “${name}” column? This clears its cell data for every song.`))return;
+  if(!await uiConfirm(`This clears “${name}” cell data for every song.`,{title:`Delete the “${name}” column?`,okLabel:'Delete',danger:true}))return;
   insts.splice(ci,1);
   al.songs.forEach(s=>{if(s.cells&&s.cells[name]!=null)delete s.cells[name];});
   await fetch('/api/instruments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,instruments:insts,remove:name})}).catch(()=>{});
@@ -2053,7 +2071,7 @@ function parseStamp(s){if(!s)return null;const m=String(s).trim().match(/^(\d+):
 function fmtDate(iso){if(!iso)return '';try{return new Date(iso).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});}catch(e){return '';}}
 function fmtDateTime(iso){if(!iso)return '';try{const d=new Date(iso);return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString(undefined,{hour:'numeric',minute:'2-digit'});}catch(e){return '';}}
 // Give a file a human title (shown ahead of the filename). Blank removes it.
-function editFileTitle(id){const t=findFile(id);if(!t)return;const cur=t.title||'';const val=(prompt('File title (leave blank to remove):',cur)||'').trim();if(val===cur)return;t.title=val;if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,title:val})}).catch(()=>{});renderSongsAudio();}
+async function editFileTitle(id){const t=findFile(id);if(!t)return;const cur=t.title||'';const val=(await uiPrompt('File title (leave blank to remove)',cur,{title:'File title'})||'').trim();if(val===cur)return;t.title=val;if(t.sid)fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,title:val})}).catch(()=>{});renderSongsAudio();}
 function trackRow(t,si){
   if(!t.id)t.id=++uidc;
   if(!t.waveform)t.waveform=stableWave((t.name||'')+si,160);
@@ -2120,10 +2138,10 @@ function persistTags(al,kind){const b={albumId:al.id};if(kind==='section')b.sect
 function refreshPalettes(){if(document.getElementById('songList'))renderSongList();if(document.getElementById('ideaBank'))renderBank();}
 function addTag(kind,val){const al=AL();ensureTags(al);val=(val||'').trim();if(!val)return;const arr=tagArr(al,kind);if(arr.some(x=>x.toLowerCase()===val.toLowerCase()))return;arr.push(val);persistTags(al,kind);renderTagManager();refreshPalettes();}
 function deleteTag(kind,idx){const al=AL();ensureTags(al);const arr=tagArr(al,kind);if(idx<0||idx>=arr.length)return;arr.splice(idx,1);persistTags(al,kind);renderTagManager();refreshPalettes();}
-function renameTag(kind,idx){
+async function renameTag(kind,idx){
   const al=AL();ensureTags(al);const arr=tagArr(al,kind);const old=arr[idx];if(old==null)return;
-  const name=(prompt('Rename tag',old)||'').trim();if(!name||name===old)return;
-  if(arr.some((x,i)=>i!==idx&&x.toLowerCase()===name.toLowerCase())){alert('That tag already exists.');return;}
+  const name=(await uiPrompt('Rename tag',old,{title:'Rename tag'})||'').trim();if(!name||name===old)return;
+  if(arr.some((x,i)=>i!==idx&&x.toLowerCase()===name.toLowerCase())){uiAlert('That tag already exists.');return;}
   arr[idx]=name;persistTags(al,kind);
   // migrate existing file labels old → new (local + persist affected files)
   const files=[];al.songs.forEach(s=>(s.files||[]).forEach(f=>files.push(f)));(al.bank||[]).forEach(f=>files.push(f));
@@ -2146,8 +2164,8 @@ function trackComments(t,i,s){
   const rows=cmts.length?cmts.map(({c,ci})=>`<div class="cmt-row"><div class="cmt-av" title="${esc(c.who)}" style="background:${avColor(c.who,c.color)}">${avInner(c.who,(c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}${c.at?`<span class="cdate">${esc(fmtDate(c.at))}</span>`:''}${canEditComment(c)?`<span class="cmt-acts"><button title="Edit" onclick="editComment('${s.id}',${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button title="Delete" onclick="deleteComment('${s.id}',${ci})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg></button></span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
   return `<div class="track-cmts">${rows}<div class="tc-add"><input id="fcmt-${t.id}" placeholder="Comment on this file…" onkeydown="if(event.key==='Enter')postFileComment('${s.id}',${t.id})"><button class="ico-btn" title="Post comment" onclick="postFileComment('${s.id}',${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>`;
 }
-function editComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];const val=(prompt('Edit comment:',c.text)||'').trim();if(!val||val===c.text)return;c.text=val;route.songId=songId;renderSongsAudio();if(c.id)fetch('/api/comment',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,text:val})}).catch(()=>{});}
-function deleteComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];if(!confirm('Delete this comment?'))return;const cid=c.id;s.comments.splice(ci,1);route.songId=songId;renderSongsAudio();if(cid)fetch('/api/comment?id='+encodeURIComponent(cid),{method:'DELETE'}).catch(()=>{});}
+async function editComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];const val=(await uiPrompt('Edit comment',c.text,{title:'Edit comment'})||'').trim();if(!val||val===c.text)return;c.text=val;route.songId=songId;renderSongsAudio();if(c.id)fetch('/api/comment',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:c.id,text:val})}).catch(()=>{});}
+async function deleteComment(songId,ci){const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s||!s.comments||!s.comments[ci])return;const c=s.comments[ci];if(!await uiConfirm('Delete this comment?',{okLabel:'Delete',danger:true}))return;const cid=c.id;s.comments.splice(ci,1);route.songId=songId;renderSongsAudio();if(cid)fetch('/api/comment?id='+encodeURIComponent(cid),{method:'DELETE'}).catch(()=>{});}
 function postFileComment(songId,trackId){
   const inp=document.getElementById('fcmt-'+trackId);if(!inp)return;const text=inp.value.trim();if(!text)return;inp.value='';
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);const t=findFile(trackId);
@@ -2187,7 +2205,7 @@ function dzDrop(e,si,el){e.preventDefault();el.classList.remove('drag');handleAu
 function renderSongsAudio(){const sc=document.getElementById('scroll');const top=sc?sc.scrollTop:0;renderSongList();renderBank();if(sc)sc.scrollTop=top;}
 function handleAudio(files,target){
   const al=AL();const audio=files.filter(f=>/audio|\.wav|\.mp3|\.m4a|\.aiff/i.test(f.type+f.name));
-  if(!audio.length){if(files.length)alert('Drop a WAV, MP3, M4A or AIFF.');return;}
+  if(!audio.length){if(files.length)uiAlert('Drop a WAV, MP3, M4A or AIFF.');return;}
   const isBank=(target==='bank');
   const song=isBank?null:al.songs[target];
   if(!isBank&&!song)return;
@@ -2218,7 +2236,7 @@ async function uploadToR2(f,dest,t){
 }
 /* ---- idea bank: assign / send-back / remove ---- */
 function assignIdea(id){
-  const al=AL();if(!al.songs.length){alert('Add a song first, then you can assign ideas to it.');return;}
+  const al=AL();if(!al.songs.length){uiAlert('Add a song first, then you can assign ideas to it.');return;}
   const rows=al.songs.map((s,i)=>`<button class="assign-row" onclick="doAssign(${id},'${s.id}')"><span class="ol-num">${String(i+1).padStart(2,'0')}</span><span style="flex:1">${esc(s.t)}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></button>`).join('');
   document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Assign idea to a song</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div><div class="modal-body"><div class="assign-list">${rows}</div></div>`;
   document.getElementById('modalBg').classList.add('show');
@@ -2247,7 +2265,7 @@ let curAudio=null,curTid=null;
 function findFile(id){const al=AL();if(!al)return null;for(const s of al.songs){const t=s.files.find(x=>x.id===id);if(t)return t;}for(const t of (al.bank||[])){if(t.id===id)return t;}return null;}
 function togglePlay(id){
   const t=findFile(id);
-  if(!t||!t.url){alert('This is a seeded demo row with no real file. Drop a real WAV or MP3 to hear playback.');return;}
+  if(!t||!t.url){uiAlert('This is a seeded demo row with no real file. Drop a real WAV or MP3 to hear playback.');return;}
   // Same track already loaded → pause/resume in place (keeps the seek position).
   if(curTid===id&&curAudio){
     if(curAudio.paused){curAudio.play().catch(()=>{});setPlayUI(id);}
@@ -2288,7 +2306,7 @@ function seekAt(id,frac){
 function waveDown(e,id){e.preventDefault();waveDragId=id;seekAt(id,fracFromEvent(e,id));}
 document.addEventListener('pointermove',e=>{if(waveDragId!=null)seekAt(waveDragId,fracFromEvent(e,waveDragId));});
 document.addEventListener('pointerup',()=>{waveDragId=null;});
-function dlTrack(id){const t=findFile(id);if(!t.url){alert('No real file behind this demo row.');return;}const a=document.createElement('a');a.href=t.url;a.download=t.name;a.click();}
+function dlTrack(id){const t=findFile(id);if(!t.url){uiAlert('No real file behind this demo row.');return;}const a=document.createElement('a');a.href=t.url;a.download=t.name;a.click();}
 // Flag exactly one file per song as the master (most-complete version).
 function setMaster(id,si){
   const al=AL();const song=al.songs[si];if(!song)return;const t=song.files.find(x=>x.id===id);if(!t)return;
@@ -2297,7 +2315,7 @@ function setMaster(id,si){
   t.master=makeMaster;
   renderSongList();
   if(t.sid){fetch('/api/song-file',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:t.sid,master:makeMaster})}).catch(()=>{});}
-  else if(makeMaster){alert('This file is still uploading — it’ll be set as master once the upload finishes.');}
+  else if(makeMaster){uiAlert('This file is still uploading — it’ll be set as master once the upload finishes.');}
 }
 function rmTrack(id,si){const al=AL();const t=al.songs[si].files.find(x=>x.id===id);if(curTid===id&&curAudio){curAudio.pause();curAudio=null;curTid=null;}al.songs[si].files=al.songs[si].files.filter(x=>x.id!==id);renderSongList();if(t&&t.sid){fetch('/api/song-file?id='+encodeURIComponent(t.sid),{method:'DELETE'}).catch(()=>{});}}
 
@@ -2425,7 +2443,7 @@ function mseqRow(s,i){
 }
 function renderSeqMobileList(){const host=document.getElementById('mseqList');if(!host)return;host.innerHTML=seqSongs.map((s,i)=>mseqRow(s,i)).join('');updateSeqStats();const tot=document.getElementById('seqTot');if(tot)tot.textContent=fmtT(seqTotal());}
 function seqPlayTrack(id){const idx=seqSongs.findIndex(s=>s.id===id);if(idx<0)return;const s=seqSongs[idx];
-  if(!s.url){const n=seqPlayableFrom(idx);if(n<0){alert('No playable audio yet — set a master (or upload a file) on a song first.');return;}}
+  if(!s.url){const n=seqPlayableFrom(idx);if(n<0){uiAlert('No playable audio yet — set a master (or upload a file) on a song first.');return;}}
   seqPos=accBefore(idx);
   if(seqPlaying){if(s.url){seqStartSong(idx,0);}else{const n=seqPlayableFrom(idx);seqPos=accBefore(n);seqStartSong(n,0);}}
   else{seqPlay();}
@@ -2441,7 +2459,7 @@ function toggleSeq(){seqPlaying?seqPause():seqPlay();}
 function seqPlay(){
   if(seqPlaying||!seqSongs.length)return;
   let{idx,into}=seqAt(seqPos);
-  if(!seqSongs[idx]||!seqSongs[idx].url){const n=seqPlayableFrom(idx+1);if(n<0){alert('No playable audio yet — set a master (or upload a file) on at least one song to hear the album here.');return;}idx=n;into=0;seqPos=accBefore(idx);}
+  if(!seqSongs[idx]||!seqSongs[idx].url){const n=seqPlayableFrom(idx+1);if(n<0){uiAlert('No playable audio yet — set a master (or upload a file) on at least one song to hear the album here.');return;}idx=n;into=0;seqPos=accBefore(idx);}
   seqPlaying=true;document.body.classList.add('seqplaying');
   const _ph=document.getElementById('seqPlayhead');if(_ph)_ph.style.display='block';
   seqStartSong(idx,into);
@@ -2566,9 +2584,9 @@ function drawSchedule(sched){
 function schedTag(s){if(s.kind==='deadline')return{cls:'kind-deadline',label:'Deadline'};if(s.kind==='goal')return{cls:'kind-goal',label:'Goal'};return{cls:s.tag||'up',label:s.tag==='done'?'Done':s.tag==='due'?'Due soon':'Upcoming'};}
 function persistSchedule(al){fetch('/api/schedule',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,schedule:al.schedule})}).catch(()=>{});}
 function addScheduleItem(){
-  const t=(document.getElementById('schT').value||'').trim();if(!t){alert('Add an item name.');return;}
+  const t=(document.getElementById('schT').value||'').trim();if(!t){uiAlert('Add an item name.');return;}
   const d=(document.getElementById('schD').value||'').trim();
-  const dv=document.getElementById('schDate').value;if(!dv){alert('Pick a date.');return;}
+  const dv=document.getElementById('schDate').value;if(!dv){uiAlert('Pick a date.');return;}
   const dt=new Date(dv+'T00:00:00');
   const item={t,d,date:dv,kind:schedKind,mo:SCHED_MO[dt.getMonth()],dy:String(dt.getDate()).padStart(2,'0'),yr:String(dt.getFullYear())};
   const al=AL();al.schedule=al.schedule||[];al.schedule.push(item);sortSchedule(al.schedule);
@@ -2661,7 +2679,7 @@ function setMediaLabel(kind,id,label){const p=findMedia(kind,id);if(!p)return;p.
   if(route.view===MEDIA[kind].view)renderMedia(kind);
   fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,label})}).catch(()=>{});
 }
-function deleteMedia(kind,id){if(!confirm('Delete this piece?'))return;const al=AL();setMediaMain(al,kind,mediaMain(al,kind).filter(x=>x.song||x.id!==id));setMediaPool(al,kind,mediaPool(al,kind).filter(x=>x.id!==id));closeModal();if(route.view===MEDIA[kind].view)renderMedia(kind);fetch('/api/artwork?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});}
+async function deleteMedia(kind,id){if(!await uiConfirm('Delete this piece?',{okLabel:'Delete',danger:true}))return;const al=AL();setMediaMain(al,kind,mediaMain(al,kind).filter(x=>x.song||x.id!==id));setMediaPool(al,kind,mediaPool(al,kind).filter(x=>x.id!==id));closeModal();if(route.view===MEDIA[kind].view)renderMedia(kind);fetch('/api/artwork?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});}
 function toggleMediaFinal(kind,id){const p=findMedia(kind,id);if(!p)return;p.finalized=!p.finalized;fetch('/api/artwork',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,finalized:p.finalized})}).catch(()=>{});if(route.view===MEDIA[kind].view)renderMedia(kind);if(document.getElementById('modalBg').classList.contains('show'))openMedia(kind,id);}
 function openMedia(kind,id){
   const cfg=MEDIA[kind];const p=findMedia(kind,id);if(!p)return;
@@ -2719,6 +2737,28 @@ function merchImgTap(id,which){
     openImageViewer(list,Math.max(0,list.findIndex(x=>x.img===url)),{});return;}
   browseMerchImg(id,which);
 }
+/* ===== styled dialogs — drop-in replacements for alert/confirm/prompt ===== */
+let _uiRes=null,_uiEsc=null;
+function _uiClose(val){const bg=document.getElementById('uiDialogBg');if(bg)bg.classList.remove('show');if(_uiEsc){document.removeEventListener('keydown',_uiEsc);_uiEsc=null;}const r=_uiRes;_uiRes=null;if(r)r(val);}
+function uiDialog(o){o=o||{};return new Promise(res=>{
+  if(_uiRes)_uiClose(null); // close any prior
+  _uiRes=res;
+  const card=document.getElementById('uiDialogCard');
+  card.innerHTML=`${o.title?`<div class="uid-title">${esc(o.title)}</div>`:''}${o.message?`<div class="uid-msg">${esc(o.message)}</div>`:''}${o.input?`<input class="uid-input" id="uidInput" placeholder="${esc(o.placeholder||'')}" value="${esc(o.defaultValue||'')}">`:''}<div class="uid-actions">${o.cancelLabel===null?'':`<button class="uid-btn cancel" id="uidCancel">${esc(o.cancelLabel||'Cancel')}</button>`}<button class="uid-btn ok ${o.danger?'danger':''}" id="uidOk">${esc(o.okLabel||'OK')}</button></div>`;
+  const bg=document.getElementById('uiDialogBg');bg.classList.add('show');
+  const inp=document.getElementById('uidInput');
+  const ok=()=>_uiClose(o.input?(inp?inp.value:''):true);
+  const cancel=()=>_uiClose(o.input?null:false);
+  document.getElementById('uidOk').onclick=ok;
+  const c=document.getElementById('uidCancel');if(c)c.onclick=cancel;
+  bg.onclick=e=>{if(e.target===bg)cancel();};
+  _uiEsc=e=>{if(e.key==='Escape'){e.preventDefault();cancel();}};document.addEventListener('keydown',_uiEsc);
+  if(inp){setTimeout(()=>{inp.focus();inp.select();},30);inp.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ok();}};}
+  else setTimeout(()=>{const b=document.getElementById('uidOk');if(b)b.focus();},30);
+});}
+function uiAlert(message,title){return uiDialog({title:title||'',message:message,cancelLabel:null,okLabel:'OK'});}
+function uiConfirm(message,opts){opts=opts||{};return uiDialog({title:opts.title||'Are you sure?',message:message,okLabel:opts.okLabel||'Confirm',cancelLabel:opts.cancelLabel||'Cancel',danger:opts.danger});}
+function uiPrompt(message,defaultValue,opts){opts=opts||{};return uiDialog({title:opts.title||'',message:message,input:true,defaultValue:defaultValue||'',placeholder:opts.placeholder||'',okLabel:opts.okLabel||'Save',cancelLabel:opts.cancelLabel||'Cancel'});}
 const MERCH_SIZES=["S","M","L","XL","2XL","3XL"];
 let merchOpen={};
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -2793,7 +2833,7 @@ function merchItem(id){const al=AL();return (al&&al.merchItems?al.merchItems:[])
 async function addMerchItem(){
   const al=AL();if(!al)return;
   const res=await fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'create',albumId:al.id})});
-  if(!res.ok){alert('Could not add the merch item — has the merch_items table been created in Supabase?');return;}
+  if(!res.ok){uiAlert('Could not add the merch item — has the merch_items table been created in Supabase?');return;}
   const {id}=await res.json();
   al.merchItems=al.merchItems||[];
   al.merchItems.push({id,name:'',brand:'',color:'',sizes:[],hasSizes:true,budget:null,vendor:'',vendorLink:'',sizeQty:{},totalQty:null,finalized:false,mockup:null,print:null});
@@ -2801,8 +2841,8 @@ async function addMerchItem(){
   const el=document.querySelector(`.idea-song[data-mi="${id}"]`);if(el)setTimeout(()=>el.scrollIntoView({behavior:'smooth',block:'center'}),60);
 }
 function toggleMerchFinal(id){const it=merchItem(id);if(!it)return;it.finalized=!it.finalized;renderMerchList();fetch('/api/merch-item',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'update',id,finalized:it.finalized})}).catch(()=>{});}
-function deleteMerchItem(id){
-  if(!confirm('Delete this merch item? Its images will be removed too.'))return;
+async function deleteMerchItem(id){
+  if(!await uiConfirm('Its images will be removed too.',{title:'Delete this merch item?',okLabel:'Delete',danger:true}))return;
   const al=AL();al.merchItems=(al.merchItems||[]).filter(x=>x.id!==id);delete merchOpen[id];renderMerchList();
   fetch('/api/merch-item?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});
 }
@@ -3006,51 +3046,51 @@ function persistAssignees(songId,instrument,assignees,silent,changedName,added){
 async function createAlbumFlow(artistName){
   let artist,title;
   if(artistName!=null){ // adding an album under an existing artist
-    title=(prompt('Album title')||'').trim();if(!title)return;artist=artistName;
+    title=(await uiPrompt('Album title','',{title:'New album',okLabel:'Create'})||'').trim();if(!title)return;artist=artistName;
   }else{ // "New artist" from the roster — ask the artist first
-    artist=(prompt('Artist / band name')||'').trim();if(!artist)return;
-    title=(prompt('First album title')||'').trim();if(!title)return;
+    artist=(await uiPrompt('Artist / band name','',{title:'New artist',okLabel:'Next'})||'').trim();if(!artist)return;
+    title=(await uiPrompt('First album title','',{title:'New album',okLabel:'Create'})||'').trim();if(!title)return;
   }
   const res=await fetch('/api/album',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,artist})});
-  if(!res.ok){alert('Could not create the album.');return;}
+  if(!res.ok){uiAlert('Could not create the album.');return;}
   const {id}=await res.json();
   await reloadData();
   for(const a of artists){const al=a.albums.find(x=>x.id===id);if(al){nav({view:'dashboard',artistId:a.id,albumId:al.id});break;}}
 }
 async function renameBand(artistId){
   const a=getArtist(artistId);if(!a)return;
-  const nn=(prompt('Band / artist name',a.name)||'').trim();if(!nn||nn===a.name)return;
+  const nn=(await uiPrompt('Band / artist name',a.name,{title:'Rename artist'})||'').trim();if(!nn||nn===a.name)return;
   const res=await fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({renameArtistFrom:a.name,renameArtistTo:nn})});
-  if(!res.ok){alert('Could not rename the band.');return;}
+  if(!res.ok){uiAlert('Could not rename the band.');return;}
   await reloadData({view:'roster'});
   const na=artists.find(x=>x.name===nn);if(na)nav({view:'albums',artistId:na.id});
 }
 async function renameAlbum(artistId,albumId){
   const a=getArtist(artistId);const al=a&&getAlbum(a,albumId);if(!al)return;
-  const nt=(prompt('Album title',al.title)||'').trim();if(!nt||nt===al.title)return;
+  const nt=(await uiPrompt('Album title',al.title,{title:'Rename album'})||'').trim();if(!nt||nt===al.title)return;
   const res=await fetch('/api/album',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:albumId,title:nt})});
-  if(!res.ok){alert('Could not rename the album.');return;}
+  if(!res.ok){uiAlert('Could not rename the album.');return;}
   await reloadData({...route});
 }
 async function addSongFlow(){
   const al=AL();if(!al)return;
-  const title=prompt('Song title');if(!title||!title.trim())return;
+  const title=await uiPrompt('Song title','',{title:'Add song',okLabel:'Add'});if(!title||!title.trim())return;
   const res=await fetch('/api/song',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,title:title.trim()})});
-  if(!res.ok){alert('Could not add the song.');return;}
+  if(!res.ok){uiAlert('Could not add the song.');return;}
   await reloadData({...route}); // reload syncs both the grid and songs views
 }
 async function deleteSong(id){
   const al=AL();const s=al&&al.songs.find(x=>x.id===id);if(!s)return;
-  if(!confirm(`Delete “${s.t}”? This removes its grid cells, files and comments.`))return;
+  if(!await uiConfirm(`This removes its grid cells, files and comments.`,{title:`Delete “${s.t}”?`,okLabel:'Delete',danger:true}))return;
   al.songs=al.songs.filter(x=>x.id!==id);
   if(route.songId===id)route.songId=null;
   render();
   fetch('/api/song?id='+encodeURIComponent(id),{method:'DELETE'}).catch(()=>{});
 }
 async function inviteMember(){
-  const al=AL();if(!al)return;const name=prompt('Invite who? (name)');if(!name||!name.trim())return;
+  const al=AL();if(!al)return;const name=await uiPrompt('Invite who?','',{title:'Invite member',placeholder:'Bandmate name',okLabel:'Invite'});if(!name||!name.trim())return;
   const res=await fetch('/api/member',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({albumId:al.id,name:name.trim()})});
-  if(!res.ok){alert('Could not add member.');return;}
+  if(!res.ok){uiAlert('Could not add member.');return;}
   await reloadData({...route});
 }
 function curStamp(){return (curAudio&&!curAudio.paused)?fmtT(curAudio.currentTime):'';}
@@ -3095,14 +3135,14 @@ function refsBody(s){
 }
 function toggleRefMenu(songId,forceClose){const m=document.getElementById('refmenu-'+songId);if(!m)return;m.style.display=(forceClose||m.style.display!=='none')?'none':'';}
 function persistRefs(s){const clean=(s.refs||[]).map(r=>r.type==='file'?{type:'file',title:r.title,key:r.key||null}:r);fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId:s.id,refs:clean})}).catch(()=>{});}
-function addRefType(songId,type){
+async function addRefType(songId,type){
   toggleRefMenu(songId,true);
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;s.refs=s.refs||[];
   let ref=null;
-  if(type==='artist'){const n=(prompt('Artist name')||'').trim();if(!n)return;ref={type,title:n};}
-  else if(type==='song'){const n=(prompt('Song title')||'').trim();if(!n)return;const by=(prompt('Artist (optional)')||'').trim();ref={type,title:n,by};}
-  else if(type==='genre'){const n=(prompt('Genre')||'').trim();if(!n)return;ref={type,title:n};}
-  else if(type==='link'){let u=(prompt('Link URL (https://…)')||'').trim();if(!u)return;if(!/^https?:\/\//i.test(u))u='https://'+u;const l=(prompt('Label (optional)')||'').trim();ref={type,title:l||u,url:u};}
+  if(type==='artist'){const n=(await uiPrompt('Artist name','',{title:'Reference — artist'})||'').trim();if(!n)return;ref={type,title:n};}
+  else if(type==='song'){const n=(await uiPrompt('Song title','',{title:'Reference — song'})||'').trim();if(!n)return;const by=(await uiPrompt('Artist (optional)','',{title:'Reference — song'})||'').trim();ref={type,title:n,by};}
+  else if(type==='genre'){const n=(await uiPrompt('Genre','',{title:'Reference — genre'})||'').trim();if(!n)return;ref={type,title:n};}
+  else if(type==='link'){let u=(await uiPrompt('Link URL','',{title:'Reference — link',placeholder:'https://…'})||'').trim();if(!u)return;if(!/^https?:\/\//i.test(u))u='https://'+u;const l=(await uiPrompt('Label (optional)','',{title:'Reference — link'})||'').trim();ref={type,title:l||u,url:u};}
   else if(type==='file'){refFileTarget=songId;document.getElementById('refFileInput').click();return;}
   s.refs.push(ref);route.songId=songId;renderSongList();persistRefs(s);
 }
@@ -3119,8 +3159,8 @@ async function uploadRefFile(f){
     ref.key=up.key;persistRefs(s);
   }catch(e){/* local preview stays this session */}
 }
-function addCredit(songId){
-  const who=prompt('Credit — who?');if(!who||!who.trim())return;const role=(prompt('Role (guitar, vox, writing…)')||'').trim();const split=(prompt('Split % (optional, e.g. 40%)')||'').trim();
+async function addCredit(songId){
+  const who=await uiPrompt('Credit — who?','',{title:'Add credit'});if(!who||!who.trim())return;const role=(await uiPrompt('Role (guitar, vox, writing…)','',{title:'Add credit'})||'').trim();const split=(await uiPrompt('Split % (optional, e.g. 40%)','',{title:'Add credit'})||'').trim();
   const al=AL();const s=al&&al.songs.find(x=>x.id===songId);if(!s)return;
   s.credits.push({who:who.trim(),role,split});route.songId=songId;renderSongList();
   fetch('/api/song-meta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({songId,credits:s.credits})}).catch(()=>{});
