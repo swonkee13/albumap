@@ -3,7 +3,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createClient } from "@/lib/supabase/server";
 import { r2Client, R2_BUCKET } from "@/lib/r2";
-import { colorFor } from "@/lib/activity";
+import { colorFor, initialsFor } from "@/lib/activity";
 
 const NAME_TO_STATE: Record<string, number> = {
   not_started: 0,
@@ -493,5 +493,22 @@ export async function GET() {
     sub: `${a.albums.length} album${a.albums.length !== 1 ? "s" : ""}`,
   }));
 
-  return NextResponse.json({ artists });
+  // The signed-in user's own avatar, so every "you" avatar across the app
+  // (member stack, activity, comments, call bar) is consistent + shows the photo.
+  let mePhoto: string | null = null;
+  const { data: meProfile } = await supabase
+    .from("profiles")
+    .select("display_name, photo_key")
+    .eq("id", user.id)
+    .maybeSingle();
+  const meName = meProfile?.display_name || user.email || "You";
+  if (meProfile?.photo_key) mePhoto = await signGet(client, meProfile.photo_key);
+  const me = {
+    name: meName,
+    initials: initialsFor(meName),
+    color: "#FF4D1C",
+    photo: mePhoto,
+  };
+
+  return NextResponse.json({ artists, me });
 }

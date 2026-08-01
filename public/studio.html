@@ -137,6 +137,7 @@
   .member-stack .avatar:first-child{margin-left:0}
   .avatar:hover{transform:translateY(-3px);z-index:2}
   .avatar.in{color:#fff}
+  .av-img{width:100%;height:100%;object-fit:cover;border-radius:50%;display:block}
   .avatar.pending{background:#2a2a30;color:var(--txt-3);border:2px dashed var(--txt-3)}
   .member-caption{display:flex;align-items:center;gap:6px;color:var(--txt-2);font-size:12.5px;font-weight:500;padding:2px 0 6px}
   .mc-dot{width:8px;height:8px;border-radius:50%;flex:none}
@@ -431,6 +432,7 @@
   .block .ph-x{position:absolute;top:5px;right:5px;z-index:4;width:18px;height:18px;border-radius:5px;border:none;background:rgba(0,0,0,.35);color:#fff;cursor:pointer;display:none;place-items:center;padding:0}
   .block .ph-x svg{width:11px;height:11px}
   .block.placeholder:hover .ph-x{display:grid}
+  .block .ph-edit{right:27px}
   .ol-row.placeholder .ol-name{font-style:italic}
   .ph-x.sm{background:transparent;border:none;color:var(--txt-3);cursor:pointer;padding:4px;border-radius:6px;display:grid;place-items:center;flex:none}
   .ph-x.sm svg{width:14px;height:14px}
@@ -809,6 +811,10 @@ function albumInstrumentTags(al){return (al&&al.instrumentTags&&al.instrumentTag
 function mkSong(t,cells,extra={}){return {id:t.toLowerCase().replace(/[^a-z0-9]+/g,'-'),t,cells,dur:extra.dur||210,files:extra.files||[],comments:extra.comments||[],lyrics:extra.lyrics||"",notes:extra.notes||"",refs:extra.refs||[],credits:extra.credits||[]};}
 
 let artists=[];
+let me=null; // signed-in user's avatar {name,initials,color,photo}
+function meMatch(name){return !!(me&&me.name&&name&&String(name).trim().toLowerCase()===me.name.trim().toLowerCase());}
+function avColor(name,fallback){return meMatch(name)?(me.color||fallback):fallback;}
+function avInner(name,fallbackText){if(meMatch(name)&&me.photo)return `<img class="av-img" src="${me.photo}">`;return esc(meMatch(name)?(me.initials||fallbackText):(fallbackText||'?'));}
 const DEMO_ARTISTS=[
  {id:"novaway",name:"Novaway",type:"Band",photo:null,sub:"3 members · 2 releases",
   albums:[
@@ -940,7 +946,7 @@ function render(){
 function toggleNotif(e){if(e)e.stopPropagation();const d=document.getElementById('notifDrop');if(!d)return;
   if(d.style.display!=='none'){d.style.display='none';return;}
   const al=AL();const acts=(al&&al.activity)?al.activity:[];
-  d.innerHTML=`<div class="nd-head">Notifications</div>${acts.length?acts.slice(0,15).map((ac,i)=>`<div class="nd-row" onclick="closeNotif();actNav(${i})"><div class="act-dot" style="background:${ac.color}">${esc((ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="nd-empty">No activity yet.</div>'}<div class="nd-foot" onclick="closeNotif();nav({view:'activity',artistId:route.artistId,albumId:route.albumId})">View all →</div>`;
+  d.innerHTML=`<div class="nd-head">Notifications</div>${acts.length?acts.slice(0,15).map((ac,i)=>`<div class="nd-row" onclick="closeNotif();actNav(${i})"><div class="act-dot" title="${esc(ac.who)}" style="background:${avColor(ac.who,ac.color)}">${avInner(ac.who,(ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="nd-empty">No activity yet.</div>'}<div class="nd-foot" onclick="closeNotif();nav({view:'activity',artistId:route.artistId,albumId:route.albumId})">View all →</div>`;
   d.style.display='';
 }
 function closeNotif(){const d=document.getElementById('notifDrop');if(d)d.style.display='none';}
@@ -1078,7 +1084,7 @@ function renderDashboard(){
       <div class="hero-sub"><b>${a.name}</b><span class="dot-sep"></span><span>${al.songs.length} songs</span><span class="dot-sep"></span><span>${al.year}</span><span class="dot-sep"></span><span class="pill"><span class="status-dot" style="background:var(--amber)"></span>${statusLabel(al.status)}</span></div>
       <div class="hero-actions">
         <button class="play-lg" onclick="nav({view:'sequencer',artistId:'${a.id}',albumId:'${al.id}'})"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
-        <div class="member-stack">${(al.members||[]).map(m=>m.status==='in'?`<div class="avatar in" style="background:${m.color}" title="${m.name}">${m.initials}</div>`:`<div class="avatar pending" title="${m.name} · pending">${m.initials}</div>`).join('')}</div>
+        <div class="member-stack">${(al.members||[]).map(m=>m.status==='in'?`<div class="avatar in" style="background:${avColor(m.name,m.color)}" title="${esc(m.name)}">${avInner(m.name,m.initials)}</div>`:`<div class="avatar pending" title="${esc(m.name)} · pending">${esc(m.initials)}</div>`).join('')}</div>
         <button class="ghost-btn" onclick="inviteMember()">＋ Invite</button>
         <button class="solid-btn" onclick="openShare()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5 8.6 10.5"/></svg>Share progress</button>
       </div>
@@ -1128,12 +1134,12 @@ function renderDashboard(){
       <!-- waiting on -->
       <div class="section">
         <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div><div><h3 class="sec-t">Waiting on</h3><div class="cnt">Who's blocking the album</div></div></div></div>
-        ${waiting.map(w=>`<div class="wait-row"><div class="wait-av" style="background:${w.color}">${w.initials}</div><div class="wait-info"><div class="wn">${w.name}</div><div class="wt">${w.detail}</div></div><div class="wait-count">${w.count}</div></div>`).join('')}
+        ${waiting.map(w=>`<div class="wait-row"><div class="wait-av" style="background:${avColor(w.name,w.color)}" title="${esc(w.name)}">${avInner(w.name,w.initials)}</div><div class="wait-info"><div class="wn">${w.name}</div><div class="wt">${w.detail}</div></div><div class="wait-count">${w.count}</div></div>`).join('')}
       </div>
       <!-- activity -->
       <div class="section">
         <div class="sec-head"><div class="lt"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></div><div><h3 class="sec-t">Activity</h3><div class="cnt">Latest across the band</div></div></div></div>
-        ${al.activity.slice(0,6).map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" style="background:${ac.color}">${ac.who[0]}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')||'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}
+        ${al.activity.slice(0,6).map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" title="${esc(ac.who)}" style="background:${avColor(ac.who,ac.color)}">${avInner(ac.who,(ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${ac.who}</b> ${ac.text}</div><div class="atime">${ac.time}</div></div></div>`).join('')||'<div class="empty-note" style="padding:14px 20px">No activity yet.</div>'}
         ${al.activity.length>6?`<div class="sec-foot"><button class="expand" onclick="nav({view:'activity',artistId:'${a.id}',albumId:'${al.id}'})">View all ${al.activity.length} →</button></div>`:''}
       </div>
     </div>
@@ -1437,7 +1443,7 @@ function toggleLabel(id,label){
 function trackComments(t,i,s){
   const firstSid=(s.files&&s.files.length)?((s.files.find(f=>f.master)||s.files[0]).sid||null):null;
   const cmts=(s.comments||[]).filter(c=>c.fileSid?(t.sid&&c.fileSid===t.sid):(t.sid&&t.sid===firstSid));
-  const rows=cmts.length?cmts.map(c=>`<div class="cmt-row"><div class="cmt-av" style="background:${c.color}">${esc((c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
+  const rows=cmts.length?cmts.map(c=>`<div class="cmt-row"><div class="cmt-av" title="${esc(c.who)}" style="background:${avColor(c.who,c.color)}">${avInner(c.who,(c.who||'?')[0])}</div><div class="cmt-body"><div class="cmeta"><span class="cwho">${esc(c.who)}</span>${c.stamp?`<span class="cstamp">@ ${esc(c.stamp)}</span>`:''}</div><div class="ctext">${esc(c.text)}</div></div></div>`).join(''):'<div class="tc-empty">No comments on this file yet — playing while you comment stamps the time.</div>';
   return `<div class="track-cmts">${rows}<div class="tc-add"><input id="fcmt-${t.id}" placeholder="Comment on this file…" onkeydown="if(event.key==='Enter')postFileComment('${s.id}',${t.id})"><button class="ico-btn" title="Post comment" onclick="postFileComment('${s.id}',${t.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/></svg></button></div></div>`;
 }
 function postFileComment(songId,trackId){
@@ -1609,24 +1615,36 @@ function buildSeqSongs(al){
   base.forEach(b=>{if(!used.has(b.id)){out.push(b);used.add(b.id);}});
   return out;
 }
-function addPlaceholder(){
+// Adding a placeholder asks for its length first, then drops it in.
+function addPlaceholder(){openPlaceholderDurNew();}
+function addPlaceholderWithDur(sec){
   const n=seqSongs.filter(s=>s.placeholder).length;
-  seqSongs.push({id:'ph-'+Date.now()+'-'+n,name:'Placeholder',dur:PH_DUR,color:PH_COLORS[n%PH_COLORS.length],url:null,placeholder:true});
-  seqStop();seqPos=0;renderSeq();seqPersist();
+  seqSongs.push({id:'ph-'+Date.now()+'-'+n,name:'Placeholder',dur:Math.max(5,Math.round(sec)),color:PH_COLORS[n%PH_COLORS.length],url:null,placeholder:true});
+  seqStop();seqPos=0;renderSeq();seqPersist();closeModal();
 }
+function addPlaceholderWithStr(str){const sec=parsePhStr(str);if(sec)addPlaceholderWithDur(sec);}
 function removePlaceholder(id){seqSongs=seqSongs.filter(s=>s.id!==id);seqStop();seqPos=0;renderSeq();seqPersist();}
 const PH_PILLS=[30,60,90,120,150,180,210,240,270,300];
+function parsePhStr(str){const m=String(str||'').trim().match(/^(\d+):(\d{1,2})$/);if(m)return parseInt(m[1],10)*60+parseInt(m[2],10);const n=parseInt(str,10);return (Number.isNaN(n)||n<=0)?null:n;}
+function openPlaceholderDurNew(){
+  document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>New placeholder length</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+  <div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:14px">Pick how long the reserved slot should be — it sizes the block in the sequencer and on the dashboard.</p>
+    <div class="art-pills">${PH_PILLS.map(sec=>`<span class="lchip" onclick="addPlaceholderWithDur(${sec})">${fmtT(sec)}</span>`).join('')}</div>
+    <div style="margin-top:14px"><div class="mf-lbl">Exact time (mm:ss)</div><input class="art-custom" placeholder="e.g. 3:45" onkeydown="if(event.key==='Enter'){addPlaceholderWithStr(this.value);}"></div>
+  </div>`;
+  document.getElementById('modalBg').classList.add('show');
+}
 function openPlaceholderDur(id){
   const s=seqSongs.find(x=>x.id===id);if(!s)return;
   document.getElementById('modalInner').innerHTML=`<div class="modal-head"><h3>Placeholder length</h3><button class="circ" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
-  <div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:14px">Reserve a slot of this length — it sizes the block in the sequencer and on the dashboard.</p>
+  <div class="modal-body"><p style="color:var(--txt-2);font-size:12.5px;margin-bottom:14px">Change this slot's length — it resizes the block in the sequencer and on the dashboard.</p>
     <div class="art-pills">${PH_PILLS.map(sec=>`<span class="lchip ${s.dur===sec?'on':''}" onclick="setPlaceholderDur('${id}',${sec})">${fmtT(sec)}</span>`).join('')}</div>
     <div style="margin-top:14px"><div class="mf-lbl">Exact time (mm:ss)</div><input class="art-custom" placeholder="e.g. 3:45" value="${fmtT(s.dur)}" onkeydown="if(event.key==='Enter'){setPlaceholderDurStr('${id}',this.value);}" onblur="setPlaceholderDurStr('${id}',this.value)"></div>
   </div>`;
   document.getElementById('modalBg').classList.add('show');
 }
 function setPlaceholderDur(id,sec){const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,Math.round(sec));seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
-function setPlaceholderDurStr(id,str){const m=String(str||'').trim().match(/^(\d+):(\d{1,2})$/);let sec;if(m)sec=parseInt(m[1],10)*60+parseInt(m[2],10);else{const n=parseInt(str,10);if(!Number.isNaN(n))sec=n;}if(sec==null||sec<=0)return;const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,sec);seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
+function setPlaceholderDurStr(id,str){const sec=parsePhStr(str);if(sec==null)return;const s=seqSongs.find(x=>x.id===id);if(!s)return;s.dur=Math.max(5,sec);seqStop();seqPos=0;renderSeq();seqPersist();closeModal();}
 function renderSequencer(){
   const al=AL();
   seqSongs=buildSeqSongs(al);
@@ -1650,7 +1668,7 @@ function renderSeq(){
   [...tl.querySelectorAll('.block')].forEach(b=>b.remove());
   seqSongs.forEach((s,idx)=>{const b=document.createElement('div');b.className='block'+(s.placeholder?' placeholder':(s.url?'':' no-audio'));b.dataset.id=s.id;b.style.transition='none';
     if(s.placeholder){b.style.background=s.color+'26';b.style.boxShadow='inset 0 0 0 1.5px '+s.color+'aa';
-      b.innerHTML=`<button class="ph-x" title="Remove placeholder" onpointerdown="event.stopPropagation()" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg></button><div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="ph-label"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M12 3 2 12l10 9 10-9z"/></svg>PLACEHOLDER</div>`;
+      b.innerHTML=`<button class="ph-x ph-edit" title="Set length" onpointerdown="event.stopPropagation()" onclick="openPlaceholderDur('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></button><button class="ph-x" title="Remove placeholder" onpointerdown="event.stopPropagation()" onclick="removePlaceholder('${s.id}')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M18 6 6 18M6 6l12 12"/></svg></button><div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="ph-label"><svg viewBox="0 0 24 24" fill="currentColor" style="width:12px;height:12px"><path d="M12 3 2 12l10 9 10-9z"/></svg>PLACEHOLDER</div>`;
     }else{b.style.background=`linear-gradient(160deg,${s.color},${shade(s.color,-18)})`;const wave=stableWave(s.name,Math.max(24,Math.round(s.dur/3)));
       b.innerHTML=`<div class="b-top"><span class="b-num">${String(idx+1).padStart(2,'0')}</span><span class="b-dur">${fmtT(s.dur)}</span></div><div class="b-name">${esc(s.name)}</div>${s.url?'':'<span class="no-audio-tag">no audio</span>'}<div class="b-wave">${wave.map(h=>`<div class="wb" style="height:${Math.round(h*100)}%"></div>`).join('')}</div>`;}
     b.addEventListener('pointerdown',e=>blockPointerDown(e,s.id));tl.insertBefore(b,ph);});
@@ -1749,7 +1767,7 @@ document.addEventListener('pointermove',e=>{
 document.addEventListener('pointerup',e=>{
   if(!blockDrag)return;const bd=blockDrag;blockDrag=null;document.body.style.cursor='';
   const el=blockEl(bd.id);
-  if(!bd.moved){if(el){el.classList.remove('seq-lift');el.style.transform='';}const s=seqSongs.find(x=>x.id===bd.id);if(s&&s.placeholder){openPlaceholderDur(bd.id);}else{seqSeekClient(e.clientX);}return;}
+  if(!bd.moved){if(el){el.classList.remove('seq-lift');el.style.transform='';}seqSeekClient(e.clientX);return;}
   if(el){el.classList.remove('seq-lift');el.style.transform='';}
   layoutBlocks();updateSeqStats();renderSeqOrder();seqStop();seqPos=0;seqPersist();
 });
@@ -2046,7 +2064,7 @@ async function uploadMerchImg(f){
 function renderActivity(){
   const a=A(),al=AL();const acts=al.activity||[];
   content.innerHTML=`<div class="ws-head"><div class="eyebrow">${al.title}</div><div class="view-title">Notifications</div><div class="ws-sub">Everything that’s happened on this album — newest first.</div></div>
-  <div class="section" style="margin-top:8px">${acts.length?acts.map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" style="background:${ac.color}">${esc((ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:24px">No activity yet.</div>'}</div>`;
+  <div class="section" style="margin-top:8px">${acts.length?acts.map((ac,idx)=>`<div class="act-row clickable" onclick="actNav(${idx})"><div class="act-dot" title="${esc(ac.who)}" style="background:${avColor(ac.who,ac.color)}">${avInner(ac.who,(ac.who||'?')[0])}</div><div class="act-body"><div class="at"><b>${esc(ac.who)}</b> ${ac.text}</div><div class="atime">${esc(ac.time)}</div></div></div>`).join(''):'<div class="empty-note" style="padding:24px">No activity yet.</div>'}</div>`;
 }
 /* ===== SONG DETAIL ===== */
 /* ===== SHARE MODAL ===== */
@@ -2070,7 +2088,7 @@ function closeModal(){document.getElementById('modalBg').classList.remove('show'
 /* ===== CALL BAR ===== */
 function renderCallBar(){
   const al=AL();const inM=(al&&al.members?al.members.filter(m=>m.status==='in'):[]);
-  document.getElementById('callAvatars').innerHTML=inM.map(m=>`<div class="avatar in" style="background:${m.color}" title="${m.name}">${m.initials}</div>`).join('');
+  document.getElementById('callAvatars').innerHTML=inM.map(m=>`<div class="avatar in" style="background:${avColor(m.name,m.color)}" title="${esc(m.name)}">${avInner(m.name,m.initials)}</div>`).join('');
   document.getElementById('ccSub').textContent = inM.length?`${inM.length} bandmates around · talk through the record together`:'Hop on to talk through the record together';
   const ctx=document.getElementById('cohCtx'); if(ctx&&al)ctx.textContent='Talking about: '+al.title;
 }
@@ -2080,7 +2098,7 @@ function openCall(){
   const tiles=inM.map((m,idx)=>{
     const you=idx===0; const camOff=idx===2; const muted=idx===1;
     return `<div class="vtile ${you?'you':''}">
-      <div class="vav" style="background:${m.color}">${m.initials}</div>
+      <div class="vav" style="background:${avColor(m.name,m.color)}" title="${esc(m.name)}">${avInner(m.name,m.initials)}</div>
       <div class="vname">${you?'You ('+m.name+')':m.name}</div>
       <div class="vmic ${muted?'muted':''}">${muted?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 1l22 22M9 9v3a3 3 0 0 0 5 2M15 9.3V5a3 3 0 0 0-5.7-1.3"/><path d="M19 10v1a7 7 0 0 1-.6 2.8M12 18v4"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v1a7 7 0 0 1-14 0v-1M12 18v4"/></svg>'}</div>
     </div>`;
@@ -2168,7 +2186,7 @@ function restoreRoute(){
   }catch(e){return null;}
 }
 async function reloadData(nextRoute){
-  try{const res=await fetch('/api/studio-data',{cache:'no-store'});if(res.ok){const d=await res.json();artists=Array.isArray(d.artists)?d.artists:[];}}catch(e){}
+  try{const res=await fetch('/api/studio-data',{cache:'no-store'});if(res.ok){const d=await res.json();artists=Array.isArray(d.artists)?d.artists:[];me=d.me||null;}}catch(e){}
   route=nextRoute||restoreRoute()||defaultRoute();hist=[{...route}];hi=0;render();
 }
 function persistCell(songId,instrument,state){
