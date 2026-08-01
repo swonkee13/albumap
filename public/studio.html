@@ -166,13 +166,15 @@
   .ring .pct{position:absolute;inset:0;display:grid;place-items:center;font-family:'Poppins';font-weight:700;font-size:16px}
   /* hero gauge panel */
   .hero-gauges{margin-left:auto;display:flex;align-items:flex-start;gap:10px;padding-bottom:4px}
-  .hg-grid{display:flex;gap:18px;flex-wrap:wrap;justify-content:flex-end;max-width:400px}
-  .gauge{display:flex;flex-direction:column;align-items:center;gap:3px}
-  .gauge-ring{position:relative;width:64px;height:64px}
+  /* gauges always stay on one row and scale down to fit (never wrap) */
+  .hg-grid{display:flex;gap:12px;flex-wrap:nowrap;justify-content:flex-end;max-width:430px}
+  .gauge{display:flex;flex-direction:column;align-items:center;gap:3px;flex:0 1 64px;min-width:0}
+  .gauge-ring{position:relative;width:100%;max-width:64px;aspect-ratio:1;margin:0 auto}
+  .gauge-ring svg{width:100%;height:100%;display:block}
   .gauge-ring svg{transform:rotate(-90deg)}
-  .gauge-pct{position:absolute;inset:0;display:grid;place-items:center;font-family:'Poppins';font-weight:700;font-size:15px}
-  .gauge-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
-  .gauge-sub{font-size:10px;color:var(--txt-3);font-family:'JetBrains Mono'}
+  .gauge-pct{position:absolute;inset:0;display:grid;place-items:center;font-family:'Poppins';font-weight:700;font-size:14px}
+  .gauge-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gauge-sub{font-size:9.5px;color:var(--txt-3);font-family:'JetBrains Mono';max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .hg-edit{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.35);color:var(--txt-3);cursor:pointer;display:grid;place-items:center;flex:none}
   .hg-edit:hover{border-color:var(--accent);color:var(--accent-hi)}
   .hg-edit svg{width:15px;height:15px}
@@ -887,7 +889,7 @@
      ===================================================================== */
   .hamburger{display:none;width:36px;height:36px;border-radius:10px;background:rgba(0,0,0,.4);border:none;color:var(--txt);place-items:center;cursor:pointer;flex:none}
   .hamburger svg{width:20px;height:20px}
-  .brand-mark{display:none;width:28px;height:28px;border-radius:7px;flex:none;cursor:pointer}
+  .brand-mark{display:none;height:24px;width:auto;max-width:150px;object-fit:contain;flex:none;cursor:pointer}
   .mobile-tabs{display:none}
   .drawer-scrim{display:none}
 
@@ -901,12 +903,12 @@
     body.drawer-open .sidebar{transform:translateX(0)}
     .drawer-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);z-index:125;opacity:0;pointer-events:none;transition:opacity .26s}
     body.drawer-open .drawer-scrim{opacity:1;pointer-events:auto}
-    /* topbar */
+    /* topbar → two rows: [☰ logo … 🔔] then breadcrumbs full-width below */
     .hamburger{display:grid}
     .brand-mark{display:block}
-    .topbar{padding:11px 12px;gap:9px}
+    .topbar{padding:10px 13px 9px;gap:10px;flex-wrap:wrap;row-gap:9px}
     .navbtns{display:none}
-    .crumbs{font-size:12px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
+    .crumbs{order:10;width:100%;font-size:12.5px;flex-wrap:wrap;white-space:normal;overflow:visible;line-height:1.4}
     /* content: tighter, and clear the bottom tab bar */
     .content{padding:14px 16px calc(84px + env(safe-area-inset-bottom))}
     .view-title{font-size:26px!important}
@@ -957,7 +959,8 @@
     .hero-sub{justify-content:center;flex-wrap:wrap}
     .hero-actions{justify-content:center;flex-wrap:wrap;gap:10px}
     .member-caption{justify-content:center}
-    .hero-gauges{margin:12px 0 0!important;justify-content:center;flex-wrap:wrap;width:100%}
+    .hero-gauges{margin:12px 0 0!important;justify-content:center;width:100%}
+    .hg-grid{justify-content:center;max-width:100%;gap:8px}
     /* ---- mobile recording grid (song-centric checklist) ---- */
     .mg-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
     .mg-toolbar .ghost-btn{padding:8px 13px;font-size:12.5px}
@@ -1136,7 +1139,7 @@
   <main class="main">
     <div class="topbar" id="topbar">
       <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
-      <img class="brand-mark" src="/albumap-mark.png?v=1" alt="albumap" onclick="nav({view:'roster'})">
+      <img class="brand-mark" src="/albumap-io-logo.png?v=2" alt="albumap.io" onclick="nav({view:'roster'})">
       <div class="navbtns">
         <button class="circ" id="backBtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
         <button class="circ" id="fwdBtn" onclick="fwd()" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -1412,7 +1415,7 @@ function metricValue(al,key,keys){
   const r=metricRaw(al,key);return r?{pct:r.pct,sub:r.sub}:{pct:0,sub:'—'};
 }
 function gaugeHTML(al,key,keys){const m=metricValue(al,key,keys);const cfg=HERO_METRICS[key];const circ=2*Math.PI*27;
-  return `<div class="gauge"><div class="gauge-ring"><svg width="64" height="64"><circle cx="32" cy="32" r="27" stroke="var(--grey)" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="27" stroke="${cfg.color}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-m.pct/100)}"/></svg><div class="gauge-pct">${m.pct}%</div></div><div class="gauge-label" style="color:${cfg.color}">${cfg.label}</div><div class="gauge-sub">${m.sub}</div></div>`;
+  return `<div class="gauge"><div class="gauge-ring"><svg viewBox="0 0 64 64" width="64" height="64"><circle cx="32" cy="32" r="27" stroke="var(--grey)" stroke-width="5" fill="none"/><circle cx="32" cy="32" r="27" stroke="${cfg.color}" stroke-width="5" fill="none" stroke-linecap="round" stroke-dasharray="${circ}" stroke-dashoffset="${circ*(1-m.pct/100)}"/></svg><div class="gauge-pct">${m.pct}%</div></div><div class="gauge-label" style="color:${cfg.color}">${cfg.label}</div><div class="gauge-sub">${m.sub}</div></div>`;
 }
 function heroGaugesHTML(a,al){const keys=heroKeys(al);
   return `<div class="hero-gauges"><div class="hg-grid">${keys.map(k=>gaugeHTML(al,k,keys)).join('')}</div></div>`;
