@@ -855,7 +855,73 @@
   .cctl.leave{background:#e0322a;border-color:#e0322a;color:#fff}
   .cctl.leave:hover{background:#c72821}
   @media(max-width:1000px){.callbar,.callbar.open{left:16px;right:16px}}
-  @media(max-width:1000px){.app{grid-template-columns:1fr}.sidebar{display:none}.dash-grid{grid-template-columns:1fr}.song-detail-grid{grid-template-columns:1fr}}
+
+  /* =====================================================================
+     MOBILE / TABLET SHELL  (≤1024px).  Desktop (≥1025px) is untouched:
+     these controls are display:none until the media query turns them on.
+     ===================================================================== */
+  .hamburger{display:none;width:36px;height:36px;border-radius:10px;background:rgba(0,0,0,.4);border:none;color:var(--txt);place-items:center;cursor:pointer;flex:none}
+  .hamburger svg{width:20px;height:20px}
+  .mobile-tabs{display:none}
+  .drawer-scrim{display:none}
+
+  @media(max-width:1024px){
+    /* shell → single column; sidebar becomes a slide-in drawer */
+    .app{display:block;height:auto;min-height:100vh;padding:0;gap:0}
+    .main{border-radius:0;border:none;min-height:100vh}
+    .sidebar{position:fixed;top:0;left:0;bottom:0;width:290px;max-width:86vw;z-index:130;border-radius:0;border:none;border-right:1px solid var(--line);transform:translateX(-104%);transition:transform .26s cubic-bezier(.4,0,.2,1);box-shadow:0 0 60px rgba(0,0,0,.6)}
+    body.drawer-open .sidebar{transform:translateX(0)}
+    .drawer-scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(2px);z-index:125;opacity:0;pointer-events:none;transition:opacity .26s}
+    body.drawer-open .drawer-scrim{opacity:1;pointer-events:auto}
+    /* topbar */
+    .hamburger{display:grid}
+    .topbar{padding:11px 14px;gap:10px}
+    .navbtns{display:none}
+    .crumbs{font-size:12px;flex-wrap:nowrap;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;min-width:0}
+    /* content: tighter, and clear the bottom tab bar */
+    .content{padding:14px 16px calc(84px + env(safe-area-inset-bottom))}
+    .view-title{font-size:26px!important}
+    .ws-head .view-title{font-size:24px!important}
+    /* the desktop studio-call dock is desktop-only (mobile = read & listen) */
+    .callbar{display:none!important}
+    /* galleries + forms breathe on a phone */
+    .slot-grid{grid-template-columns:repeat(3,1fr)!important}
+    .gallery{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+    .modal{width:96vw;max-width:96vw;margin:0}
+    /* bottom tab bar */
+    .mobile-tabs{position:fixed;left:0;right:0;bottom:0;z-index:120;background:rgba(18,18,21,.94);backdrop-filter:blur(20px);border-top:1px solid var(--line);display:flex;align-items:stretch;padding-bottom:env(safe-area-inset-bottom)}
+    .mtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:none;border:none;color:var(--txt-3);font-size:10px;font-weight:600;cursor:pointer;padding:9px 2px 8px;position:relative}
+    .mtab svg{width:22px;height:22px}
+    .mtab.active{color:var(--accent-hi)}
+    .mtab.active::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:26px;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+    /* topbar grid shortcut is redundant with the bottom Grid tab */
+    .qn-grid{display:none!important}
+    /* dashboard hero → stacked & centered */
+    .dash-hero{flex-direction:column;align-items:stretch;gap:12px;padding:6px 0 16px}
+    .hero-cover-wrap{margin:2px auto 12px}
+    .hero-cover{width:180px!important;height:180px!important;border-radius:18px}
+    .hero-cover .hc-ph{font-size:72px!important}
+    .hero-logo-badge{width:70px!important;height:70px!important;left:-10px!important;bottom:-10px!important}
+    .hero-meta{padding:0;text-align:center;flex:none}
+    .hero-meta .eyebrow{justify-content:center}
+    .band-name{white-space:normal!important;font-size:26px!important;text-align:center;margin:6px 0 12px}
+    .hero-sub{justify-content:center;flex-wrap:wrap}
+    .hero-actions{justify-content:center;flex-wrap:wrap;gap:10px}
+    .member-caption{justify-content:center}
+    .hero-gauges{margin:12px 0 0!important;justify-content:center;flex-wrap:wrap;width:100%}
+  }
+  @media(max-width:640px){
+    .slot-grid{grid-template-columns:repeat(2,1fr)!important}
+    .gallery{grid-template-columns:repeat(2,1fr);gap:12px}
+    .content{padding:12px 13px calc(84px + env(safe-area-inset-bottom))}
+    .view-title{font-size:23px!important}
+    /* song-list collapsed header: drop the inline progress bar so the title +
+       meta have room (the % still shows in the meta line) */
+    .idea-song[data-song] .idea-head{gap:10px;padding:14px 12px}
+    .idea-song[data-song] .idea-head .pbar{display:none}
+    .idea-song[data-song] .idea-title{font-size:15.5px}
+    .ws-sub{font-size:13px}
+  }
 </style>
 </head>
 <body>
@@ -880,6 +946,7 @@
 
   <main class="main">
     <div class="topbar" id="topbar">
+      <button class="hamburger" id="hamburger" onclick="toggleDrawer()" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg></button>
       <div class="navbtns">
         <button class="circ" id="backBtn" onclick="back()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m15 18-6-6 6-6"/></svg></button>
         <button class="circ" id="fwdBtn" onclick="fwd()" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -890,6 +957,10 @@
     <div class="scroll" id="scroll"><div class="content" id="content"></div></div>
   </main>
 </div>
+
+<!-- ===== MOBILE: drawer scrim + bottom tab bar (hidden on desktop) ===== -->
+<div class="drawer-scrim" id="drawerScrim" onclick="closeDrawer()"></div>
+<nav class="mobile-tabs" id="mobileTabs"></nav>
 
 <div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
   <div class="modal" id="modalInner"></div>
@@ -1038,7 +1109,43 @@ const DEMO_ARTISTS=[
 /* ================= ROUTER ================= */
 let route={view:"dashboard",artistId:"novaway",albumId:"westcoast"};
 let hist=[{...route}],hi=0;
-function nav(r,push=true){ stopAllAudio(); route=r; if(push){hist=hist.slice(0,hi+1);hist.push({...r});hi=hist.length-1;} render(); }
+function nav(r,push=true){ stopAllAudio(); closeDrawer(); route=r; if(push){hist=hist.slice(0,hi+1);hist.push({...r});hi=hist.length-1;} render(); }
+/* ===== MOBILE SHELL: drawer + bottom tab bar (no effect on desktop) ===== */
+function isMobile(){return window.matchMedia('(max-width:1024px)').matches;}
+function toggleDrawer(){document.body.classList.toggle('drawer-open');}
+function openDrawer(){document.body.classList.add('drawer-open');}
+function closeDrawer(){document.body.classList.remove('drawer-open');}
+const MICO={
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>',
+  grid:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>',
+  songs:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>',
+  play:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+  more:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>',
+  artists:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></svg>',
+  settings:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9 2 2 0 1 1-2.8 2.8 1.7 1.7 0 0 0-2.9 1.2 2 2 0 0 1-4 0 1.7 1.7 0 0 0-2.9-1.2 2 2 0 1 1-2.8-2.8 1.7 1.7 0 0 0 .3-1.9 2 2 0 0 1 0-4 1.7 1.7 0 0 0-.3-1.9 2 2 0 1 1 2.8-2.8 1.7 1.7 0 0 0 2.9-1.2 2 2 0 0 1 4 0 1.7 1.7 0 0 0 2.9 1.2 2 2 0 1 1 2.8 2.8 1.7 1.7 0 0 0-.3 1.9 2 2 0 0 1 0 4z"/></svg>'
+};
+function renderMobileTabs(){
+  const el=document.getElementById('mobileTabs');if(!el)return;
+  const ALBUM_VIEWS=['dashboard','grid','songs','sequencer','schedule','artwork','photos','logos','merch','activity'];
+  const inAlbum=route.albumId&&ALBUM_VIEWS.includes(route.view);
+  const tab=(view,label,icon,onclick)=>`<button class="mtab ${route.view===view?'active':''}" onclick="${onclick}">${icon}<span>${label}</span></button>`;
+  const albNav=v=>`nav({view:'${v}',artistId:'${route.artistId}',albumId:'${route.albumId}'})`;
+  if(inAlbum){
+    el.innerHTML=
+      tab('dashboard','Home',MICO.home,albNav('dashboard'))+
+      tab('grid','Grid',MICO.grid,albNav('grid'))+
+      tab('songs','Songs',MICO.songs,albNav('songs'))+
+      tab('sequencer','Player',MICO.play,albNav('sequencer'))+
+      `<button class="mtab" onclick="openDrawer()">${MICO.more}<span>More</span></button>`;
+  }else{
+    el.innerHTML=
+      tab('roster','Artists',MICO.artists,"nav({view:'roster'})")+
+      `<button class="mtab" onclick="openDrawer()">${MICO.more}<span>Library</span></button>`+
+      tab('settings','Profile',MICO.settings,"nav({view:'settings'})");
+  }
+}
+let _wasMobile=null;
+window.addEventListener('resize',()=>{const m=isMobile();if(_wasMobile===null)_wasMobile=m;if(m!==_wasMobile){_wasMobile=m;if(!m)closeDrawer();render();}});
 function back(){ if(hi>0){hi--;route={...hist[hi]};stopAllAudio();render();} }
 function fwd(){ if(hi<hist.length-1){hi++;route={...hist[hi]};stopAllAudio();render();} }
 function getArtist(id){return artists.find(a=>a.id===id);}
@@ -1072,9 +1179,11 @@ function albumParts(al){let done=0,total=0;al.songs.forEach(s=>{const st=songSta
 // Dot color for the dashboard heatmap = the cell's status color.
 function statusDot(al,s,inst){const st=resolveStatus(al,cellStatus(s,inst));return st?(st.na?'#242429':st.color):'#3a3a42';}
 // Shrink the album title until it fits on one line (never wraps).
-function fitBandName(){const el=content.querySelector('.band-name');if(!el)return;el.style.fontSize='';let size=parseFloat(getComputedStyle(el).fontSize)||40;let guard=0;while(el.scrollWidth>el.clientWidth+1&&size>18&&guard<90){size-=1;el.style.fontSize=size+'px';guard++;}}
+function fitBandName(){const el=content.querySelector('.band-name');if(!el)return;el.style.fontSize='';if(isMobile())return;/* mobile: CSS wraps + sizes it */let size=parseFloat(getComputedStyle(el).fontSize)||40;let guard=0;while(el.scrollWidth>el.clientWidth+1&&size>18&&guard<90){size-=1;el.style.fontSize=size+'px';guard++;}}
 // Scale the hero cover square to match the text column height; badge scales with it.
-function fitHeroCover(){const meta=content.querySelector('.hero-meta');const cover=content.querySelector('.hero-cover');const badge=content.querySelector('.hero-logo-badge');if(!meta||!cover)return;const h=Math.max(134,Math.min(260,meta.offsetHeight));cover.style.width=h+'px';cover.style.height=h+'px';const ph=cover.querySelector('.hc-ph');if(ph)ph.style.fontSize=Math.round(h*0.4)+'px';if(badge){const b=Math.round(h*0.44);badge.style.width=b+'px';badge.style.height=b+'px';badge.style.left=Math.round(-b*0.17)+'px';badge.style.bottom=Math.round(-b*0.17)+'px';}}
+function fitHeroCover(){const meta=content.querySelector('.hero-meta');const cover=content.querySelector('.hero-cover');const badge=content.querySelector('.hero-logo-badge');if(!meta||!cover)return;
+  if(isMobile()){/* mobile: fixed CSS size — clear any desktop inline sizing */cover.style.width='';cover.style.height='';const ph=cover.querySelector('.hc-ph');if(ph)ph.style.fontSize='';if(badge){badge.style.width='';badge.style.height='';badge.style.left='';badge.style.bottom='';}return;}
+  const h=Math.max(134,Math.min(260,meta.offsetHeight));cover.style.width=h+'px';cover.style.height=h+'px';const ph=cover.querySelector('.hc-ph');if(ph)ph.style.fontSize=Math.round(h*0.4)+'px';if(badge){const b=Math.round(h*0.44);badge.style.width=b+'px';badge.style.height=b+'px';badge.style.left=Math.round(-b*0.17)+'px';badge.style.bottom=Math.round(-b*0.17)+'px';}}
 /* ===== hero completion gauges (configurable instrument panel) ===== */
 const HERO_METRICS={
   recording:{label:'Recording',color:'#FF4D1C'},
@@ -1140,7 +1249,7 @@ function render(){
   document.getElementById('fwdBtn').disabled=hi>=hist.length-1;
   document.getElementById('nav-roster').classList.toggle('active',route.view==='roster');
   document.getElementById('nav-settings').classList.toggle('active',route.view==='settings');
-  renderLib();renderCrumbs();
+  renderLib();renderCrumbs();renderMobileTabs();
   const v=route.view;
   if(v==='settings')renderSettings();
   else if(v==='roster')renderRoster();
@@ -1166,7 +1275,7 @@ function render(){
   const qn=document.getElementById('quickNav');
   if(qn){
     if(inAlbum&&route.albumId){
-      const gridBtn=route.view!=='grid'?`<button class="solid-btn" style="padding:8px 15px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
+      const gridBtn=route.view!=='grid'?`<button class="solid-btn qn-grid" style="padding:8px 15px" onclick="gotoGrid()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>Recording grid</button>`:'';
       const unread=albumUnread(AL());
       qn.innerHTML=gridBtn+`<button class="circ notif-bell" title="Notifications" onclick="toggleNotif(event)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>${unread>0?'<span class="notif-dot"></span>':''}</button><div class="notif-drop" id="notifDrop" style="display:none"></div>`;
     }else qn.innerHTML='';
